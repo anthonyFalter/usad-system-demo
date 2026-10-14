@@ -310,6 +310,7 @@ input:focus-visible,
   cursor: grab;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .canvas-viewport.is-dragging {
@@ -322,9 +323,6 @@ input:focus-visible,
   left: 50%;
   width: 393px;
   height: 852px;
-  transform: translate(-50%, -50%);
-  transform-origin: center center;
-  will-change: transform;
 }
 
 .phone-screen {
@@ -335,7 +333,12 @@ input:focus-visible,
   border-radius: 45px;
   background: #fff;
   color: var(--ink);
+  user-select: none;
+}
+
+.phone-screen input {
   user-select: text;
+  -webkit-user-select: text;
 }
 
 .auth-content {

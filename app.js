@@ -94,7 +94,9 @@
   };
 
   const updateCanvas = () => {
-    world.style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom})`;
+    world.style.zoom = String(zoom);
+    world.style.left = `calc(50% - 196.5px + ${panX / zoom}px)`;
+    world.style.top = `calc(50% - 426px + ${panY / zoom}px)`;
     zoomOutput.value = `${Math.round(zoom * 100)}%`;
     zoomOutput.textContent = `${Math.round(zoom * 100)}%`;
   };
@@ -134,7 +136,8 @@
   document.querySelectorAll("[data-zoom]").forEach((button) => {
     button.addEventListener("click", () => {
       const multiplier = button.dataset.zoom === "in" ? 1.12 : 1 / 1.12;
-      zoom = Math.min(1.25, Math.max(0.35, zoom * multiplier));
+      const nextZoom = Math.min(1.25, Math.max(0.35, zoom * multiplier));
+      zoom = nextZoom;
       updateCanvas();
     });
   });

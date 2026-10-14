@@ -33,7 +33,7 @@ After the user selects User, show exactly one 393 × 852 mobile screen at a time
 - Render only the active state in the phone viewport. Do not display other screens as frames, cards, thumbnails, or neighboring canvases.
 - Keep frame labels, canvas controls, and navigation outside the mobile viewport.
 - Support canvas panning by dragging the background, and zooming in and out with visible controls. If practical, support wheel/pinch zoom without hijacking ordinary page scrolling or mobile gestures.
-- Open the user workspace at 100% zoom so the fixed mobile screen renders at native CSS pixel scale and stays crisp. Do not automatically shrink the fixed mobile screen to fit short viewports; allow users to pan and zoom as needed.
+- Open the user workspace at 100% zoom so the fixed mobile screen renders at native CSS pixel scale and stays crisp. Use browser-native CSS zoom rather than transform scaling for magnification, to avoid blurring text and controls. Do not automatically shrink the fixed mobile screen to fit short viewports; allow users to pan and zoom as needed.
 - Keep zoom centered around the pointer or canvas center, prevent accidental panning when interacting with screen controls, and provide a way to return to a useful default zoom/position.
 - Keep the canvas navigable and controls accessible by keyboard; use semantic buttons and visible focus styles.
 
