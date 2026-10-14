@@ -1,6 +1,14 @@
+# What is USAD?
+USAD and the researcher’s initiative offers significant advantages for daily commuters by offering real-time visibility into the location of mini buses, route match, seat availability, and estimated arrival times; reducing an individual’s uncertainty and unnecessary waiting. Advanced ticket purchasing and seat reservation would also streamline boarding and minimize the risk of commuters being unable to board due to a mini bus being at full capacity. Traffic-aware ETAs would allow management to plan trips around congestion or delays rather than being caught off guard by them. The system would also offer better visibility into passenger demand, informing route and schedule adjustments. On a broader level, the system would support the ongoing PUV modernization efforts by extending improvements beyond the vehicle themselves and into the overall experience of commuting.
+
+This solution aims to improve the operational process of Saraza TRD Transport Services Corp. Fleet management and deployment is a manual process for the operation of Saraza; transitioning from a manual to an automated process improves the overall fleet deployment and management. Saraza operates an ad-hoc dispatching; decisions and dispatch schedules are done unsystematically. Finances and sales monitoring are done manually, without a clear discrepancy report. Fleet deployment currently operates on a reactive basis, where vehicle assignment is strictly contingent on immediate daily functionality rather than structured, preventative maintenance schedules. Logging of bus and driver information, time in route, and discounts are recorded pen and paper.
+
+
 # USAD UI-Only Prototype
 
-Implement the USAD prototype as an interactive, UI-only experience. Before changing code, inspect the existing app structure, stack, and available assets, and read [`shadcn_components.md`](./shadcn_components.md). Follow established project patterns and reuse relevant existing components and assets. Do not add dependencies unless the current stack cannot meet the requirements.
+Implement the USAD prototype as an interactive, UI-only experience using only the vanilla web development triad: HTML, CSS, and JavaScript. Do not use frameworks, component libraries, build tools, or external dependencies. Before changing code, inspect the existing project and available assets, and reuse relevant assets.
+
+**Required design reference:** Read [`shadcn_components.md`](./shadcn_components.md) before implementation and treat it as a required source of styling and component guidance, not an optional suggestion. Apply its relevant shadcn conventions to the interface while implementing them with semantic native HTML and hand-written CSS/JavaScript. Do not install or import shadcn or any UI library. If a requested pattern is not covered by that file, follow the supplied screen reference and the project constraints rather than inventing a shadcn rule.
 
 ## Scope
 
@@ -12,7 +20,7 @@ Implement the USAD prototype as an interactive, UI-only experience. Before chang
 - Use the supplied reference image as the visual guide for the three mobile screens. Preserve its clean, restrained, white-screen design, generous whitespace, rounded controls, and centered composition.
 - Brand green: `#2FD9A8`. Primary text: `#2C2C2C`. Use legible, muted neutrals for secondary text and borders, and a clear red treatment for login errors.
 - Use **SF Pro Display** where available, with a sensible system sans-serif fallback. Do not fetch or add a font dependency just for this prototype.
-- Treat **393 × 852 CSS pixels** as the target mobile viewport for each user screen. Keep content usable on smaller screens and avoid clipping on taller or shorter viewports.
+- Treat **393 × 852 CSS pixels** as the fixed target viewport for each mobile screen, matching the reference image. These are prototype frames on a canvas, not responsive pages: preserve the device-frame dimensions while the canvas itself is zoomed and panned.
 - Inspect `assets/` before recreating any illustrations or brand artwork; reuse suitable existing assets.
 
 ## Prototype canvas
@@ -22,13 +30,12 @@ Present the screens in a draggable, zoomable prototype workspace rather than mak
 - Place the role-choice entry and the three user-flow states as distinct, clearly identifiable frames. Keep the mobile content within its 393 × 852 viewport; any frame labels or canvas controls belong outside the mobile viewport.
 - Support canvas panning by dragging the background, and zooming in and out with visible controls. If practical, support wheel/pinch zoom without hijacking ordinary page scrolling or mobile gestures.
 - Keep zoom centered around the pointer or canvas center, prevent accidental panning when interacting with screen controls, and provide a way to return to a useful default zoom/position.
-- Keep the canvas navigable and the controls accessible by keyboard; use semantic buttons and visible focus styles.
-- the protoype shouldnt be responsive as we already have a zoom-in/out feature.
+- Keep the canvas navigable and controls accessible by keyboard; use semantic buttons and visible focus styles.
 
 ## Implementation and validation
 
-1. Inspect the existing app and available assets; read [`shadcn_components.md`](./shadcn_components.md) before choosing components.
-2. Implement the scoped prototype using the current stack and conventions. Keep UI state local and make every in-scope choice and control produce an appropriate UI response.
+1. Inspect the existing project and available assets; read [`shadcn_components.md`](./shadcn_components.md) and apply its relevant styling/component guidance.
+2. Implement the scoped prototype with plain HTML, CSS, and JavaScript only, translating the applicable guidance into native elements and CSS. Keep UI state local and make every in-scope choice and control produce an appropriate UI response.
 3. Validate the project with its existing focused build, type-check, lint, or tests. Check the initial role choice, each of the three mobile states, and canvas pan/zoom behavior at the target viewport.
 4. Keep changes limited to this prototype. Report what was implemented and which validation commands passed or could not be run.
 5. Some of the assets (if provided) are in ./assets/3d-images
