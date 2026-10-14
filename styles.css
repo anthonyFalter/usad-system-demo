@@ -9,7 +9,8 @@
   --ink: #2c2c2c;
   --muted: #777;
   --border: #e5e7eb;
-  --error: #d94242;
+  --error: #e63238;
+  --error-outline: rgb(255 0 0 / 40%);
 }
 
 * {
@@ -420,6 +421,15 @@ input:focus-visible,
   box-shadow: 0 0 0 3px rgba(47, 217, 168, 0.16);
 }
 
+.field-error {
+  color: var(--error);
+  font-size: 11px;
+}
+
+.form-field input[aria-invalid="true"] {
+  border-color: var(--error-outline);
+}
+
 .is-error .form-field {
   gap: 7px;
   margin-bottom: 14px;
@@ -427,13 +437,13 @@ input:focus-visible,
 
 .is-error .form-field label,
 .is-error .forgot-link {
-  color: #c33c3c;
+  color: var(--error);
 }
 
 .is-error .form-field input {
-  border-color: #ed7777;
+  border-color: var(--error-outline);
   background: #fffafa;
-  color: #b64040;
+  color: var(--error);
 }
 
 .form-alert {
@@ -442,10 +452,10 @@ input:focus-visible,
   place-items: center;
   margin: -2px 0 18px;
   padding: 8px;
-  border: 1px solid #ef8c8c;
+  border: 1px solid var(--error-outline);
   border-radius: 7px;
   background: #ffe7e7;
-  color: #a72c2c;
+  color: var(--error);
   font-size: 12px;
 }
 
@@ -532,8 +542,8 @@ input:focus-visible,
 }
 
 .social-button svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .register-copy {
@@ -546,6 +556,13 @@ input:focus-visible,
 
 .register-copy .text-link {
   font-size: inherit;
+}
+
+.text-link.service-link {
+  align-self: center;
+  margin-top: 6px;
+  color: var(--brand);
+  font-size: 11px;
 }
 
 .interaction-message {

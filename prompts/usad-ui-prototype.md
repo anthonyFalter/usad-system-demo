@@ -20,7 +20,11 @@ Implement the USAD prototype as an interactive, UI-only experience using only th
 
 - Use the supplied reference image as the visual guide for the three mobile screens. Preserve its clean, restrained, white-screen design, generous whitespace, rounded controls, and centered composition.
 - Brand green: `#2FD9A8`. Primary text: `#2C2C2C`. Use legible, muted neutrals for secondary text and borders, and a clear red treatment for login errors.
+- In the invalid-login state, use `#FF0000` at 40% opacity for error outlines and `#E63238` for error text.
 - Match the reference's compact “Forgot password?” link: approximately 11px and brand green `#2FD9A8`, not body/button-sized dark green text.
+- Keep the “Having trouble? View service status” action compact (approximately 11px), brand green `#2FD9A8`, and centered beneath the registration line.
+- Use “Enter Email/username” and “Enter password” as empty-field placeholders. Use a password input so masking bullets appear only after the user types a password.
+- Use correctly recognizable Google, Facebook, and Apple marks in the same muted gray, centered and optically balanced to a consistent visual size in the OAuth buttons. Facebook should be a white lowercase “f” in a solid gray circle, matching the supplied icon reference.
 - Use **SF Pro Display** where available, with a sensible system sans-serif fallback. Do not fetch or add a font dependency just for this prototype.
 - Treat **393 × 852 CSS pixels** as the fixed target viewport for each mobile screen, matching the reference image. These are prototype frames on a canvas, not responsive pages: preserve the device-frame dimensions while the canvas itself is zoomed and panned.
 - Inspect `assets/` before recreating any illustrations or brand artwork; reuse suitable existing assets.
@@ -29,7 +33,7 @@ Implement the USAD prototype as an interactive, UI-only experience using only th
 
 After the user selects User, show exactly one 393 × 852 mobile screen at a time in a draggable, zoomable workspace. This is an interactive prototype, not a wireframe, storyboard, or canvas of side-by-side screens.
 
-- Start on the Login screen. Submitting Login transitions the same phone viewport to the invalid-credentials error state; the service-status action transitions it to the backend-error state. Provide a way back to Login from the backend-error state.
+- Start on the Login screen. Validate that the email is non-empty and uses a valid email format before showing the invalid-credentials state. For an empty or malformed email, stay on Login and show an inline validation error. For a valid email, submitting Login transitions the same phone viewport to the invalid-credentials state; the service-status action transitions it to the backend-error state. Provide a way back to Login from the backend-error state.
 - Render only the active state in the phone viewport. Do not display other screens as frames, cards, thumbnails, or neighboring canvases.
 - Keep frame labels, canvas controls, and navigation outside the mobile viewport.
 - Support canvas panning by dragging the background, and zooming in and out with visible controls. If practical, support wheel/pinch zoom without hijacking ordinary page scrolling or mobile gestures.

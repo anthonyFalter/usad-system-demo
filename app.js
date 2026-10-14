@@ -24,13 +24,13 @@
   const socialButtons = `
     <div class="social-buttons" aria-label="Other sign-in options">
       <button class="social-button" type="button" aria-label="Continue with Google" data-info="Google sign-in is not connected in this prototype.">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.35 12.22c0-.71-.06-1.39-.18-2.05H12v3.88h5.23a4.47 4.47 0 0 1-1.94 2.93v2.43h3.14c1.84-1.7 2.92-4.2 2.92-7.19ZM12 21.75c2.63 0 4.84-.87 6.45-2.34l-3.14-2.43c-.87.58-1.98.93-3.31.93-2.55 0-4.72-1.72-5.5-4.04H3.25v2.5A9.75 9.75 0 0 0 12 21.75Z"/><path fill="currentColor" d="M6.5 13.87a5.87 5.87 0 0 1 0-3.74v-2.5H3.25a9.75 9.75 0 0 0 0 8.74l3.25-2.5Z"/><path fill="currentColor" d="M12 6.1c1.43 0 2.71.49 3.72 1.47l2.79-2.79C16.84 3.2 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.75 5.38l3.25 2.5C7.28 7.82 9.45 6.1 12 6.1Z"/></svg>
+        <svg class="oauth-icon oauth-google" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.35 12.22c0-.71-.06-1.39-.18-2.05H12v3.88h5.23a4.47 4.47 0 0 1-1.94 2.93v2.43h3.14c1.84-1.7 2.92-4.2 2.92-7.19ZM12 21.75c2.63 0 4.84-.87 6.45-2.34l-3.14-2.43c-.87.58-1.98.93-3.31.93-2.55 0-4.72-1.72-5.5-4.04H3.25v2.5A9.75 9.75 0 0 0 12 21.75Z"/><path fill="currentColor" d="M6.5 13.87a5.87 5.87 0 0 1 0-3.74v-2.5H3.25a9.75 9.75 0 0 0 0 8.74l3.25-2.5Z"/><path fill="currentColor" d="M12 6.1c1.43 0 2.71.49 3.72 1.47l2.79-2.79C16.84 3.2 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.75 5.38l3.25 2.5C7.28 7.82 9.45 6.1 12 6.1Z"/></svg>
       </button>
       <button class="social-button" type="button" aria-label="Continue with Facebook" data-info="Facebook sign-in is not connected in this prototype.">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.25A9.75 9.75 0 1 0 13.43 21.65v-6.81h2.28l.34-2.66h-2.62v-1.7c0-.77.22-1.3 1.31-1.3h1.4V6.8c-.24-.03-1.06-.1-2.02-.1-2 0-3.37 1.22-3.37 3.46v2.02H8.49v2.66h2.26v6.84A9.75 9.75 0 0 0 12 2.25Z"/></svg>
+        <svg class="oauth-icon oauth-facebook" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path fill="#fff" d="M13.45 20v-7.25h2.44l.37-2.83h-2.81V8.11c0-.82.23-1.38 1.4-1.38h1.5V4.2c-.26-.04-1.2-.12-2.29-.12-2.26 0-3.81 1.38-3.81 3.92v1.92H7.7v2.83h2.55V20h3.2Z"/></svg>
       </button>
       <button class="social-button" type="button" aria-label="Continue with Apple" data-info="Apple sign-in is not connected in this prototype.">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.37 12.63c.02 2.18 1.91 2.9 1.93 2.91-.02.05-.3 1.04-.98 2.06-.6.89-1.23 1.77-2.22 1.79-.97.02-1.28-.58-2.39-.58-1.11 0-1.46.56-2.38.6-.95.03-1.67-.96-2.28-1.85-1.24-1.8-2.18-5.08-.91-7.3.63-1.1 1.75-1.8 2.97-1.82.93-.02 1.8.63 2.38.63.57 0 1.65-.78 2.78-.66.47.02 1.8.19 2.65 1.43-.07.04-1.58.92-1.55 2.79Zm-1.83-6.02c.5-.61.84-1.46.75-2.31-.73.03-1.61.49-2.13 1.09-.47.54-.89 1.4-.78 2.23.81.06 1.65-.41 2.16-1.01Z"/></svg>
+        <svg class="oauth-icon oauth-apple" viewBox="5 2 14 20" aria-hidden="true"><path fill="currentColor" d="M16.37 12.63c.02 2.18 1.91 2.9 1.93 2.91-.02.05-.3 1.04-.98 2.06-.6.89-1.23 1.77-2.22 1.79-.97.02-1.28-.58-2.39-.58-1.11 0-1.46.56-2.38.6-.95.03-1.67-.96-2.28-1.85-1.24-1.8-2.18-5.08-.91-7.3.63-1.1 1.75-1.8 2.97-1.82.93-.02 1.8.63 2.38.63.57 0 1.65-.78 2.78-.66.47.02 1.8.19 2.65 1.43-.07.04-1.58.92-1.55 2.79Zm-1.83-6.02c.5-.61.84-1.46.75-2.31-.73.03-1.61.49-2.13 1.09-.47.54-.89 1.4-.78 2.23.81.06 1.65-.41 2.16-1.01Z"/></svg>
       </button>
     </div>`;
 
@@ -50,11 +50,12 @@
         ${showError ? '<p class="form-alert" role="alert" tabindex="-1">Invalid Email or Password</p>' : ""}
         <div class="form-field">
           <label for="login-email">Email</label>
-          <input id="login-email" name="email" type="email" placeholder="jockypyth onking@edu.phd.engr.com" autocomplete="email"${showError ? ' value="jockypyth onking@edu.phd.engr.com" aria-invalid="true"' : ""}>
+          <input id="login-email" name="email" type="email" placeholder="Enter Email/username" autocomplete="email" aria-describedby="email-error"${showError ? ' aria-invalid="true"' : ""}>
+          <span class="field-error" id="email-error" role="alert" hidden>Enter a valid email address.</span>
         </div>
         <div class="form-field">
           <label for="login-password">Password</label>
-          <input id="login-password" name="password" type="password" placeholder="••••••••••" autocomplete="current-password"${showError ? ' value="password123" aria-invalid="true"' : ""}>
+          <input id="login-password" name="password" type="password" placeholder="Enter password" autocomplete="current-password"${showError ? ' aria-invalid="true"' : ""}>
         </div>
         <button class="text-link forgot-link" type="button" data-info="Password recovery is not connected in this prototype.">Forgot password?</button>
         <button class="login-button" type="submit">Login</button>
@@ -205,8 +206,35 @@
   screen.addEventListener("submit", (event) => {
     if (!event.target.matches("[data-login-form]")) return;
     event.preventDefault();
+    const email = screen.querySelector("#login-email");
+    const emailError = screen.querySelector("#email-error");
+    if (!email || !emailError) {
+      throw new Error("USAD login could not validate the email: email field or error message is missing.");
+    }
+    if (!email.value.trim() || !email.validity.valid) {
+      email.setAttribute("aria-invalid", "true");
+      emailError.hidden = false;
+      email.focus();
+      return;
+    }
+    const submittedEmail = email.value;
+    const submittedPassword = screen.querySelector("#login-password")?.value ?? "";
     renderScreen("login-error");
+    const errorEmail = screen.querySelector("#login-email");
+    const errorPassword = screen.querySelector("#login-password");
+    if (!errorEmail || !errorPassword) {
+      throw new Error("USAD login could not preserve the submitted values in the error state.");
+    }
+    errorEmail.value = submittedEmail;
+    errorPassword.value = submittedPassword;
     screen.querySelector(".form-alert")?.focus({ preventScroll: true });
+  });
+
+  screen.addEventListener("input", (event) => {
+    if (!event.target.matches("#login-email")) return;
+    const emailError = screen.querySelector("#email-error");
+    if (emailError) emailError.hidden = true;
+    event.target.removeAttribute("aria-invalid");
   });
 
   screen.addEventListener("click", (event) => {
