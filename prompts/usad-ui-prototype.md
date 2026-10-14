@@ -13,22 +13,27 @@ Implement the USAD prototype as an interactive, UI-only experience using only th
 ## Scope
 
 - On the initial visit, show the question **“Which one?”** and two clear, clickable choices: **Admin** and **User**.
+- Show the role choice as its own page before either system opens; it is not a frame on the prototype canvas.
 - The User choice opens the mobile user flow described below.
 
 ## Visual direction
 
 - Use the supplied reference image as the visual guide for the three mobile screens. Preserve its clean, restrained, white-screen design, generous whitespace, rounded controls, and centered composition.
 - Brand green: `#2FD9A8`. Primary text: `#2C2C2C`. Use legible, muted neutrals for secondary text and borders, and a clear red treatment for login errors.
+- Match the reference's compact “Forgot password?” link: approximately 11px and brand green `#2FD9A8`, not body/button-sized dark green text.
 - Use **SF Pro Display** where available, with a sensible system sans-serif fallback. Do not fetch or add a font dependency just for this prototype.
 - Treat **393 × 852 CSS pixels** as the fixed target viewport for each mobile screen, matching the reference image. These are prototype frames on a canvas, not responsive pages: preserve the device-frame dimensions while the canvas itself is zoomed and panned.
 - Inspect `assets/` before recreating any illustrations or brand artwork; reuse suitable existing assets.
 
-## Prototype canvas
+## Single-screen interaction prototype
 
-Present the screens in a draggable, zoomable prototype workspace rather than making the mobile screens themselves draggable.
+After the user selects User, show exactly one 393 × 852 mobile screen at a time in a draggable, zoomable workspace. This is an interactive prototype, not a wireframe, storyboard, or canvas of side-by-side screens.
 
-- Place the role-choice entry and the three user-flow states as distinct, clearly identifiable frames. Keep the mobile content within its 393 × 852 viewport; any frame labels or canvas controls belong outside the mobile viewport.
+- Start on the Login screen. Submitting Login transitions the same phone viewport to the invalid-credentials error state; the service-status action transitions it to the backend-error state. Provide a way back to Login from the backend-error state.
+- Render only the active state in the phone viewport. Do not display other screens as frames, cards, thumbnails, or neighboring canvases.
+- Keep frame labels, canvas controls, and navigation outside the mobile viewport.
 - Support canvas panning by dragging the background, and zooming in and out with visible controls. If practical, support wheel/pinch zoom without hijacking ordinary page scrolling or mobile gestures.
+- Open the user workspace at 100% zoom so the fixed mobile screen renders at native CSS pixel scale and stays crisp. Do not automatically shrink the fixed mobile screen to fit short viewports; allow users to pan and zoom as needed.
 - Keep zoom centered around the pointer or canvas center, prevent accidental panning when interacting with screen controls, and provide a way to return to a useful default zoom/position.
 - Keep the canvas navigable and controls accessible by keyboard; use semantic buttons and visible focus styles.
 
@@ -36,7 +41,7 @@ Present the screens in a draggable, zoomable prototype workspace rather than mak
 
 1. Inspect the existing project and available assets; read [`shadcn_components.md`](./shadcn_components.md) and apply its relevant styling/component guidance.
 2. Implement the scoped prototype with plain HTML, CSS, and JavaScript only, translating the applicable guidance into native elements and CSS. Keep UI state local and make every in-scope choice and control produce an appropriate UI response.
-3. Validate the project with its existing focused build, type-check, lint, or tests. Check the initial role choice, each of the three mobile states, and canvas pan/zoom behavior at the target viewport.
+3. Validate the role choice, each reachable user state rendered one at a time, and canvas pan/zoom behavior at the target viewport.
 4. Keep changes limited to this prototype. Report what was implemented and which validation commands passed or could not be run.
 5. Some of the assets (if provided) are in ./assets/3d-images
 6. Avoid using Emojis/common AI generated stuffs and copy exactly what the user sent.
