@@ -1460,7 +1460,7 @@ input:focus-visible,
 }
 
 .home-stats strong { align-self: end; font-size: 13px; line-height: 1.1; }
-.home-stats span { align-self: start; color: #65716b; font-size: 10px; }
+.home-stats span { align-self: start; color: #4f5d56; font-size: 11px; }
 
 .vehicle-section {
   margin: 13px 18px 12px;
@@ -1474,7 +1474,7 @@ input:focus-visible,
 }
 
 .section-heading h2 { margin: 0; font-size: 14px; letter-spacing: -.02em; }
-.section-heading > span { display: flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 12px; background: #d9f4eb; color: #167657; font-size: 10px; font-weight: 600; }
+.section-heading > span { display: flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 12px; background: #d9f4eb; color: #126346; font-size: 11px; font-weight: 600; }
 .section-heading > span i { width: 5px; height: 5px; border-radius: 50%; background: #147c5b; }
 
 .vehicle-row {
@@ -1516,11 +1516,11 @@ input:focus-visible,
 .vehicle-logo.ochre { background: #a46a08; }
 .vehicle-info { min-width: 0; flex: 1; }
 .vehicle-info strong { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.vehicle-info small { display: block; margin-top: 4px; overflow: hidden; color: #596660; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.vehicle-info small { display: block; margin-top: 4px; overflow: hidden; color: #46534d; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .vehicle-eta { flex: 0 0 auto; color: #188b68; font-size: 12px; font-weight: 650; text-align: right; }
-.vehicle-eta small { display: block; margin-top: 3px; color: #596660; font-size: 10px; font-weight: 400; }
+.vehicle-eta small { display: block; margin-top: 3px; color: #46534d; font-size: 11px; font-weight: 400; }
 .vehicle-eta.soon { color: #a66b06; }
-.home-demo-note { margin: 10px 0 14px; color: #596660; font-size: 10px; text-align: center; }
+.home-demo-note { margin: 10px 0 14px; color: #46534d; font-size: 11px; text-align: center; }
 
 .app-navigation {
   position: absolute;
@@ -1551,7 +1551,7 @@ input:focus-visible,
   background: transparent;
   color: #929a96;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .nav-item svg {
@@ -1583,7 +1583,7 @@ input:focus-visible,
 }
 
 .nav-book svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
-.prototype-stamp { position: absolute; bottom: 68px; left: 0; width: 100%; margin: 0; color: #596660; font-size: 10px; text-align: center; pointer-events: none; }
+.prototype-stamp { position: absolute; bottom: 68px; left: 0; width: 100%; margin: 0; color: #46534d; font-size: 11px; text-align: center; pointer-events: none; }
 .home-scroll + .app-navigation + .prototype-stamp { background: rgba(255,255,255,.82); }
 
 .modal-scrim {
