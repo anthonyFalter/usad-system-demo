@@ -54,6 +54,7 @@
   ];
   let notificationFilter = "all";
   let welcomeTimeout = 0;
+  let bottomSheetCloseTimeout = 0;
   let activeFaqCategory = "all";
   let tripData = {
     origin: "Robinsons Place Malolos",
@@ -300,7 +301,6 @@
       <div class="modal-scrim">
         <form class="bottom-sheet quick-book-sheet" data-quick-book>
           <span class="sheet-handle"></span>
-          <button class="modal-close" type="button" aria-label="Close" data-screen="home">×</button>
           <h2>Quick Book</h2><p class="sheet-subtitle">Find and reserve a seat in seconds</p>
           <div class="route-fields">
             <label><span class="route-dot origin-dot"></span><input name="origin" aria-label="Starting point" value="${escapeHtml(tripData.origin)}" required></label>
@@ -694,7 +694,6 @@
         <div class="modal-scrim bus-popup-scrim" data-bus-popup hidden>
           <section class="bottom-sheet quick-book-sheet bus-capacity-popup" role="dialog" aria-modal="true" aria-labelledby="bus-popup-title" tabindex="-1">
             <span class="sheet-handle"></span>
-            <button class="modal-close" type="button" data-bus-popup-close aria-label="Close bus details">×</button>
             <h2 id="bus-popup-title" data-bus-name>Bus 01</h2>
             <p class="sheet-subtitle" data-bus-route>Malolos → Trinoma</p>
             <div class="route-fields">
@@ -842,6 +841,8 @@
   const renderScreen = (state, options = {}) => {
     if (welcomeTimeout) window.clearTimeout(welcomeTimeout);
     welcomeTimeout = 0;
+    if (bottomSheetCloseTimeout) window.clearTimeout(bottomSheetCloseTimeout);
+    bottomSheetCloseTimeout = 0;
     stopLiveMapSimulation();
     activeState = state;
     liveMapDrag = null;
@@ -901,6 +902,26 @@
           if (activeState === "register-success") renderScreen("home");
         }, 400);
       }, 1600);
+    }
+  };
+
+  const closeBottomSheet = (overlay, onClose) => {
+    const sheet = overlay.querySelector(".bottom-sheet");
+    if (!sheet || overlay.hidden || sheet.classList.contains("is-closing")) return;
+    overlay.classList.add("is-closing");
+    sheet.classList.add("is-closing");
+    const finishClose = () => {
+      bottomSheetCloseTimeout = 0;
+      if (!overlay.isConnected) return;
+      overlay.hidden = true;
+      overlay.classList.remove("is-closing");
+      sheet.classList.remove("is-closing");
+      onClose?.();
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      finishClose();
+    } else {
+      bottomSheetCloseTimeout = window.setTimeout(finishClose, 180);
     }
   };
 
@@ -1054,6 +1075,11 @@
   }, { passive: false });
 
   screen.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && activeState === "quick-book") {
+      const quickBookOverlay = screen.querySelector(".modal-scrim");
+      if (quickBookOverlay) closeBottomSheet(quickBookOverlay, () => renderScreen("home"));
+      return;
+    }
     const busMarker = event.target.closest("[data-sim-bus]");
     if (busMarker && (event.key === "Enter" || event.key === " ")) {
       event.preventDefault();
@@ -1063,8 +1089,7 @@
     if (event.key === "Escape" && activeState === "live-map") {
       const popup = screen.querySelector("[data-bus-popup]:not([hidden])");
       if (popup) {
-        popup.hidden = true;
-        screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus();
+        closeBottomSheet(popup, () => screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus());
         return;
       }
     }
@@ -1237,12 +1262,22 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const quickBookOverlay = event.target.closest(".modal-scrim");
+    if (activeState === "quick-book" && quickBookOverlay && event.target === quickBookOverlay) {
+      closeBottomSheet(quickBookOverlay, () => renderScreen("home"));
+      return;
+    }
+
     const busMarker = event.target.closest("[data-sim-bus]");
     if (busMarker) {
       selectedLiveBus = Number(busMarker.dataset.simBus);
       const bus = liveBusDetails[selectedLiveBus];
       const popup = screen.querySelector("[data-bus-popup]");
       if (!bus || !popup) return;
+      if (bottomSheetCloseTimeout) window.clearTimeout(bottomSheetCloseTimeout);
+      bottomSheetCloseTimeout = 0;
+      popup.classList.remove("is-closing");
+      popup.querySelector(".bottom-sheet")?.classList.remove("is-closing");
       popup.querySelector("[data-bus-name]").textContent = bus.name;
       popup.querySelector("[data-bus-route]").textContent = bus.route;
       popup.querySelector("[data-bus-seats]").textContent = String(bus.seats);
@@ -1252,14 +1287,13 @@
       popup.querySelector("[data-bus-status]").value = bus.status;
       popup.querySelector("[data-bus-seat-layout]").innerHTML = seatLayoutMarkup(bus);
       popup.hidden = false;
-      popup.querySelector("[data-bus-popup-close]").focus();
+      popup.querySelector(".bottom-sheet").focus();
       return;
     }
 
     const popup = event.target.closest("[data-bus-popup]");
-    if (popup && (event.target === popup || event.target.closest("[data-bus-popup-close]"))) {
-      popup.hidden = true;
-      screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus();
+    if (popup && event.target === popup) {
+      closeBottomSheet(popup, () => screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus());
       return;
     }
 
