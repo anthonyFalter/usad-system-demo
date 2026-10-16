@@ -58,6 +58,12 @@
   let tripHistoryFilter = "all";
   let tripHistoryQuery = "";
   let selectedHistoryTripId = "";
+  let discountVerificationType = "student";
+  let discountVerificationStep = 1;
+  let discountVerificationFiles = { front: null, back: null };
+  let discountVerificationConfirmed = false;
+  let discountVerificationStatus = "unverified";
+  let discountVerificationMessage = "";
   let tripHistory = [
     { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Barangka, Malolos", destination: "Trinoma Landmark Bus Bay", destinationDetail: "Via North Luzon Expy (NLEX)", fare: 80, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true, receiptLabel: "E-Ticket & Receipt", showRateAction: true, rebookLabel: "Rebook" },
     { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: "Trinoma EDSA Terminal", originDetail: "North Avenue P2P Lounge", destination: "Robinsons Place Malolos", destinationDetail: "Express via Tabang Exit", fare: 80, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true, receiptLabel: "Receipt", rebookLabel: "Rebook Route" },
@@ -324,6 +330,70 @@
       </div>
       ${navigation("home")}
     </div>`;
+
+  const accountVerificationScreen = () => {
+    const concessionTypes = [
+      { id: "student", label: "Student", detail: "20% Discount", icon: '<path d="M3 9 12 4l9 5-9 5-9-5Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5m3-2v6"/>' },
+      { id: "senior", label: "Senior", detail: "60+ y/o", icon: '<circle cx="12" cy="7" r="3"/><path d="M6 21v-2a6 6 0 0 1 12 0v2m-2-4 4 4m-4 0h4"/>' },
+      { id: "pwd", label: "PWD", detail: "Valid ID", icon: '<circle cx="12" cy="5" r="2"/><path d="M10 9h5l2 4h-4l-1 3m-2-7-2 5h4l2 4m-3-2-3 4"/>' },
+    ];
+    const stepLabel = (step, label) => `<span class="verification-step${discountVerificationStep === step ? " is-current" : discountVerificationStep > step ? " is-complete" : ""}"${discountVerificationStep === step ? ' aria-current="step"' : ""}><i>${discountVerificationStep > step ? "✓" : step}</i><strong>${label}</strong></span>`;
+    const uploadCard = (side, title) => {
+      const file = discountVerificationFiles[side];
+      const preview = file?.previewUrl
+        ? `<img class="verification-upload-preview" src="${escapeHtml(file.previewUrl)}" alt="${side === "front" ? "Front" : "Back"} of uploaded discount ID">`
+        : `<span class="verification-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3"/></svg></span>`;
+      return `<article class="verification-upload-card${file ? " has-file" : ""}">
+        ${preview}
+        <strong>${file ? escapeHtml(file.name) : title}</strong>
+        <small>${file ? file.type === "application/pdf" ? "PDF added" : "Image added" : "Ensure details are free of glares, reflections or blurriness."}</small>
+        <div class="verification-upload-actions">
+          <button type="button" data-trigger-id-upload="${side}" data-upload-kind="camera" aria-label="Take photo of ${side} of ID" title="Take photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3"/></svg></button>
+          <button type="button" data-trigger-id-upload="${side}" data-upload-kind="file" aria-label="Choose ${side} ID file" title="Choose file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6l2 2h8v12H4zM12 10v6m-3-3 3-3 3 3"/></svg></button>
+          ${file ? `<button type="button" class="verification-remove-upload" data-remove-id-upload="${side}">Remove</button>` : ""}
+          <input class="verification-file-input" type="file" accept="image/jpeg,image/png,application/pdf" capture="environment" data-discount-id-upload="${side}" data-upload-kind="camera" aria-hidden="true" tabindex="-1">
+          <input class="verification-file-input" type="file" accept="image/jpeg,image/png,application/pdf" data-discount-id-upload="${side}" data-upload-kind="file" aria-hidden="true" tabindex="-1">
+        </div>
+      </article>`;
+    };
+    const stepContent = discountVerificationStep === 1
+      ? `<div class="verification-section-label"><strong>Select Concession Type</strong><span>${discountVerificationType === "student" ? "20% Discount" : "Discount ID"}</span></div>
+          <div class="verification-types" role="group" aria-label="Concession type">
+            ${concessionTypes.map((type) => `<button type="button" class="verification-type${discountVerificationType === type.id ? " is-selected" : ""}" data-concession-type="${type.id}" aria-pressed="${discountVerificationType === type.id}"><span class="verification-type-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${type.icon}</svg></span><strong>${type.label}</strong><small>${type.id === discountVerificationType ? "Selected" : type.detail}</small></button>`).join("")}
+          </div>
+          <div class="verification-section-label verification-upload-heading"><strong>Document Upload</strong><span>JPG, PNG or PDF</span></div>
+          <div class="verification-upload-list">${uploadCard("front", "Upload Front of School ID")}${uploadCard("back", "Upload Back of School ID")}</div>
+          <p class="verification-note">Automated ID verification usually takes 1–2 minutes once submitted.</p>
+          <p class="verification-message" data-verification-message role="status" aria-live="polite">${escapeHtml(discountVerificationMessage || "Upload both sides of your ID to continue.")}</p>
+          <button class="verification-primary" type="button" data-verification-action="review"${discountVerificationFiles.front && discountVerificationFiles.back ? "" : " disabled"}>Review Documents <span aria-hidden="true">→</span></button>`
+      : discountVerificationStep === 2
+      ? `<section class="verification-review" aria-labelledby="verification-review-title">
+          <h2 id="verification-review-title">Review your documents</h2>
+          <p>Check that your concession type and ID images are correct.</p>
+          <div class="verification-review-type"><strong>Concession Type</strong><span>${concessionTypes.find((type) => type.id === discountVerificationType)?.label}</span></div>
+          <div class="verification-review-files">${["front", "back"].map((side) => `<div><strong>${side === "front" ? "Front" : "Back"} of ID</strong>${discountVerificationFiles[side]?.previewUrl ? `<img src="${escapeHtml(discountVerificationFiles[side].previewUrl)}" alt="${side} ID preview">` : `<span class="verification-file-name">${escapeHtml(discountVerificationFiles[side]?.name || "ID document")}</span>`}</div>`).join("")}</div>
+          <label class="verification-confirm"><input type="checkbox" data-verification-confirmed${discountVerificationConfirmed ? " checked" : ""}><span>I confirm these details are clear and belong to me.</span></label>
+          <p class="verification-message" data-verification-message role="status" aria-live="polite">${escapeHtml(discountVerificationMessage)}</p>
+          <div class="verification-review-actions"><button type="button" class="verification-secondary" data-verification-action="edit">Edit Documents</button><button type="button" class="verification-primary" data-verification-action="submit"${discountVerificationConfirmed ? "" : " disabled"}>Submit for Verification</button></div>
+        </section>`
+      : `<section class="verification-complete" aria-labelledby="verification-complete-title">
+          <span class="verification-complete-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
+          <h2 id="verification-complete-title">Request ready</h2>
+          <p>Your ${concessionTypes.find((type) => type.id === discountVerificationType)?.label} ID is marked <strong>Pending</strong> in this prototype.</p>
+          <p>Documents are not sent to a live identity verification service.</p>
+          <button class="verification-primary" type="button" data-screen="profile">Back to Account</button>
+        </section>`;
+    return `<div class="commuter-app verification-app">
+      <div class="settings-scroll verification-scroll">
+        <header class="settings-header verify-account-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="profile" aria-label="Back to Account Profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>Verify Discount ID</h1></div></header>
+        <main class="discount-verification-content">
+          <div class="verification-stepper" role="list" aria-label="Verification progress">${stepLabel(1, "Upload ID")}<span aria-hidden="true"></span>${stepLabel(2, "Review")}<span aria-hidden="true"></span>${stepLabel(3, "Verify")}</div>
+          ${stepContent}
+        </main>
+      </div>
+      ${navigation("profile")}
+    </div>`;
+  };
 
   const quickBookScreen = () => `
     <div class="commuter-app has-modal">
@@ -680,9 +750,9 @@
           ? `<div class="account-page account-profile-page">
               <section class="profile-user-card" aria-label="Account profile">
                 <span class="account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
-                <div class="profile-user-copy"><strong>${escapeHtml(registrationData.username || "JockyThePythonKing")}</strong><span>${escapeHtml([accountProfile.firstName, accountProfile.middleName, accountProfile.lastName].filter(Boolean).join(" "))}</span><span class="profile-status-badge">Unverified</span></div>
+                <div class="profile-user-copy"><strong>${escapeHtml(registrationData.username || "JockyThePythonKing")}</strong><span>${escapeHtml([accountProfile.firstName, accountProfile.middleName, accountProfile.lastName].filter(Boolean).join(" "))}</span><span class="profile-status-badge${discountVerificationStatus === "pending" ? " is-pending" : ""}">${discountVerificationStatus === "pending" ? "Pending" : "Unverified"}</span></div>
               </section>
-              <button class="profile-verify-button" type="button" data-info="Discount ID verification is a prototype-only flow.">Verify Account <span aria-hidden="true">→</span></button>
+              <button class="profile-verify-button" type="button" data-screen="verify-account">Verify Account <span aria-hidden="true">→</span></button>
               <section class="profile-menu-card" aria-labelledby="profile-security-heading">
                 <h2 id="profile-security-heading">Account Security</h2>
                 <details class="profile-detail-inline">
@@ -1032,6 +1102,8 @@
       screen.innerHTML = bookingConfirmationScreen();
     } else if (state === "booking-confirmed") {
       screen.innerHTML = bookingConfirmedScreen();
+    } else if (state === "verify-account") {
+      screen.innerHTML = accountVerificationScreen();
     } else if (state === "live-seat-overview") {
       screen.innerHTML = liveSeatOverviewScreen();
     } else if (state === "live-seat-detail") {
@@ -1061,7 +1133,7 @@
     } else {
       throw new Error(`Unknown USAD prototype screen: ${state}`);
     }
-    if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "live-map", "live-seat-overview", "live-seat-detail", "tickets", "profile", "faq", "notifications"].includes(state)) {
+    if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "verify-account", "live-map", "live-seat-overview", "live-seat-detail", "tickets", "profile", "faq", "notifications"].includes(state)) {
       screen.firstElementChild?.classList.add("screen-enter");
     }
     enforceMinimumFontSize();
@@ -1506,6 +1578,29 @@
       selectedBusSeatId = event.target.value;
     }
 
+    if (event.target.matches("[data-discount-id-upload]")) {
+      const file = event.target.files?.[0];
+      const side = event.target.dataset.discountIdUpload;
+      if (!file || !(side in discountVerificationFiles)) return;
+      const previousFile = discountVerificationFiles[side];
+      if (previousFile?.previewUrl) URL.revokeObjectURL(previousFile.previewUrl);
+      discountVerificationFiles[side] = {
+        name: file.name,
+        type: file.type,
+        previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+      };
+      discountVerificationMessage = "";
+      renderScreen("verify-account");
+      return;
+    }
+
+    if (event.target.matches("[data-verification-confirmed]")) {
+      discountVerificationConfirmed = event.target.checked;
+      const submitButton = screen.querySelector('[data-verification-action="submit"]');
+      if (submitButton) submitButton.disabled = !discountVerificationConfirmed;
+      return;
+    }
+
     if (event.target.matches("#terms-accepted") && event.target.checked) {
       event.target.removeAttribute("aria-invalid");
       const termsError = screen.querySelector("#terms-error");
@@ -1630,6 +1725,54 @@
         button.setAttribute("aria-pressed", String(selected));
       });
       updateFaqResults();
+      return;
+    }
+
+    const concessionType = event.target.closest("[data-concession-type]");
+    if (concessionType) {
+      discountVerificationType = concessionType.dataset.concessionType;
+      discountVerificationMessage = "";
+      renderScreen("verify-account");
+      return;
+    }
+
+    const uploadTrigger = event.target.closest("[data-trigger-id-upload]");
+    if (uploadTrigger) {
+      const input = screen.querySelector(`[data-discount-id-upload="${uploadTrigger.dataset.triggerIdUpload}"][data-upload-kind="${uploadTrigger.dataset.uploadKind}"]`);
+      input?.click();
+      return;
+    }
+
+    const removeIdUpload = event.target.closest("[data-remove-id-upload]");
+    if (removeIdUpload) {
+      const side = removeIdUpload.dataset.removeIdUpload;
+      const file = discountVerificationFiles[side];
+      if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);
+      discountVerificationFiles[side] = null;
+      discountVerificationConfirmed = false;
+      discountVerificationMessage = "";
+      renderScreen("verify-account");
+      return;
+    }
+
+    const verificationAction = event.target.closest("[data-verification-action]");
+    if (verificationAction) {
+      if (verificationAction.dataset.verificationAction === "review") {
+        if (!discountVerificationFiles.front || !discountVerificationFiles.back) return;
+        discountVerificationStep = 2;
+        discountVerificationConfirmed = false;
+      } else if (verificationAction.dataset.verificationAction === "edit") {
+        discountVerificationStep = 1;
+        discountVerificationConfirmed = false;
+      } else if (verificationAction.dataset.verificationAction === "submit") {
+        if (!discountVerificationConfirmed) return;
+        discountVerificationStep = 3;
+        discountVerificationStatus = "pending";
+      } else {
+        throw new Error(`Unknown verification action: ${verificationAction.dataset.verificationAction}`);
+      }
+      discountVerificationMessage = "";
+      renderScreen("verify-account");
       return;
     }
 
