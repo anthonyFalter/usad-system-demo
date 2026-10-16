@@ -97,6 +97,23 @@
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+  const enforceMinimumFontSize = () => {
+    [rolePage, workspacePage, screen].forEach((root) => {
+      root.querySelectorAll("*").forEach((element) => {
+        if (element.closest("svg")) return;
+        const hasText = [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+        const isTextControl = element.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea, select');
+        if (!hasText && !isTextControl) return;
+        if (Number.parseFloat(getComputedStyle(element).fontSize) < 12) element.style.fontSize = "12px";
+      });
+    });
+  };
+
+  const minimumFontSizeObserver = new MutationObserver((mutations) => {
+    if (mutations.some((mutation) => mutation.addedNodes.length)) enforceMinimumFontSize();
+  });
+  [rolePage, workspacePage, screen].forEach((root) => minimumFontSizeObserver.observe(root, { childList: true, subtree: true }));
+
   const unreadNotificationCount = () => notifications.filter((notification) => notification.unread).length;
 
   const loginScreen = (showError = false) => `
@@ -645,26 +662,12 @@
               <button type="button" data-live-map-filter="cancelled" aria-pressed="false">Cancelled (1)</button>
               <button type="button" data-live-map-filter="month" aria-pressed="false">This Month</button>
             </div>
+            <p class="live-map-filter-summary" data-live-map-filter-summary role="status" aria-live="polite">12 trips · 2 buses on this corridor</p>
           </div>
         </header>
         ${mapMarkup(false, true)}
         <aside class="live-map-legend" aria-label="Traffic flow legend"><strong>Traffic Flow</strong><span><i class="is-normal"></i>Normal Flow</span><span><i class="is-moderate"></i>Moderate</span><span><i class="is-congested"></i>Congested</span></aside>
         <div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div>
-        <section class="live-operations-panel" aria-label="Route operations summary">
-          <span class="live-operations-handle" aria-hidden="true"></span>
-          <div class="live-operations-route">
-            <div><h2>Route Malolos ⇄ Trinoma</h2><div class="live-route-badges"><span>NLEX Express</span><span class="is-normal">Normal Flow</span></div></div>
-            <div class="live-route-duration"><strong>42 mins</strong><small>Estimated</small></div>
-          </div>
-          <div class="live-route-context"><span>via Tabang Exit</span><span>Updated 1m ago</span></div>
-          <p class="live-map-filter-summary" data-live-map-filter-summary role="status" aria-live="polite">12 trips · 2 buses on this corridor</p>
-          <div class="live-operations-stats">
-            <div><h3>Terminal Demand</h3><p>Tabang Bridge <strong>118 pax</strong></p><p>Malolos Hub <strong>42 pax</strong></p></div>
-            <div><h3>Fleet Deployment</h3><p>Active on Road <strong>14 buses</strong></p><p>Dispatched Next <strong>~4 mins</strong></p></div>
-          </div>
-          <div class="live-next-departing"><span class="live-next-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10ZM7 7h10v6H7zM8 18.5v2m8-2v2"/></svg></span><div><strong>Next Departing: MLS-042</strong><small>8 available seats · Departing in 4 min</small></div><button type="button" data-action="quick-book">Reserve</button></div>
-          <p class="live-operations-disclaimer">Illustrative operations data · Not live tracking</p>
-        </section>
         <p class="map-attribution">Illustrative map · Not to scale</p>
       </div>`;
     const content = state === "notifications"
@@ -769,6 +772,18 @@
             <h2 id="bus-popup-title" data-bus-name>Bus 01</h2>
             <p class="sheet-subtitle" data-bus-route>Malolos → Trinoma</p>
             <div class="bus-popup-scroll" aria-label="Bus details and seat plan">
+            <details class="bus-route-overview">
+              <summary class="bus-route-overview-summary"><span><strong>Route Malolos ⇄ Trinoma</strong><small>42 mins · NLEX Express · Normal Flow</small></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></summary>
+              <div class="bus-route-overview-content">
+                <div class="bus-route-overview-meta"><span>via Tabang Exit</span><span>Updated 1m ago</span></div>
+                <div class="bus-route-operations">
+                  <div><strong>Terminal Demand</strong><span>Tabang Bridge <b>118 pax</b></span><span>Malolos Hub <b>42 pax</b></span></div>
+                  <div><strong>Fleet Deployment</strong><span>Active on Road <b>14 buses</b></span><span>Dispatched Next <b>~4 mins</b></span></div>
+                </div>
+                <div class="bus-next-departure"><strong data-bus-dispatch-title>Next Departure: MLS-042</strong><small data-bus-dispatch-meta>8 available seats · 3 min away</small></div>
+                <p>Illustrative operations data · Not live tracking</p>
+              </div>
+            </details>
             <div class="route-fields bus-fleet-row">
               <label><span class="route-dot origin-dot"></span><input data-bus-fleet aria-label="Bus ID" value="MLS-042" readonly></label>
             </div>
@@ -1029,6 +1044,7 @@
     if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "live-map", "live-seat-overview", "live-seat-detail", "tickets", "profile", "faq", "notifications"].includes(state)) {
       screen.firstElementChild?.classList.add("screen-enter");
     }
+    enforceMinimumFontSize();
     if (state === "register-success") {
       welcomeTimeout = window.setTimeout(() => {
         if (activeState !== "register-success") return;
@@ -1523,6 +1539,8 @@
       popup.querySelector("[data-bus-eta]").textContent = `${bus.eta} away`;
       popup.querySelector("[data-bus-fleet]").value = bus.fleetId;
       popup.querySelector("[data-bus-fare]").textContent = bus.fare;
+      popup.querySelector("[data-bus-dispatch-title]").textContent = `Next Departure: ${bus.fleetId}`;
+      popup.querySelector("[data-bus-dispatch-meta]").textContent = `${bus.seats} available ${bus.seats === 1 ? "seat" : "seats"} · ${bus.eta} away`;
       popup.querySelector("[data-bus-seat-layout]").innerHTML = busSeatPlanMarkup(bus);
       popup.querySelector("[data-seat-selection]").textContent = selectedBusSeatId ? `Seat ${selectedBusSeatId} selected` : "Select an available seat";
       popup.hidden = false;

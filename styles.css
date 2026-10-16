@@ -2035,35 +2035,29 @@ input:focus-visible,
 .live-map-legend i { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: #14a979; }
 .live-map-legend i.is-moderate { background: #ed9b22; }
 .live-map-legend i.is-congested { background: #e14e55; }
-.live-operations-panel { position: absolute; z-index: 4; right: 8px; bottom: 8px; left: 8px; display: grid; gap: 7px; max-height: 290px; overflow: hidden; padding: 8px 12px 7px; border: 1px solid rgba(30,50,42,.08); border-radius: 17px 17px 10px 10px; background: #fff; box-shadow: 0 4px 16px rgba(26,48,39,.16); color: #283630; cursor: auto; touch-action: auto; user-select: text; }
-.live-operations-handle { width: 34px; height: 4px; justify-self: center; border-radius: 99px; background: #cbd6d1; }
-.live-operations-route { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.live-operations-route h2 { margin: 0 0 5px; color: #293630; font-size: 12px; font-weight: 700; }
-.live-route-badges { display: flex; flex-wrap: wrap; gap: 5px; }
-.live-route-badges span { padding: 3px 7px; border-radius: 99px; background: #e8f6f0; color: #16815e; font-size: 8px; font-weight: 650; }
-.live-route-badges .is-normal { background: #eaf8f1; color: #11865f; }
-.live-route-duration { display: grid; gap: 2px; flex: 0 0 auto; text-align: right; }
-.live-route-duration strong { color: #0a9f72; font-size: 13px; }
-.live-route-duration small,.live-route-context span:last-child { color: #89958f; font-size: 8px; }
-.live-route-context { display: flex; justify-content: space-between; gap: 8px; color: #75817b; font-size: 8px; }
-.live-map-filter-summary { margin: 0; color: #66756e; font-size: 8px; line-height: 1.25; }
-.live-operations-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.live-operations-stats > div { display: grid; gap: 5px; min-width: 0; padding: 8px; border-radius: 9px; background: #f5f8fa; }
-.live-operations-stats h3 { display: flex; align-items: center; justify-content: space-between; margin: 0 0 1px; color: #77858e; font-size: 7px; font-weight: 700; text-transform: uppercase; }
-.live-operations-stats h3::after { width: 5px; height: 5px; border-radius: 50%; background: #20b47e; content: ""; }
-.live-operations-stats > div:first-child h3::after { background: #e14e55; }
-.live-operations-stats p { display: flex; justify-content: space-between; gap: 4px; margin: 0; color: #5d6a72; font-size: 8px; }
-.live-operations-stats p strong { color: #26352e; font-size: 8px; white-space: nowrap; }
-.live-operations-stats > div:first-child p strong { color: #d84b53; }
-.live-operations-stats > div:last-child p strong { color: #138764; }
-.live-next-departing { display: grid; min-height: 44px; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 7px; padding: 5px 7px; border: 1px solid #d6f2e5; border-radius: 10px; background: #f1fbf6; }
-.live-next-icon { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 7px; background: #0eaa78; color: #fff; }
-.live-next-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
-.live-next-departing > div { display: grid; min-width: 0; gap: 2px; }
-.live-next-departing strong { overflow: hidden; color: #2d3933; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.live-next-departing small { overflow: hidden; color: #7c8982; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
-.live-next-departing button { min-width: 66px; height: 27px; padding: 0 10px; border: 0; border-radius: 7px; background: #08aa79; color: #fff; cursor: pointer; font-size: 9px; font-weight: 700; }
-.live-operations-disclaimer { margin: 0; color: #88948e; font-size: 7px; text-align: center; }
+.live-map-filter-summary { margin: 0; color: rgba(255,255,255,.84); font-size: 8px; line-height: 1.2; }
+.bus-route-overview { margin: 0 0 9px; border: 1px solid #e2ebe6; border-radius: 9px; background: #f7faf8; }
+.bus-route-overview summary { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; cursor: pointer; list-style: none; }
+.bus-route-overview summary::-webkit-details-marker { display: none; }
+.bus-route-overview-summary > span { display: grid; min-width: 0; gap: 3px; }
+.bus-route-overview-summary strong { color: #27352e; font-size: 14px; line-height: 1.25; }
+.bus-route-overview-summary small { color: #13815e; font-size: 12px; line-height: 1.4; white-space: normal; }
+.bus-route-overview-summary svg { width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: #68786f; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; transition: transform 140ms ease; }
+.bus-route-overview[open] .bus-route-overview-summary svg { transform: rotate(180deg); }
+.bus-route-overview-content { display: grid; gap: 10px; padding: 0 10px 10px; }
+.bus-route-overview-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: #59675f; font-size: 12px; }
+.bus-route-overview-meta span:first-child,
+.bus-route-overview-meta span:nth-child(2) { padding: 4px 7px; border-radius: 99px; background: #e5f6ed; color: #12815e; font-weight: 650; }
+.bus-route-operations { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.bus-route-operations > div { display: grid; gap: 7px; min-width: 0; padding: 9px; border-radius: 8px; background: #edf2f5; }
+.bus-route-operations > div > strong { color: #697883; font-size: 12px; line-height: 1.3; text-transform: uppercase; }
+.bus-route-operations span { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: #46545c; font-size: 12px; line-height: 1.35; }
+.bus-route-operations b { color: #138764; font-size: 12px; line-height: 1.35; text-align: right; white-space: normal; }
+.bus-route-operations > div:first-child b { color: #d84b53; }
+.bus-next-departure { display: grid; gap: 4px; padding: 9px 10px; border: 1px solid #d6f2e5; border-radius: 8px; background: #eefaf4; }
+.bus-next-departure strong { color: #2d3933; font-size: 12px; line-height: 1.35; }
+.bus-next-departure small { color: #5f7067; font-size: 12px; line-height: 1.35; }
+.bus-route-overview > .bus-route-overview-content > p { margin: 0; color: #748078; font-size: 12px; text-align: right; }
 .tab-map[data-live-filter="cancelled"] .route-line { stroke: #df5961; }
 .tab-map .map-art.is-live { position: absolute; inset: 0; background-color: #e9edeb; }
 .bus-popup-scrim { z-index: 8; }
