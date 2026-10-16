@@ -28,6 +28,10 @@ Implement the USAD prototype as an interactive, UI-only experience using only th
 - Use correctly recognizable Google, Facebook, and Apple marks in the same muted gray, centered and optically balanced to a consistent visual size in the OAuth buttons. Facebook should be a white lowercase “f” in a solid gray circle, matching the supplied icon reference.
 - Use **SF Pro Display** where available, with a sensible system sans-serif fallback. Do not fetch or add a font dependency just for this prototype.
 - On the home dashboard, anchor the location/greeting, destination search, and shortcut controls to the bottom of the green header panel instead of the top.
+- Keep the home dashboard's corner language consistent: use generously rounded main panels and rows, a smaller matching radius for controls and icon tiles, and fully rounded chips where the pill shape serves as a status or shortcut. Keep the hierarchy intentional rather than giving every element the same radius; avoid mixing sharp corners into the rounded dashboard surface.
+- Keep the home visually grounded and product-specific: preserve the existing route, balance, vehicle, and navigation content; use restrained borders and color; avoid decorative card grids, excessive shadows, or generic filler.
+- The Profile destination opens an Account Information screen with a profile summary, notification/security switches, expandable settings groups, and a Customer Support link. Customer Support opens a FAQ screen with search, topic filters, expandable answers, and a support contact action.
+- Account Information and FAQ content scroll vertically inside the fixed mobile frame as their settings and help content grows. For FAQ artwork, reuse the existing `assets/3d-images/connection-error.png` as a blurred, decorative background layer and `assets/3d-images/robot-mascot.png` for the end-of-list illustration; keep text and controls above the art and readable.
 - Treat **393 × 852 CSS pixels** as the fixed target viewport for each mobile screen, matching the reference image. These are prototype frames on a canvas, not responsive pages: preserve the device-frame dimensions while the canvas itself is zoomed and panned.
 - Inspect `assets/` before recreating any illustrations or brand artwork; reuse suitable existing assets.
 
@@ -37,6 +41,7 @@ After the user selects User, show exactly one 393 × 852 mobile screen at a time
 
 - Start on Login. Validate email format and require a password; invalid input stays on Login with inline field feedback. Submitting valid login details proceeds to the commuter home dashboard in this UI-only demo. “Register now” opens registration; validate required fields, email, password strength, and password confirmation, then continue through the verification and welcome states to the home dashboard.
 - The home dashboard provides navigation to the Live Map, tickets, and profile, plus the illustrated ride-search and booking flow. The map is an interactive visual prototype with pan/zoom, but its routes, vehicle positions, availability, and ETAs are sample content, not connected live data. Booking and verification are also simulated; do not imply that payment or backend services are connected.
+- Keep the illustrative bus movement restrained; on the Live Map, hovering or keyboard-focusing a simulated bus reveals its sample route, ETA, seat availability, and status.
 - Keep the login-error and backend-error states available as user-flow states with a clear way back to Login.
 - Render only the active state in the phone viewport. Do not display other screens as frames, cards, thumbnails, or neighboring canvases.
 - Keep frame labels, canvas controls, and navigation outside the mobile viewport.

@@ -36,6 +36,7 @@
 
   let activeState = "login";
   let registrationData = { username: "", email: "" };
+  let activeFaqCategory = "all";
   let tripData = {
     origin: "Robinsons Place Malolos",
     destination: "Trinoma",
@@ -46,6 +47,7 @@
   let liveMapPan = { x: 0, y: 0 };
   let liveMapZoom = 1;
   let liveMapDrag = null;
+  let liveMapAnimationFrame = 0;
   let zoom = 1;
   let panX = 0;
   let panY = 0;
@@ -184,18 +186,19 @@
 
   const mapMarkup = (compact = false, live = false) => {
     const roads = live
-      ? '<path class="road-main" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650"/><path class="road-secondary" d="M-15 100 130 122 354 95M30 255 163 329 345 355M-12 455 210 386 365 422M66 0 91 180 44 313M290 35 252 202 290 300 269 620"/><path class="route-line" d="M107 440 163 464 185 393 163 329 211 269 191 206 217 141"/>'
+      ? '<path class="road-local" d="M-20 45 94 72 148 59 215 86 380 65M-20 128 75 153 153 135 224 167 380 143M-20 214 92 194 160 224 247 208 380 242M-20 302 81 277 165 306 238 284 380 318M-20 392 88 360 161 395 255 372 380 414M-20 486 92 454 167 486 247 463 380 502M-20 574 84 548 164 577 255 553 380 596M42-20 62 102 42 206 76 303 50 404 87 505 68 660M118-20 133 78 110 174 145 272 124 373 153 468 137 570 160 660M235-20 218 93 251 186 224 285 261 383 232 475 272 572 251 660M326-20 302 92 335 188 310 282 348 374 318 469 350 566 330 660"/><path class="road-secondary" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650M-15 100 130 122 354 95M30 255 163 329 345 355M-12 455 210 386 365 422M66 0 91 180 44 313M290 35 252 202 290 300 269 620"/><path class="road-main" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650"/><path class="route-line" d="M107 440 163 464 185 393 163 329 211 269 191 206 217 141"/><circle class="map-junction" cx="163" cy="329" r="8"/><circle class="map-junction" cx="191" cy="253" r="7"/><circle class="map-junction" cx="210" cy="386" r="7"/>'
       : '<path class="road-main" d="M-12 136 68 95 118 108 164 65 217 78 286 20 374 35"/><path class="road-secondary" d="M-15 48 68 95 95 166M118 108 152 180M164 65 147 0M217 78 231 158M286 20 312 0M286 20 332 114"/><path class="route-line" d="M48 119 110 104 160 70 220 77 296 35"/>';
     const viewBox = live ? "0 0 360 640" : "0 0 360 180";
     return `
-      <div class="map-art${compact ? " is-compact" : ""}${live ? " is-live" : ""}" role="img" aria-label="Illustrative route map from Malolos toward Trinoma">
+      <div class="map-art${compact ? " is-compact" : ""}${live ? " is-live" : ""}" role="${live ? "group" : "img"}" aria-label="Illustrative, not-to-scale route map from Robinsons Place Malolos to Trinoma via the North Luzon Expressway">
         <div class="map-scene">
           <span class="map-block map-block-one"></span><span class="map-block map-block-two"></span>
           <span class="map-block map-block-three"></span><span class="map-block map-block-four"></span>
+          ${live ? '<span class="map-park map-park-one"></span><span class="map-park map-park-two"></span><span class="map-district-label district-malolos">MALOLOS</span><span class="map-district-label district-bocaue">BOCAUE</span><span class="map-district-label district-marilao">MARILAO</span><span class="map-district-label district-balintawak">BALINTAWAK</span><span class="map-district-label district-trinoma">TRINOMA</span>' : ""}
           <svg class="map-roads" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${roads}</svg>
-          <span class="map-label map-label-one">MALINTA</span><span class="map-label map-label-two">NORTH AVE</span>
+          <span class="map-label map-label-one">${live ? "ROBINSONS MALOLOS" : "MALINTA"}</span><span class="map-label map-label-two">${live ? "NORTH LUZON EXPY" : "NORTH AVE"}</span>
           <span class="map-marker map-marker-start" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-8.1 8-13a8 8 0 1 0-16 0c0 4.9 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
-          <span class="map-marker map-marker-bus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg></span>
+          ${live ? '<span class="map-marker map-marker-bus" data-sim-bus="0" tabindex="0" role="img" aria-label="Simulated bus 1. Malolos to North Avenue. 3 minutes away, 8 seats available, on time." aria-describedby="bus-tooltip-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="bus-tooltip-1" role="tooltip"><strong>Bus 01</strong><span>Malolos → North Avenue</span><span>3 min · 8 seats</span><small>On time · Demo data</small></span></span><span class="map-marker map-marker-bus map-marker-bus-alt" data-sim-bus="1" tabindex="0" role="img" aria-label="Simulated bus 2. Malolos to North Avenue. Less than 1 minute away, 1 seat available, on time." aria-describedby="bus-tooltip-2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="bus-tooltip-2" role="tooltip"><strong>Bus 02</strong><span>Malolos → North Avenue</span><span>&lt;1 min · 1 seat</span><small>On time · Demo data</small></span></span>' : '<span class="map-marker map-marker-bus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg></span>'}
           <span class="map-marker map-marker-destination" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-8.1 8-13a8 8 0 1 0-16 0c0 4.9 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
           ${compact ? "" : '<span class="map-compass" aria-hidden="true">N</span>'}
         </div>
@@ -206,19 +209,21 @@
     <div class="commuter-app">
       <div class="home-scroll">
         <header class="home-header">
-          <div class="home-greeting-row">
-            <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>Robinsons Place Malolos</h1></div>
-            <button class="notification-button" type="button" aria-label="Notifications" data-info="You're all caught up."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span></span></button>
-          </div>
-          <form class="destination-search" data-route-search>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
-            <input name="destination" type="text" placeholder="Where are you heading?" aria-label="Where are you heading?">
-            <button type="submit" aria-label="Search rides"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
-          </form>
-          <div class="home-shortcuts">
-            <button type="button" data-info="Your saved routes will appear here."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
-            <button type="button" data-info="Fare estimates are shown with ride results."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Fare Estimator</button>
-            <button type="button" data-info="Home location updated for this demo."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Set Home</button>
+          <div class="home-header-content">
+            <div class="home-greeting-row">
+              <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>Robinsons Place Malolos</h1></div>
+              <button class="notification-button" type="button" aria-label="Notifications" data-info="You're all caught up."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span></span></button>
+            </div>
+            <form class="destination-search" data-route-search>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+              <input name="destination" type="text" placeholder="Where are you heading?" aria-label="Where are you heading?">
+              <button type="submit" aria-label="Search rides"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
+            </form>
+            <div class="home-shortcuts">
+              <button type="button" data-info="Your saved routes will appear here."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
+              <button type="button" data-info="Fare estimates are shown with ride results."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Fare Estimator</button>
+              <button type="button" data-info="Home location updated for this demo."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Set Home</button>
+            </div>
           </div>
         </header>
         <section class="pouch-panel" aria-label="U-Pouch balance">
@@ -327,15 +332,83 @@
     </div>`;
 
   const secondaryTabScreen = (state) => {
-    const titles = { "live-map": "Live Map", tickets: "My Tickets", profile: "Profile" };
+    const titles = { "live-map": "Live Map", tickets: "My Tickets", profile: "Account Information", faq: "Customer Support" };
     const content = state === "live-map"
-      ? `<div class="tab-map" tabindex="0" aria-label="Illustrative map. Drag to pan, use plus and minus to zoom, or use arrow keys.">${mapMarkup(false, true)}<div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div><div class="map-live-card"><strong>Malolos – North Avenue Station</strong><span>Illustrative vehicle · Estimated arrival 3 min</span></div><p class="map-attribution">Illustrative map · Drag to explore</p></div>`
+      ? `<div class="tab-map" tabindex="0" aria-label="Illustrative map. Drag to pan, use plus and minus to zoom, or use arrow keys.">${mapMarkup(false, true)}<div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div><div class="map-live-card"><strong>Malolos → Trinoma via NLEX</strong><span>2 simulated buses · Not live tracking</span></div><p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p></div>`
       : state === "tickets"
         ? bookingConfirmed
           ? `<button class="saved-ticket" type="button" data-screen="booking-confirmed"><strong>USAD-7X29-KM41</strong><span>${escapeHtml(tripData.origin)} → ${escapeHtml(tripData.destination)}</span><small>View ticket details →</small></button>`
           : `<p class="empty-tab">Your booked rides will appear here.</p>`
-        : `<div class="profile-summary"><span class="profile-avatar">${escapeHtml((registrationData.username || "U").slice(0, 1).toUpperCase())}</span><strong>${escapeHtml(registrationData.username || "USAD Commuter")}</strong><span>${escapeHtml(registrationData.email || "Demo account")}</span><button type="button" data-screen="login">Sign out</button></div>`;
-    return `<div class="commuter-app secondary-tab"><header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header><div class="tab-content">${content}</div>${navigation(state)}${state === "live-map" ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
+        : state === "profile"
+          ? `<div class="account-page">
+              <section class="account-identity" aria-label="Account identity">
+                <span class="account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+                <div class="account-identity-copy"><strong>${escapeHtml(registrationData.username || "JockyThePythonKing")}</strong><span>Account ID: ${registrationData.email ? "USAD-" + escapeHtml(registrationData.email.split("@")[0].slice(0, 8).toUpperCase()) : "0001-7DASNX"}</span><span class="verified-label">Verified</span></div>
+              </section>
+              <section class="account-preferences" aria-label="Account preferences">
+                <div class="account-preference"><div><strong>Enable 2FA</strong><small>Protect your account with an extra security step.</small></div><button class="toggle-switch" type="button" data-setting-toggle role="switch" aria-checked="false" aria-label="Enable two-factor authentication"></button></div>
+                <div class="account-preference"><div><strong>Push Notifications</strong><small>Get updates for your rides and bookings.</small></div><button class="toggle-switch is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Push notifications"></button></div>
+                <div class="account-preference"><div><strong>Promotional Alerts</strong><small>Hear about fare offers and service updates.</small></div><button class="toggle-switch is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Promotional alerts"></button></div>
+              </section>
+              <section class="account-sections" aria-label="Account settings">
+                <details class="account-section"><summary>Account Security</summary><div class="account-section-content"><p>Keep your sign-in details up to date.</p><button type="button" data-info="Password management is not connected in this prototype.">Change password <span>›</span></button></div></details>
+                <details class="account-section"><summary>Customer Information</summary><div class="account-section-content"><dl><div><dt>Name</dt><dd>${escapeHtml(registrationData.username || "JockyThePythonKing")}</dd></div><div><dt>Email</dt><dd>${escapeHtml(registrationData.email || "Not provided")}</dd></div><div><dt>Phone</dt><dd>Not provided</dd></div></dl></div></details>
+                <details class="account-section"><summary>Payment Options</summary><div class="account-section-content"><dl><div><dt>Preferred method</dt><dd>GCash · Demo only</dd></div><div><dt>U-Pouch balance</dt><dd>₱2.00 · Sample balance</dd></div></dl><button type="button" data-info="Payment methods are not connected in this prototype.">Manage payment options <span>›</span></button></div></details>
+                <button class="account-support-link" type="button" data-screen="faq">Customer Support <span aria-hidden="true">›</span></button>
+              </section>
+              <p class="account-message" data-message role="status" aria-live="polite"></p>
+              <button type="button" class="account-signout" data-screen="login">Sign out</button>
+            </div>`
+          : `<div class="faq-page">
+              <section class="faq-intro">
+                <h2>Got Questions?</h2>
+                <label class="faq-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input type="search" data-faq-search placeholder="Search help topics..." aria-label="Search frequently asked questions"></label>
+                <div class="faq-categories" aria-label="FAQ categories">
+                  <button type="button" data-faq-category="transactions" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4zM8 9h8m-8 4h5"/></svg><span>Transactions</span></button>
+                  <button type="button" data-faq-category="operations" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-2a8 8 0 0 1 16 0v2M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg><span>Operations</span></button>
+                  <button type="button" data-faq-category="fares" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="M8 9h8m-8 3h8m-8 3h4"/></svg><span>Fares</span></button>
+                  <button type="button" data-faq-category="promotions" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 10-13h-7l1-7Z"/></svg><span>Promos</span></button>
+                </div>
+              </section>
+              <section class="faq-list-section" aria-labelledby="faq-list-title">
+                <h2 id="faq-list-title">Frequently Asked Questions</h2>
+                <div class="faq-list" data-faq-list>
+                  <details class="faq-question" data-category="transactions"><summary>What is SARAZA USAD?</summary><p>USAD is a commuter experience prototype for Saraza TRD Transport Services Corp. This demo illustrates trip information and support screens; it is not connected to live services.</p></details>
+                  <details class="faq-question" data-category="fares"><summary>How is the “Smart Fare” calculated?</summary><p>Fare amounts shown in this prototype are sample values for demonstration. No live fare calculation or payment is performed.</p></details>
+                  <details class="faq-question" data-category="operations"><summary>How do commuters avoid waiting for full buses?</summary><p>Check the sample seat availability shown with each ride option. Availability in this prototype is illustrative and may not reflect a real vehicle.</p></details>
+                  <details class="faq-question" data-category="operations"><summary>How are drivers or conductors notified of changes?</summary><p>Notifications and service updates are represented as UI examples only. This prototype does not send messages to drivers or conductors.</p></details>
+                  <details class="faq-question" data-category="transactions"><summary>Can I reserve and pay for a ride here?</summary><p>You can explore the booking flow, but reservation and payment are simulated. No ticket is issued and no payment is processed.</p></details>
+                  <details class="faq-question" data-category="promotions"><summary>Where can I find fare offers and announcements?</summary><p>Promotional alerts are a preference shown in Account Information. Real offers and announcements are not connected in this demo.</p></details>
+                </div>
+                <p class="faq-empty" data-faq-empty hidden>No matching topics. Try a different search or category.</p>
+              </section>
+              <section class="faq-contact" aria-label="Contact support">
+                <div><strong>Can't find the topic you're looking for?</strong><small>Customer service chat · Demo</small></div>
+                <button type="button" aria-label="Contact customer support" data-info="Customer support chat is not connected in this prototype."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-11.7 6.2L4 19l1.3-3.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M9 11h.01M15 11h.01m-5 3h4"/></svg></button>
+              </section>
+              <p class="faq-message" data-message role="status" aria-live="polite"></p>
+              <section class="faq-endcap"><img src="assets/3d-images/robot-mascot.png" alt="Smiling USAD support assistant"><h3>You've caught up to the end</h3><p>More help topics will be added as the prototype grows.<br>For now, explore the sample answers above.</p></section>
+            </div>`;
+    const isSettingsFrame = state === "profile" || state === "faq";
+    const header = isSettingsFrame
+      ? `<header class="settings-header"><div class="device-status"><span>9:41</span><span class="device-status-icons" aria-hidden="true"><svg viewBox="0 0 44 14"><path d="M1 12V8m5 4V6m5 6V4m5 8V2"/><path d="M22 5c4-4 10-4 14 0m-11 3c2-2 6-2 8 0m-4 3h.01"/><rect x="38" y="3" width="5" height="8" rx="1"/><path d="M43 5h1v4h-1"/></svg></span></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="Back">‹</button><h1>${titles[state]}</h1></div></header>`
+      : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
+    return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame ? "" : navigation(state)}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
+  };
+
+  const updateFaqResults = () => {
+    const search = screen.querySelector("[data-faq-search]");
+    const questions = [...screen.querySelectorAll(".faq-question")];
+    const query = search?.value.trim().toLocaleLowerCase() ?? "";
+    let visibleCount = 0;
+    questions.forEach((question) => {
+      const categoryMatches = activeFaqCategory === "all" || question.dataset.category === activeFaqCategory;
+      const queryMatches = !query || question.textContent.toLocaleLowerCase().includes(query);
+      question.hidden = !categoryMatches || !queryMatches;
+      if (!question.hidden) visibleCount += 1;
+    });
+    const emptyState = screen.querySelector("[data-faq-empty]");
+    if (emptyState) emptyState.hidden = visibleCount > 0;
   };
 
   const applyLiveMapTransform = () => {
@@ -353,7 +426,59 @@
     if (zoomOutput) zoomOutput.textContent = `${Math.round(liveMapZoom * 100)}%`;
   };
 
+  const stopLiveMapSimulation = () => {
+    if (liveMapAnimationFrame) cancelAnimationFrame(liveMapAnimationFrame);
+    liveMapAnimationFrame = 0;
+  };
+
+  const startLiveMapSimulation = () => {
+    const buses = [...screen.querySelectorAll("[data-sim-bus]")];
+    if (!buses.length) return;
+
+    const route = [
+      [56, 96], [64, 86], [56, 73], [58, 60], [45, 51],
+      [53, 40], [42, 28], [47, 16], [44, 4],
+    ];
+    const segments = route.slice(1).map((point, index) => {
+      const start = route[index];
+      return { start, end: point, length: Math.hypot(point[0] - start[0], point[1] - start[1]) };
+    });
+    const routeLength = segments.reduce((total, segment) => total + segment.length, 0);
+    const duration = 36000;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const placeBus = (bus, distance) => {
+      let remaining = distance;
+      const segment = segments.find((part) => {
+        if (remaining <= part.length) return true;
+        remaining -= part.length;
+        return false;
+      }) || segments[segments.length - 1];
+      const progress = Math.min(1, remaining / segment.length);
+      bus.style.left = `${segment.start[0] + (segment.end[0] - segment.start[0]) * progress}%`;
+      bus.style.top = `${segment.start[1] + (segment.end[1] - segment.start[1]) * progress}%`;
+    };
+
+    if (reduceMotion) {
+      buses.forEach((bus, index) => placeBus(bus, routeLength * (index ? 0.68 : 0.28)));
+      return;
+    }
+
+    const startedAt = performance.now();
+    const animate = (now) => {
+      if (activeState !== "live-map") return;
+      buses.forEach((bus, index) => {
+        if (bus.matches(":hover, :focus-visible")) return;
+        const offset = index * duration * 0.48;
+        const progress = ((now - startedAt + offset) % duration) / duration;
+        placeBus(bus, routeLength * progress);
+      });
+      liveMapAnimationFrame = requestAnimationFrame(animate);
+    };
+    liveMapAnimationFrame = requestAnimationFrame(animate);
+  };
+
   const renderScreen = (state) => {
+    stopLiveMapSimulation();
     activeState = state;
     liveMapDrag = null;
     screen.replaceChildren();
@@ -379,12 +504,16 @@
       screen.innerHTML = bookingConfirmationScreen();
     } else if (state === "booking-confirmed") {
       screen.innerHTML = bookingConfirmedScreen();
-    } else if (state === "live-map" || state === "tickets" || state === "profile") {
+    } else if (state === "live-map" || state === "tickets" || state === "profile" || state === "faq") {
       screen.innerHTML = secondaryTabScreen(state);
       if (state === "live-map") {
         liveMapPan = { x: 0, y: 0 };
         liveMapZoom = 1;
         applyLiveMapTransform();
+        startLiveMapSimulation();
+      } else if (state === "faq") {
+        activeFaqCategory = "all";
+        updateFaqResults();
       }
     } else if (state === "backend-error") {
       screen.innerHTML = backendErrorScreen();
@@ -664,6 +793,10 @@
   });
 
   screen.addEventListener("input", (event) => {
+    if (event.target.matches("[data-faq-search]")) {
+      updateFaqResults();
+    }
+
     if (event.target.matches("#login-email")) {
       const emailError = screen.querySelector("#email-error");
       if (emailError) emailError.hidden = true;
@@ -684,6 +817,26 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const faqCategory = event.target.closest("[data-faq-category]");
+    if (faqCategory) {
+      activeFaqCategory = faqCategory.dataset.faqCategory;
+      screen.querySelectorAll("[data-faq-category]").forEach((button) => {
+        const selected = button === faqCategory;
+        button.classList.toggle("is-active", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+      updateFaqResults();
+      return;
+    }
+
+    const settingToggle = event.target.closest("[data-setting-toggle]");
+    if (settingToggle) {
+      const isOn = settingToggle.getAttribute("aria-checked") === "true";
+      settingToggle.setAttribute("aria-checked", String(!isOn));
+      settingToggle.classList.toggle("is-on", !isOn);
+      return;
+    }
+
     const mapControl = event.target.closest("[data-map-control]");
     if (mapControl) {
       const control = mapControl.dataset.mapControl;

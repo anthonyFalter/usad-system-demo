@@ -34,7 +34,7 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 - Passenger-demand visibility is intended to inform route and schedule adjustments.
 - The initiative aims to support public utility vehicle modernization by improving the broader commuting experience as well as vehicle operations.
 - The current deliverable is a UI-only prototype. It must not imply that live transit data, booking, authentication, payments, or operational services are connected.
-- The user-side prototype includes login and email validation, registration and verification states, a commuter home dashboard, an illustrative live-map screen, and booking/ticket flows. Admin screens are deferred.
+- The user-side prototype includes login and email validation, registration and verification states, a commuter home dashboard, an illustrative live-map screen, booking/ticket flows, scrollable Account Information settings, and searchable/category-filtered FAQs. Admin screens are deferred.
 
 ## Brand Commitments
 
