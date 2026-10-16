@@ -59,10 +59,10 @@
   let tripHistoryQuery = "";
   let selectedHistoryTripId = "";
   let tripHistory = [
-    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Barangka, Malolos", destination: "Trinoma Landmark Bus Bay", destinationDetail: "Via North Luzon Expy (NLEX)", fare: 80, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true },
-    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: "Trinoma EDSA Terminal", originDetail: "North Avenue P2P Lounge", destination: "Robinsons Place Malolos", destinationDetail: "Express via Tabang Exit", fare: 80, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true },
-    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Express Lane 2", destination: "SM North EDSA / Trinoma", destinationDetail: "North Station Drop-off", fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true },
-    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: "Trinoma Landmark Bus Bay", originDetail: "Trip cancelled by operator", destination: "Robinsons Place Malolos", destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false },
+    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Barangka, Malolos", destination: "Trinoma Landmark Bus Bay", destinationDetail: "Via North Luzon Expy (NLEX)", fare: 80, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true, receiptLabel: "E-Ticket & Receipt", showRateAction: true, rebookLabel: "Rebook" },
+    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: "Trinoma EDSA Terminal", originDetail: "North Avenue P2P Lounge", destination: "Robinsons Place Malolos", destinationDetail: "Express via Tabang Exit", fare: 80, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true, receiptLabel: "Receipt", rebookLabel: "Rebook Route" },
+    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Express Lane 2", destination: "SM North EDSA / Trinoma", destinationDetail: "North Station Drop-off", fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
+    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: "Trinoma Landmark Bus Bay", originDetail: "Trip cancelled by operator", destination: "Robinsons Place Malolos", destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
   ];
   let tripData = {
     origin: "Robinsons Place Malolos",
@@ -398,21 +398,23 @@
     <div class="seat-capacity-page">
       <div class="seat-capacity-shell">
         <section class="seat-capacity-panel panel-map" aria-label="Live seat capacity overview">
-          <header class="seat-capacity-header">
-            <div class="seat-capacity-title-wrap">
-              <span class="seat-live-badge"><i></i> Live</span>
-              <h2>Find Available Seats</h2>
+          <div class="seat-capacity-sticky">
+            <header class="seat-capacity-header">
+              <div class="seat-capacity-title-wrap">
+                <span class="seat-live-badge"><i></i> Live</span>
+                <h2>Find Available Seats</h2>
+              </div>
+              <button class="seat-capacity-back" type="button" data-screen="live-map" aria-label="Back to live map">‹</button>
+            </header>
+            <label class="seat-search" aria-label="Search for buses">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+              <input type="search" placeholder="Search for bus..." aria-label="Search for buses">
+            </label>
+            <div class="seat-category-tabs" role="tablist" aria-label="Nearby route filters">
+              <button class="is-active" type="button">Bus Near Me</button>
+              <button type="button">Nearby Stops</button>
+              <button type="button">Recent Rid</button>
             </div>
-            <button class="seat-capacity-back" type="button" data-screen="live-map" aria-label="Back to live map">‹</button>
-          </header>
-          <label class="seat-search" aria-label="Search for buses">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
-            <input type="search" placeholder="Search for bus..." aria-label="Search for buses">
-          </label>
-          <div class="seat-category-tabs" role="tablist" aria-label="Nearby route filters">
-            <button class="is-active" type="button">Bus Near Me</button>
-            <button type="button">Nearby Stops</button>
-            <button type="button">Recent Rid</button>
           </div>
           <div class="seat-map-surface">
             ${mapMarkup(false, true)}
@@ -581,9 +583,7 @@
     const tripHistoryScreen = () => {
       const completedTrips = tripHistory.filter((trip) => trip.status === "completed");
       const cancelledTrips = tripHistory.filter((trip) => trip.status === "cancelled");
-      const totalSpent = completedTrips.reduce((total, trip) => total + trip.fare, 0);
-      const co2Saved = completedTrips.reduce((total, trip) => total + trip.co2Saved, 0);
-      const currentMonth = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date());
+      const monthlySummary = { month: "October 2024", totalSpent: 960, rides: 12, co2Saved: 18.4 };
       const filters = `<div class="home-shortcuts trip-history-filters" role="group" aria-label="Filter trips">
         <button type="button" data-trip-filter="all" class="is-active" aria-pressed="true">All Trips</button>
         <button type="button" data-trip-filter="completed" aria-pressed="false">Completed (${completedTrips.length})</button>
@@ -604,9 +604,9 @@
           </div>
           ${trip.studentDiscount ? '<p class="trip-history-discount">Student Discount Applied (20% Off)</p>' : ""}
           <footer class="trip-history-actions">
-            <button type="button" class="trip-receipt-link" data-view-trip="${trip.id}">${trip.status === "cancelled" ? "Refund Details" : "E-Ticket &amp; Receipt"}</button>
-            ${trip.status === "completed" ? '<button type="button" class="trip-rate-button" data-info="Trip rating is a prototype-only action.">Rate Trip</button>' : ""}
-            <button type="button" class="trip-rebook-button" data-action="rebook-trip" data-trip-id="${trip.id}">${trip.status === "cancelled" ? "Rebook Route" : "Rebook"}</button>
+            <button type="button" class="trip-receipt-link" data-view-trip="${trip.id}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.75h5l3 3v9.5H4zM9 2v3h3M6 8h4m-4 2.5h4"/></svg>${escapeHtml(trip.receiptLabel)}</button>
+            ${trip.showRateAction ? '<button type="button" class="trip-rate-button" data-info="Trip rating is a prototype-only action.">Rate Trip</button>' : ""}
+            ${trip.rebookLabel ? `<button type="button" class="trip-rebook-button${trip.rebookStyle === "secondary" ? " is-secondary" : ""}" data-action="rebook-trip" data-trip-id="${trip.id}">${escapeHtml(trip.rebookLabel)}</button>` : ""}
           </footer>
         </article>`;
       }).join("");
@@ -614,8 +614,8 @@
         <header class="home-header ticket-history-header">${homeHeaderContent({ searchPlaceholder: "Search trips by bus code, date or invoice...", searchMode: "history", footerMarkup: filters })}</header>
         <div class="trip-history-body">
           <section class="trip-history-summary" aria-label="Monthly trip summary">
-            <header><div><h2>${currentMonth} Spending</h2><small>Illustrative trip history</small></div><button type="button" data-info="Tax invoice download is not connected in this prototype.">Download Tax Invoice <span aria-hidden="true">↗</span></button></header>
-            <div class="trip-history-stats"><div><span>Total Spent</span><strong>₱${totalSpent.toFixed(2)}</strong></div><div><span>Rides Taken</span><strong>${completedTrips.length} Rides</strong></div><div><span>Saved CO₂</span><strong>${co2Saved.toFixed(1)} kg</strong></div></div>
+            <header><div class="trip-history-summary-title"><span aria-hidden="true"></span><h2>${monthlySummary.month} Spending</h2></div><button type="button" data-info="Tax invoice download is not connected in this prototype.">Download Tax Invoice</button></header>
+            <div class="trip-history-stats"><div><span>Total Spent</span><strong>₱${monthlySummary.totalSpent.toFixed(2)}</strong></div><div><span>Rides Taken</span><strong>${monthlySummary.rides} Rides</strong></div><div><span>Saved CO₂</span><strong>${monthlySummary.co2Saved.toFixed(1)} kg</strong></div></div>
           </section>
           <div class="trip-history-section-heading"><h2>Recent Activity</h2><span>Malolos ⇄ Trinoma / EDSA</span></div>
           <section class="trip-history-list" data-trip-history-list aria-label="Recent trips">${cards}</section>
