@@ -36,6 +36,24 @@
 
   let activeState = "login";
   let registrationData = { username: "", email: "" };
+  const accountProfile = {
+    firstName: "Jocky",
+    middleName: "Python",
+    lastName: "Cabatbat",
+    discountId: "N/A",
+    address: "N/A",
+    email: "jockypythonking@edu.phd.engram.com",
+    contactNumber: "+639492561938",
+    password: "DemoPassword123!",
+  };
+  const notifications = [
+    { id: "bus-arrival", type: "ride", title: "Your bus is approaching", body: "Malolos → North Avenue · Bus 01 is about 3 minutes away.", time: "2 min ago", unread: true },
+    { id: "booking-confirmed", type: "ticket", title: "Booking confirmed", body: "Your sample trip to Trinoma is ready to view in My Tickets.", time: "Yesterday", unread: true },
+    { id: "service-update", type: "service", title: "Service update", body: "This is a sample service notice. Live service alerts are not connected.", time: "Oct 14", unread: false },
+    { id: "fare-offer", type: "promo", title: "A little more in your U-Pouch", body: "Explore the sample offers shown in the app. No offer is active.", time: "Oct 12", unread: false },
+  ];
+  let notificationFilter = "all";
+  let welcomeTimeout = 0;
   let activeFaqCategory = "all";
   let tripData = {
     origin: "Robinsons Place Malolos",
@@ -59,6 +77,8 @@
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
+
+  const unreadNotificationCount = () => notifications.filter((notification) => notification.unread).length;
 
   const loginScreen = (showError = false) => `
     <div class="auth-content">
@@ -101,7 +121,7 @@
       <button class="back-to-login" type="button" data-screen="login">Back to login</button>
     </div>`;
 
-  const registerScreen = (showError = false) => `
+  const registerScreen = (showError = false, showTermsError = false) => `
     <div class="auth-content register-content">
       <div class="auth-stack">
         <h2 class="screen-title">Sign up</h2>
@@ -128,7 +148,11 @@
           <input id="register-confirm-password" name="confirmPassword" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
           <span class="field-error" id="register-confirm-password-error" role="alert" hidden>Passwords do not match.</span>
         </div>
-        <p class="terms-copy">By signing up, you agree to our <button class="text-link" type="button" data-info="Terms and policy are not connected in this prototype.">Terms of Service</button> and <button class="text-link" type="button" data-info="Privacy policy is not connected in this prototype.">Privacy Policy</button>.</p>
+        <div class="terms-consent">
+          <input id="terms-accepted" name="termsAccepted" type="checkbox" required aria-label="I agree to the Terms of Service and Privacy Policy" aria-describedby="terms-error"${showTermsError ? ' aria-invalid="true"' : ""}>
+          <p class="terms-copy"><label for="terms-accepted">By signing up, you agree to our</label> <button class="text-link" type="button" data-info="Terms and policy are not connected in this prototype.">Terms of Service</button> and <button class="text-link" type="button" data-info="Privacy policy is not connected in this prototype.">Privacy Policy</button>&nbsp;.</p>
+        </div>
+        <span class="field-error terms-error" id="terms-error" role="alert"${showTermsError ? "" : " hidden"}>Please accept the Terms of Service and Privacy Policy to continue.</span>
         <button class="login-button" type="submit">Sign up</button>
         <div class="social-divider"><span></span><span>or</span><span></span></div>
         ${socialButtons}
@@ -163,7 +187,10 @@
           <img class="mascot-illustration" src="assets/3d-images/robot-mascot.png" alt="" draggable="false">
         </div>
         <p class="robot-copy success-copy">You're all set, ${username}!<br>Hang tight while we prepare your account.</p>
-        <button class="login-button success-continue" type="button" data-screen="home">Continue to home</button>
+        <div class="success-loading" role="status" aria-label="Preparing your account">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" pathLength="100"/></svg>
+          <span class="visually-hidden">Preparing your account…</span>
+        </div>
       </div>`;
   };
 
@@ -212,7 +239,7 @@
           <div class="home-header-content">
             <div class="home-greeting-row">
               <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>Robinsons Place Malolos</h1></div>
-              <button class="notification-button" type="button" aria-label="Notifications" data-info="You're all caught up."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span></span></button>
+              <button class="notification-button" type="button" aria-label="Notifications, ${unreadNotificationCount()} unread" data-screen="notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
             </div>
             <form class="destination-search" data-route-search>
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
@@ -228,8 +255,8 @@
         </header>
         <section class="pouch-panel" aria-label="U-Pouch balance">
           <div><span>Current U-Pouch Balance:</span><strong>₱2.00</strong></div>
-          <button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button>
-          <span class="pouch-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/><circle cx="18" cy="12.5" r=".7"/></svg></span>
+          <button type="button" data-info="Top up is a visual demo only."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Top Up</span></button>
+          <span class="pouch-icon" aria-hidden="true"><svg viewBox="0 0 40 36"><defs><linearGradient id="pouch-gradient" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#19bd91"/><stop offset="1" stop-color="#109b78"/></linearGradient></defs><path fill="url(#pouch-gradient)" d="M8 3h24a4 4 0 0 1 4 4v4h-7V8H8a4 4 0 0 0 0 8h27a4 4 0 0 1 4 4v11a4 4 0 0 1-4 4H8a8 8 0 0 1-8-8V11a8 8 0 0 1 8-8Z"/><path fill="#fff" d="M8 7h21a2 2 0 0 1 2 2v2H8a2 2 0 1 1 0-4Zm24 15h4v8h-4z"/></svg></span>
         </section>
         <section class="home-map-section" aria-label="Nearby vehicles map">
           ${mapMarkup()}
@@ -332,8 +359,57 @@
     </div>`;
 
   const secondaryTabScreen = (state) => {
-    const titles = { "live-map": "Live Map", tickets: "My Tickets", profile: "Account Information", faq: "Customer Support" };
-    const content = state === "live-map"
+    const titles = { "live-map": "Live Map", tickets: "My Tickets", profile: "Account Information", faq: "Customer Support", notifications: "Notifications" };
+    const notificationIcon = (type) => {
+      const paths = {
+        ride: '<path d="M5 16V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9M5 12h14M8 19h.01M16 19h.01M7 16h10l2 3H5l2-3Z"/>',
+        ticket: '<path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V6Z"/><path d="M13 8v2m0 2v2m0 2v1"/>',
+        service: '<path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><path d="M12 8v4m0 3h.01"/>',
+        promo: '<path d="m13 2-9 12h7l-1 8 10-13h-7l1-7Z"/>',
+      };
+      return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[type]}</svg>`;
+    };
+    const notificationContent = `
+      <div class="notification-page">
+        <section class="notification-overview" aria-label="Notification controls">
+          <div><strong><span data-notification-unread-count aria-live="polite" aria-atomic="true">${unreadNotificationCount()}</span> unread</strong><small>Sample alerts · not live updates</small></div>
+          <button type="button" class="notification-mark-all" data-notifications-mark-all${unreadNotificationCount() ? "" : " disabled"}>Mark all read</button>
+        </section>
+        <div class="notification-filters" role="group" aria-label="Filter notifications">
+          <button type="button" data-notification-filter="all" aria-pressed="${notificationFilter === "all"}" class="${notificationFilter === "all" ? "is-active" : ""}">All</button>
+          <button type="button" data-notification-filter="unread" aria-pressed="${notificationFilter === "unread"}" class="${notificationFilter === "unread" ? "is-active" : ""}">Unread <span data-notification-unread-tab-count>${unreadNotificationCount()}</span></button>
+        </div>
+        <section class="notification-list" aria-label="Notifications" data-notification-list>
+          ${notifications.map((notification) => `
+            <button type="button" class="notification-item${notification.unread ? " is-unread" : ""}" data-notification-id="${notification.id}" aria-label="${notification.unread ? "Mark as read: " : "Mark as unread: "}${escapeHtml(notification.title)}">
+              <span class="notification-item-icon is-${notification.type}">${notificationIcon(notification.type)}</span>
+              <span class="notification-item-copy"><strong>${escapeHtml(notification.title)}</strong><span>${escapeHtml(notification.body)}</span><small>${escapeHtml(notification.time)}</small></span>
+              <span class="notification-unread-dot" aria-hidden="true"${notification.unread ? "" : " hidden"}></span>
+            </button>`).join("")}
+        </section>
+        <p class="notification-empty" data-notification-empty role="status" aria-live="polite" hidden>No unread notifications. You’re all caught up.</p>
+        <p class="notification-disclaimer">Notifications are examples only. Push alerts and live service updates are not connected.</p>
+      </div>`;
+    const profileField = (field, label, type = "text") => `
+      <div class="account-edit-field">
+        <label for="profile-field-${field}">${label}</label>
+        <span class="account-edit-control">
+          <input id="profile-field-${field}" type="${type}" value="${escapeHtml(accountProfile[field])}" readonly data-profile-field="${field}">
+          <button type="button" data-edit-field="${field}" aria-label="Edit ${label}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Z"/></svg>
+          </button>
+        </span>
+      </div>`;
+    const paymentIcon = (icon) => {
+      if (icon === "pouch") return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/><circle cx="18" cy="12.5" r=".7"/></svg>';
+      if (icon === "card") return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg>';
+      if (icon === "gcash") return '<span class="payment-brand-icon gcash-brand">G</span>';
+      if (icon === "maya") return '<span class="payment-brand-icon maya-brand">M</span>';
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13.5 14 9.5a3.5 3.5 0 0 1 5 5l-3 3a3.5 3.5 0 0 1-5 0m3-7-4 4a3.5 3.5 0 0 1-5-5l3-3a3.5 3.5 0 0 1 5 0"/></svg>';
+    };
+    const content = state === "notifications"
+      ? notificationContent
+      : state === "live-map"
       ? `<div class="tab-map" tabindex="0" aria-label="Illustrative map. Drag to pan, use plus and minus to zoom, or use arrow keys.">${mapMarkup(false, true)}<div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div><div class="map-live-card"><strong>Malolos → Trinoma via NLEX</strong><span>2 simulated buses · Not live tracking</span></div><p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p></div>`
       : state === "tickets"
         ? bookingConfirmed
@@ -346,14 +422,57 @@
                 <div class="account-identity-copy"><strong>${escapeHtml(registrationData.username || "JockyThePythonKing")}</strong><span>Account ID: ${registrationData.email ? "USAD-" + escapeHtml(registrationData.email.split("@")[0].slice(0, 8).toUpperCase()) : "0001-7DASNX"}</span><span class="verified-label">Verified</span></div>
               </section>
               <section class="account-preferences" aria-label="Account preferences">
-                <div class="account-preference"><div><strong>Enable 2FA</strong><small>Protect your account with an extra security step.</small></div><button class="toggle-switch" type="button" data-setting-toggle role="switch" aria-checked="false" aria-label="Enable two-factor authentication"></button></div>
+                <div class="account-preference"><div><strong>Enable 2FA</strong><small>Future login sign-in safety</small></div><button class="toggle-switch is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Enable two-factor authentication"></button></div>
                 <div class="account-preference"><div><strong>Push Notifications</strong><small>Get updates for your rides and bookings.</small></div><button class="toggle-switch is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Push notifications"></button></div>
                 <div class="account-preference"><div><strong>Promotional Alerts</strong><small>Hear about fare offers and service updates.</small></div><button class="toggle-switch is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Promotional alerts"></button></div>
               </section>
               <section class="account-sections" aria-label="Account settings">
-                <details class="account-section"><summary>Account Security</summary><div class="account-section-content"><p>Keep your sign-in details up to date.</p><button type="button" data-info="Password management is not connected in this prototype.">Change password <span>›</span></button></div></details>
-                <details class="account-section"><summary>Customer Information</summary><div class="account-section-content"><dl><div><dt>Name</dt><dd>${escapeHtml(registrationData.username || "JockyThePythonKing")}</dd></div><div><dt>Email</dt><dd>${escapeHtml(registrationData.email || "Not provided")}</dd></div><div><dt>Phone</dt><dd>Not provided</dd></div></dl></div></details>
-                <details class="account-section"><summary>Payment Options</summary><div class="account-section-content"><dl><div><dt>Preferred method</dt><dd>GCash · Demo only</dd></div><div><dt>U-Pouch balance</dt><dd>₱2.00 · Sample balance</dd></div></dl><button type="button" data-info="Payment methods are not connected in this prototype.">Manage payment options <span>›</span></button></div></details>
+                <details class="account-section">
+                  <summary>Account Security</summary>
+                  <div class="account-section-content">
+                    ${profileField("email", "Email", "email")}
+                    ${profileField("contactNumber", "Contact Number", "tel")}
+                    ${profileField("password", "Password", "password")}
+                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
+                  </div>
+                </details>
+                <details class="account-section">
+                  <summary>Customer Information</summary>
+                  <div class="account-section-content">
+                    ${profileField("firstName", "First Name")}
+                    ${profileField("middleName", "Middle Name")}
+                    ${profileField("lastName", "Last Name")}
+                    ${profileField("discountId", "Discount ID")}
+                    ${profileField("address", "Address")}
+                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
+                  </div>
+                </details>
+                <details class="account-section">
+                  <summary>Payment Options</summary>
+                  <div class="account-section-content account-payment-list">
+                    <div class="account-payment-row">
+                      <span class="account-payment-icon">${paymentIcon("pouch")}</span><strong>U-Pouch</strong><small>₱2.00</small>
+                      <button class="toggle-switch is-on account-payment-toggle" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Enable U-Pouch"></button>
+                    </div>
+                    <div class="account-payment-row">
+                      <span class="account-payment-icon">${paymentIcon("wallet")}</span><strong>E-Wallet</strong><small>Unlinked</small>
+                      <button class="account-payment-link" type="button" data-info="E-Wallet linking is not connected in this prototype." aria-label="Link E-Wallet">${paymentIcon("link")}</button>
+                    </div>
+                    <div class="account-payment-row">
+                      <span class="account-payment-icon">${paymentIcon("card")}</span><strong>Card</strong><small>Unlinked</small>
+                      <button class="account-payment-link" type="button" data-info="Card linking is not connected in this prototype." aria-label="Link card">${paymentIcon("link")}</button>
+                    </div>
+                    <div class="account-payment-row">
+                      <span class="account-payment-icon">${paymentIcon("gcash")}</span><strong>GCash</strong><small>Unlinked</small>
+                      <button class="account-payment-link" type="button" data-info="GCash linking is not connected in this prototype." aria-label="Link GCash">${paymentIcon("link")}</button>
+                    </div>
+                    <div class="account-payment-row">
+                      <span class="account-payment-icon">${paymentIcon("maya")}</span><strong>Maya</strong><small>Unlinked</small>
+                      <button class="account-payment-link" type="button" data-info="Maya linking is not connected in this prototype." aria-label="Link Maya">${paymentIcon("link")}</button>
+                    </div>
+                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
+                  </div>
+                </details>
                 <button class="account-support-link" type="button" data-screen="faq">Customer Support <span aria-hidden="true">›</span></button>
               </section>
               <p class="account-message" data-message role="status" aria-live="polite"></p>
@@ -364,10 +483,10 @@
                 <h2>Got Questions?</h2>
                 <label class="faq-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input type="search" data-faq-search placeholder="Search help topics..." aria-label="Search frequently asked questions"></label>
                 <div class="faq-categories" aria-label="FAQ categories">
-                  <button type="button" data-faq-category="transactions" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4zM8 9h8m-8 4h5"/></svg><span>Transactions</span></button>
-                  <button type="button" data-faq-category="operations" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-2a8 8 0 0 1 16 0v2M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg><span>Operations</span></button>
-                  <button type="button" data-faq-category="fares" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="M8 9h8m-8 3h8m-8 3h4"/></svg><span>Fares</span></button>
-                  <button type="button" data-faq-category="promotions" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 10-13h-7l1-7Z"/></svg><span>Promos</span></button>
+                  <button type="button" data-faq-category="transactions" aria-pressed="false"><img src="assets/3d-images/wallet.png" alt=""><span>Transactions</span></button>
+                  <button type="button" data-faq-category="operations" aria-pressed="false"><img src="assets/3d-images/cone.png" alt=""><span>Operations</span></button>
+                  <button type="button" data-faq-category="fares" aria-pressed="false"><img src="assets/3d-images/archery-target.png" alt=""><span>Fares</span></button>
+                  <button type="button" data-faq-category="promotions" aria-pressed="false"><img src="assets/3d-images/lightning.png" alt=""><span>Promos</span></button>
                 </div>
               </section>
               <section class="faq-list-section" aria-labelledby="faq-list-title">
@@ -377,8 +496,6 @@
                   <details class="faq-question" data-category="fares"><summary>How is the “Smart Fare” calculated?</summary><p>Fare amounts shown in this prototype are sample values for demonstration. No live fare calculation or payment is performed.</p></details>
                   <details class="faq-question" data-category="operations"><summary>How do commuters avoid waiting for full buses?</summary><p>Check the sample seat availability shown with each ride option. Availability in this prototype is illustrative and may not reflect a real vehicle.</p></details>
                   <details class="faq-question" data-category="operations"><summary>How are drivers or conductors notified of changes?</summary><p>Notifications and service updates are represented as UI examples only. This prototype does not send messages to drivers or conductors.</p></details>
-                  <details class="faq-question" data-category="transactions"><summary>Can I reserve and pay for a ride here?</summary><p>You can explore the booking flow, but reservation and payment are simulated. No ticket is issued and no payment is processed.</p></details>
-                  <details class="faq-question" data-category="promotions"><summary>Where can I find fare offers and announcements?</summary><p>Promotional alerts are a preference shown in Account Information. Real offers and announcements are not connected in this demo.</p></details>
                 </div>
                 <p class="faq-empty" data-faq-empty hidden>No matching topics. Try a different search or category.</p>
               </section>
@@ -387,11 +504,12 @@
                 <button type="button" aria-label="Contact customer support" data-info="Customer support chat is not connected in this prototype."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-11.7 6.2L4 19l1.3-3.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M9 11h.01M15 11h.01m-5 3h4"/></svg></button>
               </section>
               <p class="faq-message" data-message role="status" aria-live="polite"></p>
-              <section class="faq-endcap"><img src="assets/3d-images/robot-mascot.png" alt="Smiling USAD support assistant"><h3>You've caught up to the end</h3><p>More help topics will be added as the prototype grows.<br>For now, explore the sample answers above.</p></section>
+              <section class="faq-endcap"><img src="assets/3d-images/robot-mascot.png" alt="Smiling USAD support assistant"><h3>You've caught up to the end</h3><p>FAQs update automatically as new questions arise.<br>For now, relax and let us handle the heavy lifting.</p></section>
             </div>`;
-    const isSettingsFrame = state === "profile" || state === "faq";
-    const header = isSettingsFrame
-      ? `<header class="settings-header"><div class="device-status"><span>9:41</span><span class="device-status-icons" aria-hidden="true"><svg viewBox="0 0 44 14"><path d="M1 12V8m5 4V6m5 6V4m5 8V2"/><path d="M22 5c4-4 10-4 14 0m-11 3c2-2 6-2 8 0m-4 3h.01"/><rect x="38" y="3" width="5" height="8" rx="1"/><path d="M43 5h1v4h-1"/></svg></span></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="Back">‹</button><h1>${titles[state]}</h1></div></header>`
+    const isSettingsFrame = state === "profile" || state === "faq" || state === "notifications";
+    const hasBrandedHeader = isSettingsFrame || state === "live-map" || state === "tickets";
+    const header = hasBrandedHeader
+      ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="${state === "faq" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
       : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
     return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame ? "" : navigation(state)}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
   };
@@ -409,6 +527,41 @@
     });
     const emptyState = screen.querySelector("[data-faq-empty]");
     if (emptyState) emptyState.hidden = visibleCount > 0;
+  };
+
+  const updateNotificationView = () => {
+    const unreadCount = unreadNotificationCount();
+    const count = screen.querySelector("[data-notification-unread-count]");
+    const tabCount = screen.querySelector("[data-notification-unread-tab-count]");
+    const markAllButton = screen.querySelector("[data-notifications-mark-all]");
+    const emptyState = screen.querySelector("[data-notification-empty]");
+    let visibleCount = 0;
+
+    if (count) count.textContent = String(unreadCount);
+    if (tabCount) tabCount.textContent = String(unreadCount);
+    if (markAllButton) markAllButton.disabled = unreadCount === 0;
+    screen.querySelectorAll("[data-notification-filter]").forEach((button) => {
+      const selected = button.dataset.notificationFilter === notificationFilter;
+      button.classList.toggle("is-active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    screen.querySelectorAll("[data-notification-id]").forEach((button) => {
+      const notification = notifications.find(({ id }) => id === button.dataset.notificationId);
+      if (!notification) throw new Error(`Unknown notification in the inbox: ${button.dataset.notificationId}.`);
+      const hidden = notificationFilter === "unread" && !notification.unread;
+      button.hidden = hidden;
+      if (!hidden) visibleCount += 1;
+      button.classList.toggle("is-unread", notification.unread);
+      button.setAttribute("aria-label", `${notification.unread ? "Mark as read: " : "Mark as unread: "}${notification.title}`);
+      const unreadDot = button.querySelector(".notification-unread-dot");
+      if (unreadDot) unreadDot.hidden = !notification.unread;
+    });
+    if (emptyState) {
+      emptyState.hidden = visibleCount > 0;
+      emptyState.textContent = notificationFilter === "unread"
+        ? "No unread notifications. You’re all caught up."
+        : "There are no notifications yet.";
+    }
   };
 
   const applyLiveMapTransform = () => {
@@ -477,7 +630,9 @@
     liveMapAnimationFrame = requestAnimationFrame(animate);
   };
 
-  const renderScreen = (state) => {
+  const renderScreen = (state, options = {}) => {
+    if (welcomeTimeout) window.clearTimeout(welcomeTimeout);
+    welcomeTimeout = 0;
     stopLiveMapSimulation();
     activeState = state;
     liveMapDrag = null;
@@ -489,7 +644,7 @@
     } else if (state === "register") {
       screen.innerHTML = registerScreen();
     } else if (state === "register-error") {
-      screen.innerHTML = registerScreen(true);
+      screen.innerHTML = registerScreen(true, options.termsError === true);
     } else if (state === "verification") {
       screen.innerHTML = verificationScreen();
     } else if (state === "register-success") {
@@ -504,7 +659,7 @@
       screen.innerHTML = bookingConfirmationScreen();
     } else if (state === "booking-confirmed") {
       screen.innerHTML = bookingConfirmedScreen();
-    } else if (state === "live-map" || state === "tickets" || state === "profile" || state === "faq") {
+    } else if (state === "live-map" || state === "tickets" || state === "profile" || state === "faq" || state === "notifications") {
       screen.innerHTML = secondaryTabScreen(state);
       if (state === "live-map") {
         liveMapPan = { x: 0, y: 0 };
@@ -514,11 +669,25 @@
       } else if (state === "faq") {
         activeFaqCategory = "all";
         updateFaqResults();
+      } else if (state === "notifications") {
+        updateNotificationView();
       }
     } else if (state === "backend-error") {
       screen.innerHTML = backendErrorScreen();
     } else {
       throw new Error(`Unknown USAD prototype screen: ${state}`);
+    }
+    if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "live-map", "tickets", "profile", "faq", "notifications"].includes(state)) {
+      screen.firstElementChild?.classList.add("screen-enter");
+    }
+    if (state === "register-success") {
+      welcomeTimeout = window.setTimeout(() => {
+        if (activeState !== "register-success") return;
+        screen.querySelector(".success-content")?.classList.add("is-leaving");
+        welcomeTimeout = window.setTimeout(() => {
+          if (activeState === "register-success") renderScreen("home");
+        }, 400);
+      }, 1600);
     }
   };
 
@@ -574,6 +743,7 @@
   fitButton.addEventListener("click", resetCanvas);
 
   viewport.addEventListener("wheel", (event) => {
+    if (event.target.closest("#phone-screen")) return;
     event.preventDefault();
     const multiplier = event.deltaY < 0 ? 1.08 : 1 / 1.08;
     const bounds = viewport.getBoundingClientRect();
@@ -720,6 +890,7 @@
         username: localPart.replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
         email: email.value.trim(),
       };
+      accountProfile.email = registrationData.email;
       renderScreen("home");
       return;
     }
@@ -730,21 +901,28 @@
       const email = screen.querySelector("#register-email");
       const password = screen.querySelector("#register-password");
       const confirmPassword = screen.querySelector("#register-confirm-password");
-      const hasEmptyField = !username?.value.trim() || !email?.value.trim() || !password?.value || !confirmPassword?.value;
+      const termsAccepted = screen.querySelector("#terms-accepted");
+      if (!username || !email || !password || !confirmPassword || !termsAccepted) {
+        throw new Error("USAD registration could not validate the form: a required field or consent checkbox is missing.");
+      }
+      const hasEmptyField = !username.value.trim() || !email.value.trim() || !password.value || !confirmPassword.value;
       const invalidEmail = email ? !email.validity.valid : true;
       const weakPassword = password ? !/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password.value) : true;
       const mismatch = password && confirmPassword ? password.value !== confirmPassword.value : true;
+      const termsError = !termsAccepted.checked;
 
-      if (hasEmptyField || invalidEmail || weakPassword || mismatch) {
-        renderScreen("register-error");
+      if (hasEmptyField || invalidEmail || weakPassword || mismatch || termsError) {
+        renderScreen("register-error", { termsError });
         const restoredUsername = screen.querySelector("#register-username");
         const restoredEmail = screen.querySelector("#register-email");
         const restoredPassword = screen.querySelector("#register-password");
         const restoredConfirmPassword = screen.querySelector("#register-confirm-password");
-        if (restoredUsername) restoredUsername.value = username?.value ?? "";
-        if (restoredEmail) restoredEmail.value = email?.value ?? "";
-        if (restoredPassword) restoredPassword.value = password?.value ?? "";
-        if (restoredConfirmPassword) restoredConfirmPassword.value = confirmPassword?.value ?? "";
+        const restoredTermsAccepted = screen.querySelector("#terms-accepted");
+        if (restoredUsername) restoredUsername.value = username.value;
+        if (restoredEmail) restoredEmail.value = email.value;
+        if (restoredPassword) restoredPassword.value = password.value;
+        if (restoredConfirmPassword) restoredConfirmPassword.value = confirmPassword.value;
+        if (restoredTermsAccepted) restoredTermsAccepted.checked = termsAccepted.checked;
         screen.querySelector(".form-alert")?.focus({ preventScroll: true });
         return;
       }
@@ -753,6 +931,7 @@
         username: username.value.trim(),
         email: email.value.trim(),
       };
+      accountProfile.email = registrationData.email;
 
       renderScreen("verification");
     }
@@ -814,9 +993,47 @@
       if (passwordError) passwordError.hidden = true;
       event.target.removeAttribute("aria-invalid");
     }
+
+    if (event.target.matches("[data-profile-field]")) {
+      event.target.removeAttribute("aria-invalid");
+      const message = event.target.closest(".account-section")?.querySelector("[data-profile-message]");
+      if (message) message.textContent = "";
+    }
+  });
+
+  screen.addEventListener("change", (event) => {
+    if (event.target.matches("#terms-accepted") && event.target.checked) {
+      event.target.removeAttribute("aria-invalid");
+      const termsError = screen.querySelector("#terms-error");
+      if (termsError) termsError.hidden = true;
+    }
   });
 
   screen.addEventListener("click", (event) => {
+    const notificationFilterButton = event.target.closest("[data-notification-filter]");
+    if (notificationFilterButton) {
+      notificationFilter = notificationFilterButton.dataset.notificationFilter;
+      updateNotificationView();
+      return;
+    }
+
+    if (event.target.closest("[data-notifications-mark-all]")) {
+      notifications.forEach((notification) => {
+        notification.unread = false;
+      });
+      updateNotificationView();
+      return;
+    }
+
+    const notificationButton = event.target.closest("[data-notification-id]");
+    if (notificationButton) {
+      const notification = notifications.find(({ id }) => id === notificationButton.dataset.notificationId);
+      if (!notification) throw new Error(`Unknown notification in the inbox: ${notificationButton.dataset.notificationId}.`);
+      notification.unread = !notification.unread;
+      updateNotificationView();
+      return;
+    }
+
     const faqCategory = event.target.closest("[data-faq-category]");
     if (faqCategory) {
       activeFaqCategory = faqCategory.dataset.faqCategory;
@@ -834,6 +1051,38 @@
       const isOn = settingToggle.getAttribute("aria-checked") === "true";
       settingToggle.setAttribute("aria-checked", String(!isOn));
       settingToggle.classList.toggle("is-on", !isOn);
+      return;
+    }
+
+    const editFieldButton = event.target.closest("[data-edit-field]");
+    if (editFieldButton) {
+      const field = editFieldButton.dataset.editField;
+      const input = screen.querySelector(`[data-profile-field="${field}"]`);
+      const message = editFieldButton.closest(".account-section")?.querySelector("[data-profile-message]") ?? screen.querySelector("[data-message]");
+      if (!input || !(field in accountProfile)) {
+        throw new Error(`Account profile field could not be edited: ${field}.`);
+      }
+      const label = input.labels?.[0]?.textContent?.trim() ?? "profile field";
+      if (input.readOnly) {
+        input.readOnly = false;
+        editFieldButton.setAttribute("aria-label", `Save ${label}`);
+        editFieldButton.classList.add("is-saving");
+        editFieldButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>';
+        input.focus();
+        input.select();
+      } else if (!input.value.trim() || !input.validity.valid) {
+        input.setAttribute("aria-invalid", "true");
+        input.focus();
+        if (message) message.textContent = input.value.trim() ? `Enter a valid ${label.toLowerCase()}.` : `${label} cannot be empty.`;
+      } else {
+        accountProfile[field] = input.value.trim();
+        input.readOnly = true;
+        input.removeAttribute("aria-invalid");
+        editFieldButton.setAttribute("aria-label", `Edit ${label}`);
+        editFieldButton.classList.remove("is-saving");
+        editFieldButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Z"/></svg>';
+        if (message) message.textContent = "Profile update saved in this prototype.";
+      }
       return;
     }
 
@@ -889,7 +1138,7 @@
 
     const infoButton = event.target.closest("[data-info]");
     if (infoButton) {
-      const message = screen.querySelector("[data-message]");
+      const message = infoButton.closest(".account-section")?.querySelector("[data-profile-message]") ?? screen.querySelector("[data-message]");
       if (message) message.textContent = infoButton.dataset.info;
     }
   });
