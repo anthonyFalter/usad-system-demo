@@ -55,11 +55,21 @@
   let notificationFilter = "all";
   let welcomeTimeout = 0;
   let activeFaqCategory = "all";
+  let tripHistoryFilter = "all";
+  let tripHistoryQuery = "";
+  let selectedHistoryTripId = "";
+  let tripHistory = [
+    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Barangka, Malolos", destination: "Trinoma Landmark Bus Bay", destinationDetail: "Via North Luzon Expy (NLEX)", fare: 80, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true },
+    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: "Trinoma EDSA Terminal", originDetail: "North Avenue P2P Lounge", destination: "Robinsons Place Malolos", destinationDetail: "Express via Tabang Exit", fare: 80, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true },
+    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Express Lane 2", destination: "SM North EDSA / Trinoma", destinationDetail: "North Station Drop-off", fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true },
+    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: "Trinoma Landmark Bus Bay", originDetail: "Trip cancelled by operator", destination: "Robinsons Place Malolos", destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false },
+  ];
   let tripData = {
     origin: "Robinsons Place Malolos",
     destination: "Trinoma",
     passengers: 1,
     payment: "GCash",
+    seat: "1A",
   };
   let bookingConfirmed = false;
   const liveBusDetails = [
@@ -239,7 +249,7 @@
       </div>`;
   };
 
-  const homeHeaderContent = () => `
+  const homeHeaderContent = ({ searchPlaceholder = "Where are you heading?", searchMode = "route", footerMarkup = null } = {}) => `
     <div class="home-header-content">
       <div class="home-greeting-row">
         <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>Robinsons Place Malolos</h1></div>
@@ -247,14 +257,14 @@
       </div>
       <form class="destination-search" data-route-search>
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
-        <input name="destination" type="text" placeholder="Where are you heading?" aria-label="Where are you heading?">
+        <input name="destination" type="text" placeholder="${searchPlaceholder}" aria-label="${searchPlaceholder}"${searchMode === "history" ? " data-trip-history-search" : ""}>
         <button type="submit" aria-label="Search rides"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
       </form>
-      <div class="home-shortcuts">
+      ${footerMarkup ?? `<div class="home-shortcuts">
         <button type="button" data-info="Your saved routes will appear here."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
         <button type="button" data-info="Fare estimates are shown with ride results."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Fare Estimator</button>
         <button type="button" data-info="Home location updated for this demo."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Set Home</button>
-      </div>
+      </div>`}
     </div>`;
 
   const homeScreen = () => `
@@ -351,21 +361,36 @@
       </div>
     </div>`;
 
-  const bookingConfirmedScreen = () => `
+  const bookingConfirmedScreen = () => {
+    const trip = tripHistory.find(({ id }) => id === selectedHistoryTripId) ?? {
+      id: "USAD-7X29-KM41",
+      receiptId: "USAD-7X29-KM41",
+      origin: tripData.origin,
+      destination: tripData.destination,
+      fare: 80 * tripData.passengers,
+      seat: tripData.seat,
+      passengers: tripData.passengers,
+      payment: tripData.payment,
+      status: "upcoming",
+    };
+    const isCurrentBooking = bookingConfirmed && trip.status === "upcoming";
+    return `
     <div class="booking-confirmed">
-      <button type="button" class="confirmed-back" data-screen="home" aria-label="Back to home">‹</button>
-      <div class="confirmed-check" aria-hidden="true">✓</div>
-      <h1>Booking Confirmed</h1><p>₱${(80 * tripData.passengers).toFixed(2)} total · ${escapeHtml(tripData.payment)} demo</p>
+      <button type="button" class="confirmed-back" data-screen="${selectedHistoryTripId ? "tickets" : "home"}" aria-label="Back">‹</button>
+      <div class="confirmed-check" aria-hidden="true">${trip.status === "cancelled" ? "↺" : "✓"}</div>
+      <h1>${trip.status === "cancelled" ? "Trip Refunded" : isCurrentBooking ? "Booking Confirmed" : "Trip Receipt"}</h1>
+      <p>₱${Number(trip.fare).toFixed(2)} total · ${escapeHtml(trip.payment)} demo</p>
       <section class="ticket-panel">
         <div class="demo-qr" role="img" aria-label="Illustrative non-scannable ticket code"><i></i><i></i><i></i><b></b></div>
-        <span class="ticket-caption">Ticket Reference</span><strong class="ticket-number">USAD-7X29-KM41</strong>
-        <div class="ticket-route"><span class="ride-logo">MLS<small>NAVE</small></span><div><strong>Malolos – North Avenue Station</strong><small>${escapeHtml(tripData.origin)} → ${escapeHtml(tripData.destination)}</small></div></div>
-        <div class="ticket-facts"><div><span>Arrival</span><strong>3 minutes</strong></div><div><span>Seat held until</span><strong>9:51 AM</strong></div><div><span>Passengers</span><strong>${tripData.passengers}</strong></div><div><span>Fare total</span><strong>₱${(80 * tripData.passengers).toFixed(2)}</strong></div></div>
-        <button type="button" class="track-ride" data-screen="live-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Track this ride</button>
+        <span class="ticket-caption">Ticket Reference</span><strong class="ticket-number">${escapeHtml(trip.receiptId || trip.id)}</strong>
+        <div class="ticket-route"><span class="ride-logo">MLS<small>NAVE</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)}</small></div></div>
+        <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Refunded" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Fare total</span><strong>₱${Number(trip.fare).toFixed(2)}</strong></div></div>
+        ${trip.status === "upcoming" ? '<button type="button" class="track-ride" data-screen="live-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Track this ride</button>' : '<button type="button" class="track-ride" data-screen="tickets">Back to trip history <span>→</span></button>'}
       </section>
-      <button type="button" class="cancel-booking" data-action="cancel-booking">Cancel booking</button>
-      <p class="prototype-stamp">Demo confirmation · No payment was processed</p>
+      ${isCurrentBooking ? '<button type="button" class="cancel-booking" data-action="cancel-booking">Cancel booking</button>' : ""}
+      <p class="prototype-stamp">Illustrative demo · No live service connected</p>
     </div>`;
+  };
 
   const liveSeatOverviewScreen = () => {
     const bus = liveBusDetails[selectedLiveBus];
@@ -553,6 +578,52 @@
       if (icon === "maya") return '<span class="payment-brand-icon maya-brand">M</span>';
       return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13.5 14 9.5a3.5 3.5 0 0 1 5 5l-3 3a3.5 3.5 0 0 1-5 0m3-7-4 4a3.5 3.5 0 0 1-5-5l3-3a3.5 3.5 0 0 1 5 0"/></svg>';
     };
+    const tripHistoryScreen = () => {
+      const completedTrips = tripHistory.filter((trip) => trip.status === "completed");
+      const cancelledTrips = tripHistory.filter((trip) => trip.status === "cancelled");
+      const totalSpent = completedTrips.reduce((total, trip) => total + trip.fare, 0);
+      const co2Saved = completedTrips.reduce((total, trip) => total + trip.co2Saved, 0);
+      const currentMonth = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date());
+      const filters = `<div class="home-shortcuts trip-history-filters" role="group" aria-label="Filter trips">
+        <button type="button" data-trip-filter="all" class="is-active" aria-pressed="true">All Trips</button>
+        <button type="button" data-trip-filter="completed" aria-pressed="false">Completed (${completedTrips.length})</button>
+        <button type="button" data-trip-filter="cancelled" aria-pressed="false">Cancelled (${cancelledTrips.length})</button>
+        <button type="button" data-trip-filter="month" aria-pressed="false">This Month</button>
+      </div>`;
+      const cards = tripHistory.map((trip) => {
+        const statusLabel = trip.status === "cancelled" ? "Refunded" : trip.status === "upcoming" ? "Booked" : "Completed";
+        const fareDetail = trip.status === "cancelled" ? `Refunded ₱${trip.originalFare.toFixed(2)}` : `Paid via ${escapeHtml(trip.payment)}`;
+        return `<article class="trip-history-card" data-trip-history-card data-trip-status="${trip.status}" data-trip-period="${trip.inMonth ? "month" : "older"}">
+          <header class="trip-history-card-header"><span class="trip-history-code">${escapeHtml(trip.id)}</span><time>${escapeHtml(trip.date)}</time><span class="trip-history-status is-${trip.status}">${statusLabel}</span></header>
+          <div class="trip-history-card-body">
+            <div class="trip-history-stops">
+              <div class="trip-history-stop"><i class="trip-origin-dot"></i><span><strong>${escapeHtml(trip.origin)}</strong><small>${escapeHtml(trip.originDetail)}</small></span></div>
+              <div class="trip-history-stop"><i class="trip-destination-dot"></i><span><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.destinationDetail)}</small></span></div>
+            </div>
+            <div class="trip-history-fare"><strong>₱${trip.fare.toFixed(2)}</strong><span>Seat ${escapeHtml(trip.seat)}</span><small>${fareDetail}</small></div>
+          </div>
+          ${trip.studentDiscount ? '<p class="trip-history-discount">Student Discount Applied (20% Off)</p>' : ""}
+          <footer class="trip-history-actions">
+            <button type="button" class="trip-receipt-link" data-view-trip="${trip.id}">${trip.status === "cancelled" ? "Refund Details" : "E-Ticket &amp; Receipt"}</button>
+            ${trip.status === "completed" ? '<button type="button" class="trip-rate-button" data-info="Trip rating is a prototype-only action.">Rate Trip</button>' : ""}
+            <button type="button" class="trip-rebook-button" data-action="rebook-trip" data-trip-id="${trip.id}">${trip.status === "cancelled" ? "Rebook Route" : "Rebook"}</button>
+          </footer>
+        </article>`;
+      }).join("");
+      return `<div class="trip-history-page">
+        <header class="home-header ticket-history-header">${homeHeaderContent({ searchPlaceholder: "Search trips by bus code, date or invoice...", searchMode: "history", footerMarkup: filters })}</header>
+        <div class="trip-history-body">
+          <section class="trip-history-summary" aria-label="Monthly trip summary">
+            <header><div><h2>${currentMonth} Spending</h2><small>Illustrative trip history</small></div><button type="button" data-info="Tax invoice download is not connected in this prototype.">Download Tax Invoice <span aria-hidden="true">↗</span></button></header>
+            <div class="trip-history-stats"><div><span>Total Spent</span><strong>₱${totalSpent.toFixed(2)}</strong></div><div><span>Rides Taken</span><strong>${completedTrips.length} Rides</strong></div><div><span>Saved CO₂</span><strong>${co2Saved.toFixed(1)} kg</strong></div></div>
+          </section>
+          <div class="trip-history-section-heading"><h2>Recent Activity</h2><span>Malolos ⇄ Trinoma / EDSA</span></div>
+          <section class="trip-history-list" data-trip-history-list aria-label="Recent trips">${cards}</section>
+          <p class="trip-history-empty" data-trip-history-empty hidden>No trips match this search or filter.</p>
+          <p class="trip-history-disclaimer">Sample trip history · Not connected to live booking records</p>
+        </div>
+      </div>`;
+    };
     const content = state === "notifications"
       ? notificationContent
       : state === "live-map"
@@ -563,9 +634,7 @@
           <p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p>
         </div>`
       : state === "tickets"
-        ? bookingConfirmed
-          ? `<button class="saved-ticket" type="button" data-screen="booking-confirmed"><strong>USAD-7X29-KM41</strong><span>${escapeHtml(tripData.origin)} → ${escapeHtml(tripData.destination)}</span><small>View ticket details →</small></button>`
-          : `<p class="empty-tab">Your booked rides will appear here.</p>`
+        ? tripHistoryScreen()
         : state === "profile"
           ? `<div class="account-page account-profile-page">
               <section class="profile-user-card" aria-label="Account profile">
@@ -646,9 +715,9 @@
               <p class="faq-message" data-message role="status" aria-live="polite"></p>
               <section class="faq-endcap"><img src="assets/3d-images/robot-mascot.png" alt="Smiling USAD support assistant"><h3>You've caught up to the end</h3><p>FAQs update automatically as new questions arise.<br>For now, relax and let us handle the heavy lifting.</p></section>
             </div>`;
-    const isSettingsFrame = state === "profile" || state === "faq" || state === "notifications";
+    const isSettingsFrame = state === "profile" || state === "faq" || state === "notifications" || state === "tickets";
     const hasBrandedHeader = isSettingsFrame || state === "tickets";
-    const header = state === "live-map"
+    const header = state === "live-map" || state === "tickets"
       ? ""
       : state === "profile"
         ? `<header class="settings-header profile-settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="profile-settings-title"><h1>Account Profile</h1></div></header>`
@@ -680,7 +749,7 @@
             <p class="bus-popup-note">Illustrative demo data · Not live tracking</p>
           </section>
         </div>` : "";
-      return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}${state === "profile" ? " profile-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame && state !== "profile" ? "" : navigation(state)}${busPopup}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
+      return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}${state === "profile" ? " profile-scroll" : ""}${state === "tickets" ? " ticket-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame && state !== "profile" && state !== "tickets" ? "" : navigation(state)}${busPopup}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
   };
 
   const updateFaqResults = () => {
@@ -695,6 +764,26 @@
       if (!question.hidden) visibleCount += 1;
     });
     const emptyState = screen.querySelector("[data-faq-empty]");
+    if (emptyState) emptyState.hidden = visibleCount > 0;
+  };
+
+  const updateTripHistoryView = () => {
+    let visibleCount = 0;
+    const query = tripHistoryQuery.trim().toLocaleLowerCase();
+    screen.querySelectorAll("[data-trip-filter]").forEach((button) => {
+      const selected = button.dataset.tripFilter === tripHistoryFilter;
+      button.classList.toggle("is-active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    screen.querySelectorAll("[data-trip-history-card]").forEach((card) => {
+      const filterMatches = tripHistoryFilter === "all"
+        || card.dataset.tripStatus === tripHistoryFilter
+        || (tripHistoryFilter === "month" && card.dataset.tripPeriod === "month");
+      const queryMatches = !query || card.textContent.toLocaleLowerCase().includes(query);
+      card.hidden = !filterMatches || !queryMatches;
+      if (!card.hidden) visibleCount += 1;
+    });
+    const emptyState = screen.querySelector("[data-trip-history-empty]");
     if (emptyState) emptyState.hidden = visibleCount > 0;
   };
 
@@ -851,6 +940,10 @@
         updateFaqResults();
       } else if (state === "notifications") {
         updateNotificationView();
+      } else if (state === "tickets") {
+        tripHistoryFilter = "all";
+        tripHistoryQuery = "";
+        updateTripHistoryView();
       }
     } else if (state === "backend-error") {
       screen.innerHTML = backendErrorScreen();
@@ -1224,6 +1317,11 @@
 
     if (event.target.matches("[data-route-search]")) {
       event.preventDefault();
+      if (activeState === "tickets") {
+        tripHistoryQuery = String(new FormData(event.target).get("destination") ?? "");
+        updateTripHistoryView();
+        return;
+      }
       const destination = new FormData(event.target).get("destination");
       if (typeof destination === "string" && destination.trim()) {
         tripData.destination = destination.trim();
@@ -1254,6 +1352,11 @@
   screen.addEventListener("input", (event) => {
     if (event.target.matches("[data-faq-search]")) {
       updateFaqResults();
+    }
+
+    if (event.target.matches("[data-trip-history-search]")) {
+      tripHistoryQuery = event.target.value;
+      updateTripHistoryView();
     }
 
     if (event.target.matches("#login-email")) {
@@ -1356,6 +1459,13 @@
     if (notificationFilterButton) {
       notificationFilter = notificationFilterButton.dataset.notificationFilter;
       updateNotificationView();
+      return;
+    }
+
+    const tripFilterButton = event.target.closest("[data-trip-filter]");
+    if (tripFilterButton) {
+      tripHistoryFilter = tripFilterButton.dataset.tripFilter;
+      updateTripHistoryView();
       return;
     }
 
