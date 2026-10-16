@@ -358,6 +358,170 @@
       <p class="prototype-stamp">Demo confirmation · No payment was processed</p>
     </div>`;
 
+  const liveSeatOverviewScreen = () => `
+    <div class="seat-capacity-page">
+      <div class="seat-capacity-shell">
+        <section class="seat-capacity-panel panel-map" aria-label="Live seat capacity overview">
+          <header class="seat-capacity-header">
+            <div class="seat-capacity-title-wrap">
+              <span class="seat-live-badge"><i></i> Live</span>
+              <h2>Find Available Seats</h2>
+            </div>
+            <button class="seat-capacity-back" type="button" data-screen="live-map" aria-label="Back to live map">‹</button>
+          </header>
+          <label class="seat-search" aria-label="Search for buses">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+            <input type="search" placeholder="Search for bus..." aria-label="Search for buses">
+          </label>
+          <div class="seat-category-tabs" role="tablist" aria-label="Nearby route filters">
+            <button class="is-active" type="button">Bus Near Me</button>
+            <button type="button">Nearby Stops</button>
+            <button type="button">Recent Rid</button>
+          </div>
+          <div class="seat-map-surface">
+            ${mapMarkup(false, true)}
+            <button class="seat-map-bubble" type="button" data-screen="live-seat-detail">Bus 01</button>
+          </div>
+          <div class="seat-bus-card">
+            <div class="seat-bus-meta">
+              <div class="seat-bus-icon" aria-hidden="true">MLS</div>
+              <div>
+                <strong>Bus Information</strong>
+                <span>MLS-042 · Malolos → Trinoma</span>
+              </div>
+            </div>
+            <div class="seat-bus-rows">
+              <div><span>Estimated Fare</span><strong>₱80.00</strong></div>
+              <div><span>Available Seats</span><strong>8 seats</strong></div>
+            </div>
+            <div class="seat-layout" aria-label="Seat layout">
+              <span class="seat-seat empty">1A</span>
+              <span class="seat-seat empty">2A</span>
+              <span class="seat-seat selected">3A</span>
+              <span class="seat-seat empty">4A</span>
+              <span class="seat-seat empty">5A</span>
+              <span class="seat-seat empty">1B</span>
+              <span class="seat-seat occupied">2B</span>
+              <span class="seat-seat empty">3B</span>
+              <span class="seat-seat empty">4B</span>
+              <span class="seat-seat empty">5B</span>
+            </div>
+            <div class="seat-legend">
+              <span><i class="seat-dot available"></i> Available</span>
+              <span><i class="seat-dot occupied"></i> Occupied</span>
+              <span><i class="seat-dot selected"></i> Selected</span>
+            </div>
+          </div>
+          ${navigation("live-map")}
+        </section>
+
+        <aside class="seat-capacity-panel panel-book" aria-label="Quick booking panel">
+          <div class="seat-book-card">
+            <div class="seat-book-header">
+              <h3>Quick Book</h3>
+              <button type="button" aria-label="Close quick book" data-screen="live-map">×</button>
+            </div>
+            <p class="sheet-subtitle">Find and reserve a seat in seconds</p>
+            <div class="route-fields">
+              <label><span class="route-dot origin-dot"></span><input name="origin" aria-label="Starting point" value="${escapeHtml(tripData.origin)}" readonly></label>
+              <label><span class="route-dot destination-dot"></span><input name="destination" aria-label="Destination" value="${escapeHtml(tripData.destination)}" readonly></label>
+            </div>
+            <label class="sheet-label" for="seat-passengers">Passengers</label>
+            <div class="passenger-stepper"><span id="seat-passengers">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
+            <label class="sheet-label">Payment Method</label>
+            <div class="payment-options">
+              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
+              <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
+            </div>
+            <button class="sheet-primary" type="button" data-action="open-confirmation">Find Rides <span>→</span></button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  `;
+
+  const liveSeatDetailScreen = () => `
+    <div class="seat-capacity-page">
+      <div class="seat-capacity-shell">
+        <section class="seat-capacity-panel panel-map" aria-label="Selected bus detail">
+          <header class="seat-capacity-header">
+            <div class="seat-capacity-title-wrap">
+              <span class="seat-live-badge"><i></i> Live</span>
+              <h2>Find Available Seats</h2>
+            </div>
+            <button class="seat-capacity-back" type="button" data-screen="live-seat-overview" aria-label="Back to overview">‹</button>
+          </header>
+          <label class="seat-search" aria-label="Search for buses">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+            <input type="search" placeholder="Search for bus..." aria-label="Search for buses">
+          </label>
+          <div class="seat-category-tabs" role="tablist" aria-label="Nearby route filters">
+            <button class="is-active" type="button">Bus Near Me</button>
+            <button type="button">Nearby Stops</button>
+            <button type="button">Recent Rid</button>
+          </div>
+          <div class="seat-map-surface">
+            ${mapMarkup(false, true)}
+            <span class="seat-map-bubble is-detail">Bus 01</span>
+          </div>
+          <div class="seat-bus-card detail-card">
+            <div class="seat-bus-meta">
+              <div class="seat-bus-icon" aria-hidden="true">MLS</div>
+              <div>
+                <strong>Bus Information</strong>
+                <span>MLS-042 · Malolos → Trinoma</span>
+              </div>
+            </div>
+            <div class="seat-bus-rows">
+              <div><span>Estimated Fare</span><strong>₱80.00</strong></div>
+              <div><span>Available Seats</span><strong>8 seats</strong></div>
+            </div>
+            <div class="seat-layout" aria-label="Seat layout">
+              <span class="seat-seat empty">1A</span>
+              <span class="seat-seat empty">2A</span>
+              <span class="seat-seat selected">3A</span>
+              <span class="seat-seat empty">4A</span>
+              <span class="seat-seat empty">5A</span>
+              <span class="seat-seat empty">1B</span>
+              <span class="seat-seat occupied">2B</span>
+              <span class="seat-seat empty">3B</span>
+              <span class="seat-seat empty">4B</span>
+              <span class="seat-seat empty">5B</span>
+            </div>
+            <div class="seat-legend">
+              <span><i class="seat-dot available"></i> Available</span>
+              <span><i class="seat-dot occupied"></i> Occupied</span>
+              <span><i class="seat-dot selected"></i> Selected</span>
+            </div>
+          </div>
+          ${navigation("live-map")}
+        </section>
+
+        <aside class="seat-capacity-panel panel-book" aria-label="Quick booking panel">
+          <div class="seat-book-card">
+            <div class="seat-book-header">
+              <h3>Quick Book</h3>
+              <button type="button" aria-label="Close quick book" data-screen="live-map">×</button>
+            </div>
+            <p class="sheet-subtitle">Find and reserve a seat in seconds</p>
+            <div class="route-fields">
+              <label><span class="route-dot origin-dot"></span><input name="origin" aria-label="Starting point" value="${escapeHtml(tripData.origin)}" readonly></label>
+              <label><span class="route-dot destination-dot"></span><input name="destination" aria-label="Destination" value="${escapeHtml(tripData.destination)}" readonly></label>
+            </div>
+            <label class="sheet-label" for="seat-passengers">Passengers</label>
+            <div class="passenger-stepper"><span id="seat-passengers">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
+            <label class="sheet-label">Payment Method</label>
+            <div class="payment-options">
+              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
+              <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
+            </div>
+            <button class="sheet-primary" type="button" data-action="open-confirmation">Find Rides <span>→</span></button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  `;
+
   const secondaryTabScreen = (state) => {
     const titles = { "live-map": "Live Map", tickets: "My Tickets", profile: "Account Information", faq: "Customer Support", notifications: "Notifications" };
     const notificationIcon = (type) => {
@@ -410,7 +574,7 @@
     const content = state === "notifications"
       ? notificationContent
       : state === "live-map"
-      ? `<div class="tab-map" tabindex="0" aria-label="Illustrative map. Drag to pan, use plus and minus to zoom, or use arrow keys.">${mapMarkup(false, true)}<div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div><div class="map-live-card"><strong>Malolos → Trinoma via NLEX</strong><span>2 simulated buses · Not live tracking</span></div><p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p></div>`
+      ? `<div class="tab-map" tabindex="0" aria-label="Illustrative map. Drag to pan, use plus and minus to zoom, or use arrow keys."><div class="live-map-header"><div class="live-map-topbar"><div class="live-map-pin" aria-hidden="true">◉</div><div class="live-map-location"><span>Your Location</span><strong>Robinsons Place Malolos</strong></div><button class="notification-button compact" type="button" aria-label="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count" hidden>0</span></button></div><div class="live-map-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input type="search" placeholder="Where are you heading?" aria-label="Where are you heading?"><button type="button" aria-label="Search route options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button></div><div class="live-map-filters" role="group" aria-label="Live route filters"><button class="is-active" type="button">Saved Routes</button><button type="button">Fare Estimator</button><button type="button">Set Home</button></div></div>${mapMarkup(false, true)}<div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div><p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p></div>`
       : state === "tickets"
         ? bookingConfirmed
           ? `<button class="saved-ticket" type="button" data-screen="booking-confirmed"><strong>USAD-7X29-KM41</strong><span>${escapeHtml(tripData.origin)} → ${escapeHtml(tripData.destination)}</span><small>View ticket details →</small></button>`
@@ -659,6 +823,10 @@
       screen.innerHTML = bookingConfirmationScreen();
     } else if (state === "booking-confirmed") {
       screen.innerHTML = bookingConfirmedScreen();
+    } else if (state === "live-seat-overview") {
+      screen.innerHTML = liveSeatOverviewScreen();
+    } else if (state === "live-seat-detail") {
+      screen.innerHTML = liveSeatDetailScreen();
     } else if (state === "live-map" || state === "tickets" || state === "profile" || state === "faq" || state === "notifications") {
       screen.innerHTML = secondaryTabScreen(state);
       if (state === "live-map") {
@@ -677,7 +845,7 @@
     } else {
       throw new Error(`Unknown USAD prototype screen: ${state}`);
     }
-    if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "live-map", "tickets", "profile", "faq", "notifications"].includes(state)) {
+    if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "live-map", "live-seat-overview", "live-seat-detail", "tickets", "profile", "faq", "notifications"].includes(state)) {
       screen.firstElementChild?.classList.add("screen-enter");
     }
     if (state === "register-success") {
