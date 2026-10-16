@@ -575,27 +575,47 @@
               <button class="profile-verify-button" type="button" data-info="Discount ID verification is a prototype-only flow.">Verify Account <span aria-hidden="true">→</span></button>
               <section class="profile-menu-card" aria-labelledby="profile-security-heading">
                 <h2 id="profile-security-heading">Account Security</h2>
-                <button class="profile-menu-row" type="button" data-info="Password management is not connected in this prototype.">Change Password <span aria-hidden="true">›</span></button>
-                <button class="profile-menu-row" type="button" data-info="Two-factor authentication settings are a prototype-only control.">Two-Factor Authentication <span aria-hidden="true">›</span></button>
-                <button class="profile-menu-row" type="button" data-info="Session management is not connected in this prototype.">Session Management <span aria-hidden="true">›</span></button>
+                <details class="profile-detail-inline">
+                  <summary class="profile-menu-row">Change Password <span aria-hidden="true">›</span></summary>
+                  <div class="account-section-content">
+                    ${profileField("password", "Password", "password")}
+                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
+                  </div>
+                </details>
+                <button class="profile-menu-row profile-toggle-row is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Two-factor authentication">Two-Factor Authentication</button>
               </section>
               <section class="profile-menu-card" aria-labelledby="profile-preferences-heading">
                 <h2 id="profile-preferences-heading">Preferences</h2>
-                <button class="profile-menu-row" type="button" data-info="Push notification preferences are not connected in this prototype.">Push Notifications <span aria-hidden="true">›</span></button>
-                <button class="profile-menu-row" type="button" data-info="Email marketing preferences are not connected in this prototype.">Email Marketing <span aria-hidden="true">›</span></button>
-                <button class="profile-menu-row" type="button" data-info="Theme preferences are not connected in this prototype.">Dark Mode <span aria-hidden="true">›</span></button>
+                <button class="profile-menu-row profile-toggle-row is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Push notifications">Push Notifications</button>
+                <button class="profile-menu-row profile-toggle-row is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Email marketing">Email Marketing</button>
               </section>
               <section class="profile-menu-card" aria-labelledby="profile-support-heading">
                 <h2 id="profile-support-heading">Support</h2>
                 <button class="profile-menu-row" type="button" data-screen="faq">Help Center <span aria-hidden="true">›</span></button>
-                <button class="profile-menu-row" type="button" data-info="Customer support is not connected in this prototype.">Contact Support <span aria-hidden="true">›</span></button>
-                <button class="profile-menu-row" type="button" data-info="Terms and privacy details are not connected in this prototype.">Terms &amp; Privacy <span aria-hidden="true">›</span></button>
               </section>
-              <section class="profile-menu-card" aria-labelledby="profile-session-heading">
-                <h2 id="profile-session-heading">Session Management</h2>
-                <button class="profile-menu-row" type="button" data-screen="login">Sign Out <span aria-hidden="true">›</span></button>
-                <button class="profile-menu-row" type="button" data-info="Account deletion is not connected in this prototype.">Delete Account <span aria-hidden="true">›</span></button>
-              </section>
+              <details class="profile-menu-card profile-extra-card">
+                <summary>Customer Information <span aria-hidden="true">›</span></summary>
+                <div class="profile-extra-content">
+                  ${profileField("email", "Email", "email")}
+                  ${profileField("contactNumber", "Contact Number", "tel")}
+                  ${profileField("firstName", "First Name")}
+                  ${profileField("middleName", "Middle Name")}
+                  ${profileField("lastName", "Last Name")}
+                  ${profileField("discountId", "Discount ID")}
+                  ${profileField("address", "Address")}
+                </div>
+              </details>
+              <details class="profile-menu-card profile-extra-card">
+                <summary>Payment Options <span aria-hidden="true">›</span></summary>
+                <div class="profile-extra-content account-payment-list">
+                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("pouch")}</span><strong>U-Pouch</strong><small>₱2.00</small><button class="toggle-switch is-on account-payment-toggle" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Enable U-Pouch"></button></div>
+                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("wallet")}</span><strong>E-Wallet</strong><small>Unlinked</small><button class="account-payment-link" type="button" data-info="E-Wallet linking is not connected in this prototype." aria-label="Link E-Wallet">${paymentIcon("link")}</button></div>
+                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("card")}</span><strong>Card</strong><small>Unlinked</small><button class="account-payment-link" type="button" data-info="Card linking is not connected in this prototype." aria-label="Link card">${paymentIcon("link")}</button></div>
+                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("gcash")}</span><strong>GCash</strong><small>Unlinked</small><button class="account-payment-link" type="button" data-info="GCash linking is not connected in this prototype." aria-label="Link GCash">${paymentIcon("link")}</button></div>
+                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("maya")}</span><strong>Maya</strong><small>Unlinked</small><button class="account-payment-link" type="button" data-info="Maya linking is not connected in this prototype." aria-label="Link Maya">${paymentIcon("link")}</button></div>
+                </div>
+              </details>
+              <p class="account-message profile-message" data-message role="status" aria-live="polite"></p>
               <button class="profile-support-banner" type="button" data-info="Customer service is not connected in this prototype."><span>Can’t find the topic you are looking for?</span><small>24/7 Live Customer Service</small><i aria-hidden="true">?</i></button>
             </div>`
           : `<div class="faq-page">
@@ -1373,6 +1393,13 @@
       const isOn = settingToggle.getAttribute("aria-checked") === "true";
       settingToggle.setAttribute("aria-checked", String(!isOn));
       settingToggle.classList.toggle("is-on", !isOn);
+      return;
+    }
+
+    const profileSectionButton = event.target.closest("[data-profile-section]");
+    if (profileSectionButton) {
+      const section = screen.querySelector(`#${profileSectionButton.dataset.profileSection}`);
+      section?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 

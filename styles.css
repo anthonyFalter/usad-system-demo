@@ -2651,6 +2651,26 @@ input:focus-visible,
 .profile-menu-row { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: space-between; gap: 8px; padding: 0 14px; border: 0; border-top: 1px solid #eceff1; background: #fff; color: #343a3e; cursor: pointer; font-size: 14px; text-align: left; }
 .profile-menu-row:hover { background: #f5faf8; }
 .profile-menu-row span { color: #69757b; font-size: 20px; line-height: 1; }
+.profile-toggle-row { position: relative; padding-right: 58px; }
+.profile-toggle-row::before { position: absolute; top: 50%; right: 14px; width: 34px; height: 20px; border-radius: 99px; background: #cfd4d5; content: ""; transform: translateY(-50%); transition: background-color 140ms ease; }
+.profile-toggle-row::after { position: absolute; top: 50%; right: 31px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.18); content: ""; transform: translateY(-50%); transition: transform 140ms ease; }
+.profile-toggle-row.is-on::before { background: #078d68; }
+.profile-toggle-row.is-on::after { transform: translate(13px, -50%); }
+.profile-toggle-row:focus-visible { outline: 2px solid #176e54; outline-offset: -2px; }
+.profile-detail-inline > summary,
+.profile-extra-card > summary { list-style: none; }
+.profile-detail-inline > summary::-webkit-details-marker,
+.profile-extra-card > summary::-webkit-details-marker { display: none; }
+.profile-detail-inline[open] > summary span,
+.profile-extra-card[open] > summary span { transform: rotate(90deg); }
+.profile-detail-inline .account-section-content { padding: 10px 12px; border-top: 1px solid #eceff1; }
+.profile-extra-card > summary { display: flex; min-height: 48px; align-items: center; justify-content: space-between; padding: 0 14px; color: #31373b; cursor: pointer; font-size: 14px; font-weight: 700; }
+.profile-extra-content { padding: 10px 14px 12px; border-top: 1px solid #eceff1; }
+.profile-extra-content .account-edit-field { margin-right: 0; margin-left: 0; }
+.profile-extra-content .account-payment-list { padding: 0; }
+.profile-extra-content .account-payment-row { grid-template-columns: 32px minmax(0, 1fr) 56px 32px; gap: 6px; }
+.profile-extra-content .account-payment-row > small { font-size: 10px; }
+.profile-message { margin: 0; }
 .profile-support-banner { position: relative; display: grid; width: 100%; min-height: 48px; justify-items: center; align-content: center; gap: 3px; margin-top: 1px; padding: 6px 40px 6px 8px; border: 0; border-radius: 7px; background: #2d2e30; color: #fff; cursor: pointer; text-align: center; }
 .profile-support-banner > span { font-size: 10px; }
 .profile-support-banner small { color: #d2d6d4; font-size: 9px; }
