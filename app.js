@@ -363,9 +363,9 @@
           </div>
           <div class="verification-section-label verification-upload-heading"><strong>Document Upload</strong><span>JPG, PNG or PDF</span></div>
           <div class="verification-upload-list">${uploadCard("front", "Upload Front of School ID")}${uploadCard("back", "Upload Back of School ID")}</div>
-          <p class="verification-note">Automated ID verification usually takes 1–2 minutes once submitted.</p>
-          <p class="verification-message" data-verification-message role="status" aria-live="polite">${escapeHtml(discountVerificationMessage || "Upload both sides of your ID to continue.")}</p>
-          <button class="verification-primary" type="button" data-verification-action="review"${discountVerificationFiles.front && discountVerificationFiles.back ? "" : " disabled"}>Review Documents <span aria-hidden="true">→</span></button>`
+          <p class="verification-note">Automated ID verification usually takes 1-2 minutes once submitted.</p>
+          ${discountVerificationMessage ? `<p class="verification-message" data-verification-message role="status" aria-live="polite">${escapeHtml(discountVerificationMessage)}</p>` : ""}
+          <button class="verification-primary" type="button" data-verification-action="review">Continue to Verification <span aria-hidden="true">→</span></button>`
       : discountVerificationStep === 2
       ? `<section class="verification-review" aria-labelledby="verification-review-title">
           <h2 id="verification-review-title">Review your documents</h2>
@@ -385,7 +385,7 @@
         </section>`;
     return `<div class="commuter-app verification-app">
       <div class="settings-scroll verification-scroll">
-        <header class="settings-header verify-account-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="profile" aria-label="Back to Account Profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>Verify Discount ID</h1></div></header>
+        <header class="settings-header verify-account-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><h1>Verify Discount ID</h1></div></header>
         <main class="discount-verification-content">
           <div class="verification-stepper" role="list" aria-label="Verification progress">${stepLabel(1, "Upload ID")}<span aria-hidden="true"></span>${stepLabel(2, "Review")}<span aria-hidden="true"></span>${stepLabel(3, "Verify")}</div>
           ${stepContent}
@@ -1758,7 +1758,11 @@
     const verificationAction = event.target.closest("[data-verification-action]");
     if (verificationAction) {
       if (verificationAction.dataset.verificationAction === "review") {
-        if (!discountVerificationFiles.front || !discountVerificationFiles.back) return;
+        if (!discountVerificationFiles.front || !discountVerificationFiles.back) {
+          discountVerificationMessage = "Upload both sides of your ID to continue.";
+          renderScreen("verify-account");
+          return;
+        }
         discountVerificationStep = 2;
         discountVerificationConfirmed = false;
       } else if (verificationAction.dataset.verificationAction === "edit") {
