@@ -62,6 +62,11 @@
     payment: "GCash",
   };
   let bookingConfirmed = false;
+  const liveBusDetails = [
+    { name: "Bus 01", fleetId: "MLS-042", route: "Malolos → Trinoma", eta: "3 min", seats: 8, fare: "₱80.00", status: "On time" },
+    { name: "Bus 02", fleetId: "MLS-018", route: "Malolos → Trinoma", eta: "Less than 1 min", seats: 1, fare: "₱80.00", status: "On time" },
+  ];
+  let selectedLiveBus = 0;
   let liveMapPan = { x: 0, y: 0 };
   let liveMapZoom = 1;
   let liveMapDrag = null;
@@ -232,26 +237,29 @@
       </div>`;
   };
 
+  const homeHeaderContent = () => `
+    <div class="home-header-content">
+      <div class="home-greeting-row">
+        <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>Robinsons Place Malolos</h1></div>
+        <button class="notification-button" type="button" aria-label="Notifications, ${unreadNotificationCount()} unread" data-screen="notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
+      </div>
+      <form class="destination-search" data-route-search>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+        <input name="destination" type="text" placeholder="Where are you heading?" aria-label="Where are you heading?">
+        <button type="submit" aria-label="Search rides"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
+      </form>
+      <div class="home-shortcuts">
+        <button type="button" data-info="Your saved routes will appear here."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
+        <button type="button" data-info="Fare estimates are shown with ride results."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Fare Estimator</button>
+        <button type="button" data-info="Home location updated for this demo."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Set Home</button>
+      </div>
+    </div>`;
+
   const homeScreen = () => `
     <div class="commuter-app">
       <div class="home-scroll">
         <header class="home-header">
-          <div class="home-header-content">
-            <div class="home-greeting-row">
-              <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>Robinsons Place Malolos</h1></div>
-              <button class="notification-button" type="button" aria-label="Notifications, ${unreadNotificationCount()} unread" data-screen="notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
-            </div>
-            <form class="destination-search" data-route-search>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
-              <input name="destination" type="text" placeholder="Where are you heading?" aria-label="Where are you heading?">
-              <button type="submit" aria-label="Search rides"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
-            </form>
-            <div class="home-shortcuts">
-              <button type="button" data-info="Your saved routes will appear here."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
-              <button type="button" data-info="Fare estimates are shown with ride results."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Fare Estimator</button>
-              <button type="button" data-info="Home location updated for this demo."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Set Home</button>
-            </div>
-          </div>
+          ${homeHeaderContent()}
         </header>
         <section class="pouch-panel" aria-label="U-Pouch balance">
           <div><span>Current U-Pouch Balance:</span><strong>₱2.00</strong></div>
@@ -409,7 +417,6 @@
             <div class="seat-legend">
               <span><i class="seat-dot available"></i> Available</span>
               <span><i class="seat-dot occupied"></i> Occupied</span>
-              <span><i class="seat-dot selected"></i> Selected</span>
             </div>
           </div>
           ${navigation("live-map")}
@@ -440,7 +447,16 @@
     </div>
   `;
 
-  const liveSeatDetailScreen = () => `
+  const seatLayoutMarkup = (bus) => Array.from({ length: 10 }, (_, index) => {
+    const row = index % 5 + 1;
+    const side = index < 5 ? "A" : "B";
+    const status = index < bus.seats ? "empty" : "occupied";
+    return `<span class="seat-seat ${status}">${row}${side}</span>`;
+  }).join("");
+
+  const liveSeatDetailScreen = () => {
+    const bus = liveBusDetails[selectedLiveBus];
+    return `
     <div class="seat-capacity-page">
       <div class="seat-capacity-shell">
         <section class="seat-capacity-panel panel-map" aria-label="Selected bus detail">
@@ -462,31 +478,22 @@
           </div>
           <div class="seat-map-surface">
             ${mapMarkup(false, true)}
-            <span class="seat-map-bubble is-detail">Bus 01</span>
+            <span class="seat-map-bubble is-detail">${bus.name}</span>
           </div>
           <div class="seat-bus-card detail-card">
             <div class="seat-bus-meta">
               <div class="seat-bus-icon" aria-hidden="true">MLS</div>
               <div>
                 <strong>Bus Information</strong>
-                <span>MLS-042 · Malolos → Trinoma</span>
+                <span>${bus.fleetId} · ${bus.route}</span>
               </div>
             </div>
             <div class="seat-bus-rows">
-              <div><span>Estimated Fare</span><strong>₱80.00</strong></div>
-              <div><span>Available Seats</span><strong>8 seats</strong></div>
+              <div><span>Estimated Fare</span><strong>${bus.fare}</strong></div>
+              <div><span>Available Seats</span><strong>${bus.seats} ${bus.seats === 1 ? "seat" : "seats"}</strong></div>
             </div>
             <div class="seat-layout" aria-label="Seat layout">
-              <span class="seat-seat empty">1A</span>
-              <span class="seat-seat empty">2A</span>
-              <span class="seat-seat selected">3A</span>
-              <span class="seat-seat empty">4A</span>
-              <span class="seat-seat empty">5A</span>
-              <span class="seat-seat empty">1B</span>
-              <span class="seat-seat occupied">2B</span>
-              <span class="seat-seat empty">3B</span>
-              <span class="seat-seat empty">4B</span>
-              <span class="seat-seat empty">5B</span>
+              ${seatLayoutMarkup(bus)}
             </div>
             <div class="seat-legend">
               <span><i class="seat-dot available"></i> Available</span>
@@ -521,6 +528,7 @@
       </div>
     </div>
   `;
+  };
 
   const secondaryTabScreen = (state) => {
     const titles = { "live-map": "Live Map", tickets: "My Tickets", profile: "Account Information", faq: "Customer Support", notifications: "Notifications" };
@@ -574,7 +582,23 @@
     const content = state === "notifications"
       ? notificationContent
       : state === "live-map"
-      ? `<div class="tab-map" tabindex="0" aria-label="Illustrative map. Drag to pan, use plus and minus to zoom, or use arrow keys."><div class="live-map-header"><div class="live-map-topbar"><div class="live-map-pin" aria-hidden="true">◉</div><div class="live-map-location"><span>Your Location</span><strong>Robinsons Place Malolos</strong></div><button class="notification-button compact" type="button" aria-label="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count" hidden>0</span></button></div><div class="live-map-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input type="search" placeholder="Where are you heading?" aria-label="Where are you heading?"><button type="button" aria-label="Search route options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button></div><div class="live-map-filters" role="group" aria-label="Live route filters"><button class="is-active" type="button">Saved Routes</button><button type="button">Fare Estimator</button><button type="button">Set Home</button></div></div>${mapMarkup(false, true)}<div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div><p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p></div>`
+      ? `<div class="tab-map" tabindex="0" aria-label="Illustrative map. Drag to pan, use plus and minus to zoom, or use arrow keys.">
+          <div class="live-map-header home-header">${homeHeaderContent()}</div>
+          ${mapMarkup(false, true)}
+          <div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div>
+          <div class="bus-popup-scrim" data-bus-popup hidden>
+            <section class="bus-capacity-popup" role="dialog" aria-modal="true" aria-labelledby="bus-popup-title" tabindex="-1">
+              <header><div><span class="bus-popup-kicker"><i></i> Seat capacity</span><h2 id="bus-popup-title" data-bus-name>Bus 01</h2></div><button type="button" data-bus-popup-close aria-label="Close bus details">×</button></header>
+              <p class="bus-popup-route" data-bus-route>Malolos → Trinoma</p>
+              <div class="bus-popup-capacity"><strong data-bus-seats>8</strong><span>seats available</span><small data-bus-eta>3 min away</small></div>
+              <div class="bus-popup-facts"><div><span>Bus ID</span><strong data-bus-fleet>MLS-042</strong></div><div><span>Estimated fare</span><strong data-bus-fare>₱80.00</strong></div><div><span>Status</span><strong data-bus-status>On time</strong></div></div>
+              <div class="bus-popup-seat-layout" data-bus-seat-layout aria-label="Illustrative seat layout"></div>
+              <button class="bus-popup-action" type="button" data-screen="live-seat-detail">View seat details <span aria-hidden="true">→</span></button>
+              <p class="bus-popup-note">Illustrative demo data · Not live tracking</p>
+            </section>
+          </div>
+          <p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p>
+        </div>`
       : state === "tickets"
         ? bookingConfirmed
           ? `<button class="saved-ticket" type="button" data-screen="booking-confirmed"><strong>USAD-7X29-KM41</strong><span>${escapeHtml(tripData.origin)} → ${escapeHtml(tripData.destination)}</span><small>View ticket details →</small></button>`
@@ -671,10 +695,12 @@
               <section class="faq-endcap"><img src="assets/3d-images/robot-mascot.png" alt="Smiling USAD support assistant"><h3>You've caught up to the end</h3><p>FAQs update automatically as new questions arise.<br>For now, relax and let us handle the heavy lifting.</p></section>
             </div>`;
     const isSettingsFrame = state === "profile" || state === "faq" || state === "notifications";
-    const hasBrandedHeader = isSettingsFrame || state === "live-map" || state === "tickets";
-    const header = hasBrandedHeader
-      ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="${state === "faq" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
-      : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
+    const hasBrandedHeader = isSettingsFrame || state === "tickets";
+    const header = state === "live-map"
+      ? ""
+      : hasBrandedHeader
+        ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="${state === "faq" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
+        : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
     return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame ? "" : navigation(state)}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
   };
 
@@ -751,6 +777,13 @@
   const startLiveMapSimulation = () => {
     const buses = [...screen.querySelectorAll("[data-sim-bus]")];
     if (!buses.length) return;
+    buses.forEach((bus) => {
+      const info = liveBusDetails[Number(bus.dataset.simBus)];
+      bus.setAttribute("role", "button");
+      bus.setAttribute("aria-haspopup", "dialog");
+      bus.setAttribute("aria-controls", "bus-popup-title");
+      if (info) bus.setAttribute("aria-label", `${info.name}. ${info.route}. ${info.eta} away, ${info.seats} ${info.seats === 1 ? "seat" : "seats"} available, ${info.status.toLowerCase()}.`);
+    });
 
     const route = [
       [56, 96], [64, 86], [56, 73], [58, 60], [45, 51],
@@ -971,7 +1004,7 @@
 
   screen.addEventListener("pointerdown", (event) => {
     const map = event.target.closest(".tab-map");
-    if (activeState !== "live-map" || !map || event.button !== 0 || event.target.closest(".map-controls, .map-live-card")) return;
+    if (activeState !== "live-map" || !map || event.button !== 0 || event.target.closest(".map-controls, .map-live-card, .live-map-header, [data-sim-bus], [data-bus-popup]")) return;
     liveMapDrag = {
       pointerId: event.pointerId,
       originX: event.clientX,
@@ -1009,6 +1042,20 @@
   }, { passive: false });
 
   screen.addEventListener("keydown", (event) => {
+    const busMarker = event.target.closest("[data-sim-bus]");
+    if (busMarker && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      busMarker.click();
+      return;
+    }
+    if (event.key === "Escape" && activeState === "live-map") {
+      const popup = screen.querySelector("[data-bus-popup]:not([hidden])");
+      if (popup) {
+        popup.hidden = true;
+        screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus();
+        return;
+      }
+    }
     if (activeState !== "live-map" || !event.target.closest(".tab-map")) return;
     const panStep = event.shiftKey ? 80 : 36;
     if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown") {
@@ -1178,6 +1225,32 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const busMarker = event.target.closest("[data-sim-bus]");
+    if (busMarker) {
+      selectedLiveBus = Number(busMarker.dataset.simBus);
+      const bus = liveBusDetails[selectedLiveBus];
+      const popup = screen.querySelector("[data-bus-popup]");
+      if (!bus || !popup) return;
+      popup.querySelector("[data-bus-name]").textContent = bus.name;
+      popup.querySelector("[data-bus-route]").textContent = bus.route;
+      popup.querySelector("[data-bus-seats]").textContent = String(bus.seats);
+      popup.querySelector("[data-bus-eta]").textContent = `${bus.eta} away`;
+      popup.querySelector("[data-bus-fleet]").textContent = bus.fleetId;
+      popup.querySelector("[data-bus-fare]").textContent = bus.fare;
+      popup.querySelector("[data-bus-status]").textContent = bus.status;
+      popup.querySelector("[data-bus-seat-layout]").innerHTML = seatLayoutMarkup(bus);
+      popup.hidden = false;
+      popup.querySelector("[data-bus-popup-close]").focus();
+      return;
+    }
+
+    const popup = event.target.closest("[data-bus-popup]");
+    if (popup && (event.target === popup || event.target.closest("[data-bus-popup-close]"))) {
+      popup.hidden = true;
+      screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus();
+      return;
+    }
+
     const notificationFilterButton = event.target.closest("[data-notification-filter]");
     if (notificationFilterButton) {
       notificationFilter = notificationFilterButton.dataset.notificationFilter;
