@@ -83,6 +83,8 @@
   let liveMapZoom = 1;
   let liveMapDrag = null;
   let liveMapAnimationFrame = 0;
+  let liveMapFilter = "all";
+  let liveMapQuery = "";
   let zoom = 1;
   let panX = 0;
   let panY = 0;
@@ -230,7 +232,7 @@
 
   const mapMarkup = (compact = false, live = false) => {
     const roads = live
-      ? '<path class="road-local" d="M-20 45 94 72 148 59 215 86 380 65M-20 128 75 153 153 135 224 167 380 143M-20 214 92 194 160 224 247 208 380 242M-20 302 81 277 165 306 238 284 380 318M-20 392 88 360 161 395 255 372 380 414M-20 486 92 454 167 486 247 463 380 502M-20 574 84 548 164 577 255 553 380 596M42-20 62 102 42 206 76 303 50 404 87 505 68 660M118-20 133 78 110 174 145 272 124 373 153 468 137 570 160 660M235-20 218 93 251 186 224 285 261 383 232 475 272 572 251 660M326-20 302 92 335 188 310 282 348 374 318 469 350 566 330 660"/><path class="road-secondary" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650M-15 100 130 122 354 95M30 255 163 329 345 355M-12 455 210 386 365 422M66 0 91 180 44 313M290 35 252 202 290 300 269 620"/><path class="road-main" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650"/><path class="route-line" d="M107 440 163 464 185 393 163 329 211 269 191 206 217 141"/><circle class="map-junction" cx="163" cy="329" r="8"/><circle class="map-junction" cx="191" cy="253" r="7"/><circle class="map-junction" cx="210" cy="386" r="7"/>'
+      ? '<path class="road-local" d="M-20 45 94 72 148 59 215 86 380 65M-20 128 75 153 153 135 224 167 380 143M-20 214 92 194 160 224 247 208 380 242M-20 302 81 277 165 306 238 284 380 318M-20 392 88 360 161 395 255 372 380 414M-20 486 92 454 167 486 247 463 380 502M-20 574 84 548 164 577 255 553 380 596M42-20 62 102 42 206 76 303 50 404 87 505 68 660M118-20 133 78 110 174 145 272 124 373 153 468 137 570 160 660M235-20 218 93 251 186 224 285 261 383 232 475 272 572 251 660M326-20 302 92 335 188 310 282 348 374 318 469 350 566 330 660"/><path class="road-secondary" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650M-15 100 130 122 354 95M30 255 163 329 345 355M-12 455 210 386 365 422M66 0 91 180 44 313M290 35 252 202 290 300 269 620"/><path class="road-main" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650"/><path class="route-line" d="M107 390 163 380 185 365 163 350 211 338 191 320 217 300"/><circle class="map-junction" cx="163" cy="329" r="8"/><circle class="map-junction" cx="191" cy="253" r="7"/><circle class="map-junction" cx="210" cy="386" r="7"/>'
       : '<path class="road-main" d="M-12 136 68 95 118 108 164 65 217 78 286 20 374 35"/><path class="road-secondary" d="M-15 48 68 95 95 166M118 108 152 180M164 65 147 0M217 78 231 158M286 20 312 0M286 20 332 114"/><path class="route-line" d="M48 119 110 104 160 70 220 77 296 35"/>';
     const viewBox = live ? "0 0 360 640" : "0 0 360 180";
     return `
@@ -624,15 +626,51 @@
         </div>
       </div>`;
     };
+    const liveMapScreen = () => `
+      <div class="tab-map" tabindex="0" aria-label="Illustrative live operations map. Drag to pan, use plus and minus to zoom, or use arrow keys.">
+        <header class="live-map-header">
+          <div class="live-map-header-content">
+            <div class="live-map-topbar">
+              <div class="live-map-location"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Live View</span><strong>Live Operations Map</strong></div>
+              <button class="notification-button compact" type="button" data-screen="notifications" aria-label="Notifications, ${unreadNotificationCount()} unread"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
+            </div>
+            <div class="live-map-search" role="search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+              <input type="search" data-live-map-search placeholder="Search trips by bus code, route..." aria-label="Search trips by bus code or route">
+              <button type="button" data-live-filter-toggle aria-label="Toggle trip filters" aria-expanded="true" aria-controls="live-map-filters"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
+            </div>
+            <div class="live-map-filters" id="live-map-filters" role="group" aria-label="Filter map activity">
+              <button type="button" class="is-active" data-live-map-filter="all" aria-pressed="true">All Trips</button>
+              <button type="button" data-live-map-filter="completed" aria-pressed="false">Completed (11)</button>
+              <button type="button" data-live-map-filter="cancelled" aria-pressed="false">Cancelled (1)</button>
+              <button type="button" data-live-map-filter="month" aria-pressed="false">This Month</button>
+            </div>
+          </div>
+        </header>
+        ${mapMarkup(false, true)}
+        <aside class="live-map-legend" aria-label="Traffic flow legend"><strong>Traffic Flow</strong><span><i class="is-normal"></i>Normal Flow</span><span><i class="is-moderate"></i>Moderate</span><span><i class="is-congested"></i>Congested</span></aside>
+        <div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div>
+        <section class="live-operations-panel" aria-label="Route operations summary">
+          <span class="live-operations-handle" aria-hidden="true"></span>
+          <div class="live-operations-route">
+            <div><h2>Route Malolos ⇄ Trinoma</h2><div class="live-route-badges"><span>NLEX Express</span><span class="is-normal">Normal Flow</span></div></div>
+            <div class="live-route-duration"><strong>42 mins</strong><small>Estimated</small></div>
+          </div>
+          <div class="live-route-context"><span>via Tabang Exit</span><span>Updated 1m ago</span></div>
+          <p class="live-map-filter-summary" data-live-map-filter-summary role="status" aria-live="polite">12 trips · 2 buses on this corridor</p>
+          <div class="live-operations-stats">
+            <div><h3>Terminal Demand</h3><p>Tabang Bridge <strong>118 pax</strong></p><p>Malolos Hub <strong>42 pax</strong></p></div>
+            <div><h3>Fleet Deployment</h3><p>Active on Road <strong>14 buses</strong></p><p>Dispatched Next <strong>~4 mins</strong></p></div>
+          </div>
+          <div class="live-next-departing"><span class="live-next-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10ZM7 7h10v6H7zM8 18.5v2m8-2v2"/></svg></span><div><strong>Next Departing: MLS-042</strong><small>8 available seats · Departing in 4 min</small></div><button type="button" data-action="quick-book">Reserve</button></div>
+          <p class="live-operations-disclaimer">Illustrative operations data · Not live tracking</p>
+        </section>
+        <p class="map-attribution">Illustrative map · Not to scale</p>
+      </div>`;
     const content = state === "notifications"
       ? notificationContent
       : state === "live-map"
-      ? `<div class="tab-map" tabindex="0" aria-label="Illustrative map. Drag to pan, use plus and minus to zoom, or use arrow keys.">
-          <div class="live-map-header home-header">${homeHeaderContent()}</div>
-          ${mapMarkup(false, true)}
-          <div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div>
-          <p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p>
-        </div>`
+      ? liveMapScreen()
       : state === "tickets"
         ? tripHistoryScreen()
         : state === "profile"
@@ -837,6 +875,41 @@
     if (zoomOutput) zoomOutput.textContent = `${Math.round(liveMapZoom * 100)}%`;
   };
 
+  const updateLiveMapView = () => {
+    const map = screen.querySelector(".tab-map");
+    if (!map) return;
+    map.dataset.liveFilter = liveMapFilter;
+    let visibleBusCount = 0;
+    const query = liveMapQuery.trim().toLocaleLowerCase();
+    const showLiveFleet = liveMapFilter === "all" || liveMapFilter === "month";
+
+    screen.querySelectorAll("[data-live-map-filter]").forEach((button) => {
+      const selected = button.dataset.liveMapFilter === liveMapFilter;
+      button.classList.toggle("is-active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    screen.querySelectorAll("[data-sim-bus]").forEach((marker) => {
+      const bus = liveBusDetails[Number(marker.dataset.simBus)];
+      const matchesQuery = !query || [bus.name, bus.fleetId, bus.route].some((value) => value.toLocaleLowerCase().includes(query));
+      marker.hidden = !showLiveFleet || !matchesQuery;
+      if (!marker.hidden) visibleBusCount += 1;
+    });
+
+    const summary = screen.querySelector("[data-live-map-filter-summary]");
+    if (!summary) return;
+    const filterSummaries = {
+      all: "12 trips · 2 buses on this corridor",
+      completed: "11 completed trips · October 2024",
+      cancelled: "1 cancelled trip · no active bus shown",
+      month: "October 2024 · 12 trips · 18.4 kg CO₂ saved",
+    };
+    summary.textContent = showLiveFleet && query
+      ? visibleBusCount
+        ? `${visibleBusCount} matching ${visibleBusCount === 1 ? "bus" : "buses"} on this corridor`
+        : "No matching buses. Try another bus code or route."
+      : filterSummaries[liveMapFilter];
+  };
+
   const stopLiveMapSimulation = () => {
     if (liveMapAnimationFrame) cancelAnimationFrame(liveMapAnimationFrame);
     liveMapAnimationFrame = 0;
@@ -854,8 +927,8 @@
     });
 
     const route = [
-      [56, 96], [64, 86], [56, 73], [58, 60], [45, 51],
-      [53, 40], [42, 28], [47, 16], [44, 4],
+      [32, 60], [45, 58], [51, 56], [45, 54], [59, 52],
+      [53, 49], [60, 46],
     ];
     const segments = route.slice(1).map((point, index) => {
       const start = route[index];
@@ -933,7 +1006,10 @@
       if (state === "live-map") {
         liveMapPan = { x: 0, y: 0 };
         liveMapZoom = 1;
+        liveMapFilter = "all";
+        liveMapQuery = "";
         applyLiveMapTransform();
+        updateLiveMapView();
         startLiveMapSimulation();
       } else if (state === "faq") {
         activeFaqCategory = "all";
@@ -1149,7 +1225,7 @@
 
   screen.addEventListener("pointerdown", (event) => {
     const map = event.target.closest(".tab-map");
-    if (activeState !== "live-map" || !map || event.button !== 0 || event.target.closest(".map-controls, .map-live-card, .live-map-header, [data-sim-bus], [data-bus-popup]")) return;
+    if (activeState !== "live-map" || !map || event.button !== 0 || event.target.closest(".map-controls, .map-live-card, .live-map-header, .live-map-legend, .live-operations-panel, [data-sim-bus], [data-bus-popup]")) return;
     liveMapDrag = {
       pointerId: event.pointerId,
       originX: event.clientX,
@@ -1179,7 +1255,7 @@
   screen.addEventListener("lostpointercapture", stopLiveMapDrag);
 
   screen.addEventListener("wheel", (event) => {
-    if (activeState !== "live-map" || !event.target.closest(".tab-map")) return;
+    if (activeState !== "live-map" || !event.target.closest(".tab-map") || event.target.closest(".live-map-header, .live-map-legend, .live-operations-panel, .map-controls")) return;
     event.preventDefault();
     event.stopPropagation();
     liveMapZoom = Math.min(2.4, Math.max(1, liveMapZoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12)));
@@ -1359,6 +1435,11 @@
       updateTripHistoryView();
     }
 
+    if (event.target.matches("[data-live-map-search]")) {
+      liveMapQuery = event.target.value;
+      updateLiveMapView();
+    }
+
     if (event.target.matches("#login-email")) {
       const emailError = screen.querySelector("#email-error");
       if (emailError) emailError.hidden = true;
@@ -1452,6 +1533,22 @@
     const popup = event.target.closest("[data-bus-popup]");
     if (popup && event.target === popup) {
       closeBottomSheet(popup, () => screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus());
+      return;
+    }
+
+    const liveMapFilterButton = event.target.closest("[data-live-map-filter]");
+    if (liveMapFilterButton) {
+      liveMapFilter = liveMapFilterButton.dataset.liveMapFilter;
+      updateLiveMapView();
+      return;
+    }
+
+    const liveMapFilterToggle = event.target.closest("[data-live-filter-toggle]");
+    if (liveMapFilterToggle) {
+      const filters = screen.querySelector("#live-map-filters");
+      if (!filters) return;
+      filters.hidden = !filters.hidden;
+      liveMapFilterToggle.setAttribute("aria-expanded", String(!filters.hidden));
       return;
     }
 
