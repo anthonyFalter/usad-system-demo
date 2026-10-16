@@ -1136,16 +1136,17 @@ input:focus-visible,
   gap: 4px;
   height: 30px;
   flex: 0 0 auto;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 14px;
-  background: #fff;
-  color: #15785f;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  background: rgba(255,255,255,.2);
+  color: #fff;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   white-space: nowrap;
 }
+.home-shortcuts button:hover { border-color: rgba(255,255,255,.42); background: rgba(255,255,255,.3); }
 
 .home-shortcuts svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -2614,7 +2615,6 @@ input:focus-visible,
 .ticket-history-header .home-shortcuts { margin: 10px -2px 0; overflow-x: auto; scrollbar-width: none; }
 .ticket-history-header .home-shortcuts::-webkit-scrollbar { display: none; }
 .trip-history-filters { gap: 6px; }
-.trip-history-filters button { height: 30px; padding: 0 10px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.2); color: #fff; font-size: 10px; }
 .trip-history-filters button.is-active { border-color: #fff; background: #fff; color: #167b5e; }
 .trip-history-body { display: grid; gap: 14px; padding: 17px 20px 28px; }
 .trip-history-summary { padding: 12px; border: 1px solid #e3e9e6; border-radius: 12px; background: #fff; }
