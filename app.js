@@ -567,67 +567,36 @@
           ? `<button class="saved-ticket" type="button" data-screen="booking-confirmed"><strong>USAD-7X29-KM41</strong><span>${escapeHtml(tripData.origin)} → ${escapeHtml(tripData.destination)}</span><small>View ticket details →</small></button>`
           : `<p class="empty-tab">Your booked rides will appear here.</p>`
         : state === "profile"
-          ? `<div class="account-page">
-              <section class="account-identity" aria-label="Account identity">
+          ? `<div class="account-page account-profile-page">
+              <section class="profile-user-card" aria-label="Account profile">
                 <span class="account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
-                <div class="account-identity-copy"><strong>${escapeHtml(registrationData.username || "JockyThePythonKing")}</strong><span>Account ID: ${registrationData.email ? "USAD-" + escapeHtml(registrationData.email.split("@")[0].slice(0, 8).toUpperCase()) : "0001-7DASNX"}</span><span class="verified-label">Verified</span></div>
+                <div class="profile-user-copy"><strong>${escapeHtml(registrationData.username || "JockyThePythonKing")}</strong><span>${escapeHtml([accountProfile.firstName, accountProfile.middleName, accountProfile.lastName].filter(Boolean).join(" "))}</span><span class="profile-status-badge">Unverified</span></div>
               </section>
-              <section class="account-preferences" aria-label="Account preferences">
-                <div class="account-preference"><div><strong>Enable 2FA</strong><small>Future login sign-in safety</small></div><button class="toggle-switch is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Enable two-factor authentication"></button></div>
-                <div class="account-preference"><div><strong>Push Notifications</strong><small>Get updates for your rides and bookings.</small></div><button class="toggle-switch is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Push notifications"></button></div>
-                <div class="account-preference"><div><strong>Promotional Alerts</strong><small>Hear about fare offers and service updates.</small></div><button class="toggle-switch is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Promotional alerts"></button></div>
+              <button class="profile-verify-button" type="button" data-info="Discount ID verification is a prototype-only flow.">Verify Account <span aria-hidden="true">→</span></button>
+              <section class="profile-menu-card" aria-labelledby="profile-security-heading">
+                <h2 id="profile-security-heading">Account Security</h2>
+                <button class="profile-menu-row" type="button" data-info="Password management is not connected in this prototype.">Change Password <span aria-hidden="true">›</span></button>
+                <button class="profile-menu-row" type="button" data-info="Two-factor authentication settings are a prototype-only control.">Two-Factor Authentication <span aria-hidden="true">›</span></button>
+                <button class="profile-menu-row" type="button" data-info="Session management is not connected in this prototype.">Session Management <span aria-hidden="true">›</span></button>
               </section>
-              <section class="account-sections" aria-label="Account settings">
-                <details class="account-section">
-                  <summary>Account Security</summary>
-                  <div class="account-section-content">
-                    ${profileField("email", "Email", "email")}
-                    ${profileField("contactNumber", "Contact Number", "tel")}
-                    ${profileField("password", "Password", "password")}
-                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
-                  </div>
-                </details>
-                <details class="account-section">
-                  <summary>Customer Information</summary>
-                  <div class="account-section-content">
-                    ${profileField("firstName", "First Name")}
-                    ${profileField("middleName", "Middle Name")}
-                    ${profileField("lastName", "Last Name")}
-                    ${profileField("discountId", "Discount ID")}
-                    ${profileField("address", "Address")}
-                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
-                  </div>
-                </details>
-                <details class="account-section">
-                  <summary>Payment Options</summary>
-                  <div class="account-section-content account-payment-list">
-                    <div class="account-payment-row">
-                      <span class="account-payment-icon">${paymentIcon("pouch")}</span><strong>U-Pouch</strong><small>₱2.00</small>
-                      <button class="toggle-switch is-on account-payment-toggle" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Enable U-Pouch"></button>
-                    </div>
-                    <div class="account-payment-row">
-                      <span class="account-payment-icon">${paymentIcon("wallet")}</span><strong>E-Wallet</strong><small>Unlinked</small>
-                      <button class="account-payment-link" type="button" data-info="E-Wallet linking is not connected in this prototype." aria-label="Link E-Wallet">${paymentIcon("link")}</button>
-                    </div>
-                    <div class="account-payment-row">
-                      <span class="account-payment-icon">${paymentIcon("card")}</span><strong>Card</strong><small>Unlinked</small>
-                      <button class="account-payment-link" type="button" data-info="Card linking is not connected in this prototype." aria-label="Link card">${paymentIcon("link")}</button>
-                    </div>
-                    <div class="account-payment-row">
-                      <span class="account-payment-icon">${paymentIcon("gcash")}</span><strong>GCash</strong><small>Unlinked</small>
-                      <button class="account-payment-link" type="button" data-info="GCash linking is not connected in this prototype." aria-label="Link GCash">${paymentIcon("link")}</button>
-                    </div>
-                    <div class="account-payment-row">
-                      <span class="account-payment-icon">${paymentIcon("maya")}</span><strong>Maya</strong><small>Unlinked</small>
-                      <button class="account-payment-link" type="button" data-info="Maya linking is not connected in this prototype." aria-label="Link Maya">${paymentIcon("link")}</button>
-                    </div>
-                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
-                  </div>
-                </details>
-                <button class="account-support-link" type="button" data-screen="faq">Customer Support <span aria-hidden="true">›</span></button>
+              <section class="profile-menu-card" aria-labelledby="profile-preferences-heading">
+                <h2 id="profile-preferences-heading">Preferences</h2>
+                <button class="profile-menu-row" type="button" data-info="Push notification preferences are not connected in this prototype.">Push Notifications <span aria-hidden="true">›</span></button>
+                <button class="profile-menu-row" type="button" data-info="Email marketing preferences are not connected in this prototype.">Email Marketing <span aria-hidden="true">›</span></button>
+                <button class="profile-menu-row" type="button" data-info="Theme preferences are not connected in this prototype.">Dark Mode <span aria-hidden="true">›</span></button>
               </section>
-              <p class="account-message" data-message role="status" aria-live="polite"></p>
-              <button type="button" class="account-signout" data-screen="login">Sign out</button>
+              <section class="profile-menu-card" aria-labelledby="profile-support-heading">
+                <h2 id="profile-support-heading">Support</h2>
+                <button class="profile-menu-row" type="button" data-screen="faq">Help Center <span aria-hidden="true">›</span></button>
+                <button class="profile-menu-row" type="button" data-info="Customer support is not connected in this prototype.">Contact Support <span aria-hidden="true">›</span></button>
+                <button class="profile-menu-row" type="button" data-info="Terms and privacy details are not connected in this prototype.">Terms &amp; Privacy <span aria-hidden="true">›</span></button>
+              </section>
+              <section class="profile-menu-card" aria-labelledby="profile-session-heading">
+                <h2 id="profile-session-heading">Session Management</h2>
+                <button class="profile-menu-row" type="button" data-screen="login">Sign Out <span aria-hidden="true">›</span></button>
+                <button class="profile-menu-row" type="button" data-info="Account deletion is not connected in this prototype.">Delete Account <span aria-hidden="true">›</span></button>
+              </section>
+              <button class="profile-support-banner" type="button" data-info="Customer service is not connected in this prototype."><span>Can’t find the topic you are looking for?</span><small>24/7 Live Customer Service</small><i aria-hidden="true">?</i></button>
             </div>`
           : `<div class="faq-page">
               <section class="faq-intro">
@@ -661,6 +630,8 @@
     const hasBrandedHeader = isSettingsFrame || state === "tickets";
     const header = state === "live-map"
       ? ""
+      : state === "profile"
+        ? `<header class="settings-header profile-settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="profile-settings-title"><h1>Account Profile</h1></div></header>`
       : hasBrandedHeader
         ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="${state === "faq" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
         : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
@@ -689,7 +660,7 @@
             <p class="bus-popup-note">Illustrative demo data · Not live tracking</p>
           </section>
         </div>` : "";
-      return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame ? "" : navigation(state)}${busPopup}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
+      return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}${state === "profile" ? " profile-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame && state !== "profile" ? "" : navigation(state)}${busPopup}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
   };
 
   const updateFaqResults = () => {
