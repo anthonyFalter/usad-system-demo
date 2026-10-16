@@ -2010,13 +2010,18 @@ input:focus-visible,
 .bus-info-list .payment-option { cursor: default; }
 .bus-popup-seat-layout {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 5px;
-  padding: 6px 0 10px;
+  gap: 6px;
+  padding: 0 0 5px;
 }
-.bus-popup-seat-layout .seat-seat { height: 24px; border-radius: 5px; font-size: 9px; }
-.bus-popup-seat-layout .seat-seat.empty { border-color: #b8e5d2; background: #e5f7ee; color: #14785b; }
-.bus-popup-seat-layout .seat-seat.occupied { background: #e8ece9; color: #77837c; }
+.bus-seat-front { display: flex; align-items: center; justify-content: space-between; margin: 2px 18px 7px; padding-bottom: 5px; border-bottom: 1px solid #e3eae6; color: #7a8780; font-size: 8px; }
+.bus-seat-front strong { color: #53635a; font-size: 9px; }
+.bus-seat-row { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); align-items: center; gap: 6px; }
+.bus-seat-aisle { width: 1px; height: 22px; justify-self: center; background: #dfe7e3; }
+.bus-popup-seat-layout .seat-seat { width: 100%; height: 26px; padding: 0; border-radius: 6px; cursor: pointer; font-size: 9px; }
+.bus-popup-seat-layout .seat-seat.empty { border: 1px solid #b8e5d2; background: #e5f7ee; color: #14785b; }
+.bus-popup-seat-layout .seat-seat.selected { border: 1px solid #0f795b; background: #0f795b; color: #fff; }
+.bus-popup-seat-layout .seat-seat.occupied { border: 1px solid #e3e9e5; background: #e8ece9; color: #77837c; cursor: not-allowed; }
+.bus-seat-selection { min-height: 12px; margin: 0 0 4px; color: #65736b; font-size: 9px; text-align: center; }
 .bus-popup-note { margin: 7px 0 0; color: #78847d; font-size: 8px; text-align: center; }
 
 .seat-capacity-page {

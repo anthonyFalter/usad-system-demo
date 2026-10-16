@@ -67,6 +67,7 @@
     { name: "Bus 02", fleetId: "MLS-018", route: "Malolos → Trinoma", eta: "Less than 1 min", seats: 1, fare: "₱80.00", status: "On time" },
   ];
   let selectedLiveBus = 0;
+  let selectedBusSeatId = "";
   let liveMapPan = { x: 0, y: 0 };
   let liveMapZoom = 1;
   let liveMapDrag = null;
@@ -453,6 +454,20 @@
     return `<span class="seat-seat ${status}">${row}${side}</span>`;
   }).join("");
 
+  const busSeatPlanMarkup = (bus) => Array.from({ length: 5 }, (_, rowIndex) => {
+    const row = rowIndex + 1;
+    const seatButton = (side) => {
+      const seatId = `${row}${side}`;
+      const seatIndex = rowIndex * 2 + (side === "B" ? 1 : 0);
+      const occupied = seatIndex >= bus.seats;
+      const selected = !occupied && selectedBusSeatId === seatId;
+      const seatState = occupied ? "occupied" : selected ? "selected" : "empty";
+      const label = occupied ? "occupied" : selected ? "selected" : "available";
+      return `<button class="seat-seat ${seatState}" type="button" data-bus-seat="${seatId}" aria-label="Seat ${seatId}, ${label}" aria-pressed="${selected}"${occupied ? " disabled" : ""}>${seatId}</button>`;
+    };
+    return `<div class="bus-seat-row">${seatButton("A")}<span class="bus-seat-aisle" aria-hidden="true"></span>${seatButton("B")}</div>`;
+  }).join("");
+
   const liveSeatDetailScreen = () => {
     const bus = liveBusDetails[selectedLiveBus];
     return `
@@ -706,7 +721,9 @@
               <div class="payment-option"><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Estimated Fare</strong><small data-bus-fare>₱80.00</small></span></div>
             </div>
             <label class="sheet-label">Seat Layout</label>
-            <div class="bus-popup-seat-layout" data-bus-seat-layout aria-label="Illustrative seat layout"></div>
+            <div class="bus-seat-front"><span>FRONT</span><strong>Driver</strong></div>
+            <div class="bus-popup-seat-layout" data-bus-seat-layout role="group" aria-label="Available bus seats"></div>
+            <p class="bus-seat-selection" data-seat-selection aria-live="polite">Select an available seat</p>
             <button class="sheet-primary" type="button" data-screen="live-seat-detail">View seat details <span>→</span></button>
             <p class="bus-popup-note">Illustrative demo data · Not live tracking</p>
           </section>
@@ -1268,9 +1285,28 @@
       return;
     }
 
+    const seatButton = event.target.closest("[data-bus-seat]");
+    if (seatButton) {
+      if (seatButton.disabled) return;
+      selectedBusSeatId = seatButton.dataset.busSeat;
+      screen.querySelectorAll("[data-bus-seat]").forEach((seat) => {
+        const selected = seat === seatButton;
+        seat.classList.toggle("selected", selected);
+        seat.classList.toggle("empty", !selected && !seat.disabled);
+        seat.setAttribute("aria-pressed", String(selected));
+        seat.setAttribute("aria-label", `Seat ${seat.dataset.busSeat}, ${selected ? "selected" : seat.disabled ? "occupied" : "available"}`);
+      });
+      screen.querySelectorAll("[data-seat-selection]").forEach((summary) => {
+        summary.textContent = `Seat ${selectedBusSeatId} selected`;
+      });
+      return;
+    }
+
     const busMarker = event.target.closest("[data-sim-bus]");
     if (busMarker) {
-      selectedLiveBus = Number(busMarker.dataset.simBus);
+      const nextBus = Number(busMarker.dataset.simBus);
+      if (nextBus !== selectedLiveBus) selectedBusSeatId = "";
+      selectedLiveBus = nextBus;
       const bus = liveBusDetails[selectedLiveBus];
       const popup = screen.querySelector("[data-bus-popup]");
       if (!bus || !popup) return;
@@ -1283,7 +1319,8 @@
       popup.querySelector("[data-bus-fleet]").value = bus.fleetId;
       popup.querySelector("[data-bus-fare]").textContent = bus.fare;
       popup.querySelector("[data-bus-status]").value = bus.status;
-      popup.querySelector("[data-bus-seat-layout]").innerHTML = seatLayoutMarkup(bus);
+      popup.querySelector("[data-bus-seat-layout]").innerHTML = busSeatPlanMarkup(bus);
+      popup.querySelector("[data-seat-selection]").textContent = selectedBusSeatId ? `Seat ${selectedBusSeatId} selected` : "Select an available seat";
       popup.hidden = false;
       popup.querySelector(".bottom-sheet").focus();
       return;
