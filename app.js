@@ -586,17 +586,6 @@
           <div class="live-map-header home-header">${homeHeaderContent()}</div>
           ${mapMarkup(false, true)}
           <div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div>
-          <div class="bus-popup-scrim" data-bus-popup hidden>
-            <section class="bus-capacity-popup" role="dialog" aria-modal="true" aria-labelledby="bus-popup-title" tabindex="-1">
-              <header><div><span class="bus-popup-kicker"><i></i> Seat capacity</span><h2 id="bus-popup-title" data-bus-name>Bus 01</h2></div><button type="button" data-bus-popup-close aria-label="Close bus details">×</button></header>
-              <p class="bus-popup-route" data-bus-route>Malolos → Trinoma</p>
-              <div class="bus-popup-capacity"><strong data-bus-seats>8</strong><span>seats available</span><small data-bus-eta>3 min away</small></div>
-              <div class="bus-popup-facts"><div><span>Bus ID</span><strong data-bus-fleet>MLS-042</strong></div><div><span>Estimated fare</span><strong data-bus-fare>₱80.00</strong></div><div><span>Status</span><strong data-bus-status>On time</strong></div></div>
-              <div class="bus-popup-seat-layout" data-bus-seat-layout aria-label="Illustrative seat layout"></div>
-              <button class="bus-popup-action" type="button" data-screen="live-seat-detail">View seat details <span aria-hidden="true">→</span></button>
-              <p class="bus-popup-note">Illustrative demo data · Not live tracking</p>
-            </section>
-          </div>
           <p class="map-attribution">Illustrative map · Not to scale · Drag to explore</p>
         </div>`
       : state === "tickets"
@@ -701,7 +690,30 @@
       : hasBrandedHeader
         ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="${state === "faq" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
         : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
-    return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame ? "" : navigation(state)}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
+      const busPopup = state === "live-map" ? `
+        <div class="modal-scrim bus-popup-scrim" data-bus-popup hidden>
+          <section class="bottom-sheet quick-book-sheet bus-capacity-popup" role="dialog" aria-modal="true" aria-labelledby="bus-popup-title" tabindex="-1">
+            <span class="sheet-handle"></span>
+            <button class="modal-close" type="button" data-bus-popup-close aria-label="Close bus details">×</button>
+            <h2 id="bus-popup-title" data-bus-name>Bus 01</h2>
+            <p class="sheet-subtitle" data-bus-route>Malolos → Trinoma</p>
+            <div class="route-fields">
+              <label><span class="route-dot origin-dot"></span><input data-bus-fleet aria-label="Bus ID" value="MLS-042" readonly></label>
+              <label><span class="route-dot destination-dot"></span><input data-bus-status aria-label="Bus status" value="On time" readonly></label>
+            </div>
+            <label class="sheet-label">Available Seats</label>
+            <div class="passenger-stepper bus-capacity-stepper"><span>Seat capacity</span><strong data-bus-seats>8</strong><small data-bus-eta>3 min away</small></div>
+            <label class="sheet-label">Bus Information</label>
+            <div class="payment-options bus-info-list">
+              <div class="payment-option"><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Estimated Fare</strong><small data-bus-fare>₱80.00</small></span></div>
+            </div>
+            <label class="sheet-label">Seat Layout</label>
+            <div class="bus-popup-seat-layout" data-bus-seat-layout aria-label="Illustrative seat layout"></div>
+            <button class="sheet-primary" type="button" data-screen="live-seat-detail">View seat details <span>→</span></button>
+            <p class="bus-popup-note">Illustrative demo data · Not live tracking</p>
+          </section>
+        </div>` : "";
+      return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame ? "" : navigation(state)}${busPopup}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
   };
 
   const updateFaqResults = () => {
@@ -1235,9 +1247,9 @@
       popup.querySelector("[data-bus-route]").textContent = bus.route;
       popup.querySelector("[data-bus-seats]").textContent = String(bus.seats);
       popup.querySelector("[data-bus-eta]").textContent = `${bus.eta} away`;
-      popup.querySelector("[data-bus-fleet]").textContent = bus.fleetId;
+      popup.querySelector("[data-bus-fleet]").value = bus.fleetId;
       popup.querySelector("[data-bus-fare]").textContent = bus.fare;
-      popup.querySelector("[data-bus-status]").textContent = bus.status;
+      popup.querySelector("[data-bus-status]").value = bus.status;
       popup.querySelector("[data-bus-seat-layout]").innerHTML = seatLayoutMarkup(bus);
       popup.hidden = false;
       popup.querySelector("[data-bus-popup-close]").focus();
