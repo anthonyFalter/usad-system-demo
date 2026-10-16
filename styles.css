@@ -1301,11 +1301,14 @@ input:focus-visible,
 }
 
 .route-line {
-  stroke: #20a77e;
-  stroke-width: 4;
+  stroke-width: 5;
   stroke-dasharray: 8 5;
+  transition: stroke-width 400ms ease, opacity 400ms ease;
   animation: route-flow 2.5s linear infinite;
 }
+.route-line-normal { stroke: #159b72; }
+.route-line-moderate { stroke: #e5a021; }
+.route-line-congested { stroke: #d84e57; }
 
 .map-junction {
   fill: #fff;
@@ -1762,11 +1765,11 @@ input:focus-visible,
 .map-art.is-live .map-roads { overflow: visible; }
 .map-art.is-live .map-label-one { left: 23%; bottom: 12%; }
 .map-art.is-live .map-label-two { top: 17%; right: 16%; }
-.map-art.is-live .map-marker-start { top: 60%; left: 32%; }
+.map-art.is-live .map-marker-start { top: 80%; left: 59%; }
 .map-art.is-live .map-marker-bus { top: 52%; left: 46%; }
-.map-art.is-live .map-marker-destination { top: 46%; right: auto; left: 64%; }
+.map-art.is-live .map-marker-destination { top: 38%; right: auto; left: 52%; }
 .map-art.is-live .map-marker { width: 29px; height: 34px; }
-.map-art.is-live .map-marker-bus { width: 34px; height: 34px; transform: translate(-50%, -50%); }
+.map-art.is-live .map-marker-bus { z-index: 3; width: 34px; height: 34px; transform: translate(-50%, -50%); }
 .map-art.is-live .map-marker-bus-alt { z-index: 2; }
 .map-art.is-live .map-marker-bus-alt svg { background: #138c71; }
 .map-art.is-live .map-marker-bus { cursor: pointer; outline: none; }
@@ -2032,6 +2035,7 @@ input:focus-visible,
 .live-map-legend { position: absolute; z-index: 3; top: 230px; right: 56px; display: grid; gap: 5px; min-width: 104px; padding: 9px 10px; border: 1px solid #e4e9e7; border-radius: 10px; background: rgba(255,255,255,.96); box-shadow: 0 2px 8px rgba(24,45,36,.1); color: #56635e; font-size: 8px; }
 .live-map-legend strong { margin-bottom: 1px; color: #718078; font-size: 8px; font-weight: 700; text-transform: uppercase; }
 .live-map-legend span { display: flex; align-items: center; gap: 6px; }
+.live-map-legend span.is-current { margin: -2px -4px; padding: 2px 4px; border-radius: 5px; background: #f1f7f4; color: #253b31; font-weight: 700; }
 .live-map-legend i { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: #14a979; }
 .live-map-legend i.is-moderate { background: #ed9b22; }
 .live-map-legend i.is-congested { background: #e14e55; }
@@ -2058,7 +2062,9 @@ input:focus-visible,
 .bus-next-departure strong { color: #2d3933; font-size: 12px; line-height: 1.35; }
 .bus-next-departure small { color: #5f7067; font-size: 12px; line-height: 1.35; }
 .bus-route-overview > .bus-route-overview-content > p { margin: 0; color: #748078; font-size: 12px; text-align: right; }
-.tab-map[data-live-filter="cancelled"] .route-line { stroke: #df5961; }
+.tab-map[data-traffic-state="normal"] .route-line-normal,
+.tab-map[data-traffic-state="moderate"] .route-line-moderate,
+.tab-map[data-traffic-state="congested"] .route-line-congested { stroke-width: 7; }
 .tab-map .map-art.is-live { position: absolute; inset: 0; background-color: #e9edeb; }
 .bus-popup-scrim { z-index: 8; }
 .bus-capacity-popup {

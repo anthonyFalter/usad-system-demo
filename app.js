@@ -249,7 +249,7 @@
 
   const mapMarkup = (compact = false, live = false) => {
     const roads = live
-      ? '<path class="road-local" d="M-20 45 94 72 148 59 215 86 380 65M-20 128 75 153 153 135 224 167 380 143M-20 214 92 194 160 224 247 208 380 242M-20 302 81 277 165 306 238 284 380 318M-20 392 88 360 161 395 255 372 380 414M-20 486 92 454 167 486 247 463 380 502M-20 574 84 548 164 577 255 553 380 596M42-20 62 102 42 206 76 303 50 404 87 505 68 660M118-20 133 78 110 174 145 272 124 373 153 468 137 570 160 660M235-20 218 93 251 186 224 285 261 383 232 475 272 572 251 660M326-20 302 92 335 188 310 282 348 374 318 469 350 566 330 660"/><path class="road-secondary" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650M-15 100 130 122 354 95M30 255 163 329 345 355M-12 455 210 386 365 422M66 0 91 180 44 313M290 35 252 202 290 300 269 620"/><path class="road-main" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650"/><path class="route-line" d="M107 390 163 380 185 365 163 350 211 338 191 320 217 300"/><circle class="map-junction" cx="163" cy="329" r="8"/><circle class="map-junction" cx="191" cy="253" r="7"/><circle class="map-junction" cx="210" cy="386" r="7"/>'
+      ? '<path class="road-local" d="M-20 45 94 72 148 59 215 86 380 65M-20 128 75 153 153 135 224 167 380 143M-20 214 92 194 160 224 247 208 380 242M-20 302 81 277 165 306 238 284 380 318M-20 392 88 360 161 395 255 372 380 414M-20 486 92 454 167 486 247 463 380 502M-20 574 84 548 164 577 255 553 380 596M42-20 62 102 42 206 76 303 50 404 87 505 68 660M118-20 133 78 110 174 145 272 124 373 153 468 137 570 160 660M235-20 218 93 251 186 224 285 261 383 232 475 272 572 251 660M326-20 302 92 335 188 310 282 348 374 318 469 350 566 330 660"/><path class="road-secondary" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650M-15 100 130 122 354 95M30 255 163 329 345 355M-12 455 210 386 365 422M66 0 91 180 44 313M290 35 252 202 290 300 269 620"/><path class="road-main" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650"/><path class="route-line route-line-normal" d="M217 515 200 469 210 386"/><path class="route-line route-line-moderate" d="M210 386 163 329 191 253"/><path class="route-line route-line-congested" d="M191 253 186 245"/><path class="bus-travel-path" d="M217 515 200 469 210 386 163 329 191 253 186 245"/><circle class="map-junction" cx="163" cy="329" r="8"/><circle class="map-junction" cx="191" cy="253" r="7"/><circle class="map-junction" cx="210" cy="386" r="7"/>'
       : '<path class="road-main" d="M-12 136 68 95 118 108 164 65 217 78 286 20 374 35"/><path class="road-secondary" d="M-15 48 68 95 95 166M118 108 152 180M164 65 147 0M217 78 231 158M286 20 312 0M286 20 332 114"/><path class="route-line" d="M48 119 110 104 160 70 220 77 296 35"/>';
     const viewBox = live ? "0 0 360 640" : "0 0 360 180";
     return `
@@ -666,7 +666,7 @@
           </div>
         </header>
         ${mapMarkup(false, true)}
-        <aside class="live-map-legend" aria-label="Traffic flow legend"><strong>Traffic Flow</strong><span><i class="is-normal"></i>Normal Flow</span><span><i class="is-moderate"></i>Moderate</span><span><i class="is-congested"></i>Congested</span></aside>
+        <aside class="live-map-legend" aria-label="Traffic flow legend"><strong>Traffic Flow</strong><span class="is-current" data-traffic-level="normal"><i class="is-normal"></i>Normal Flow</span><span data-traffic-level="moderate"><i class="is-moderate"></i>Moderate</span><span data-traffic-level="congested"><i class="is-congested"></i>Congested</span></aside>
         <div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div>
         <p class="map-attribution">Illustrative map · Not to scale</p>
       </div>`;
@@ -909,7 +909,6 @@
       marker.hidden = !showLiveFleet || !matchesQuery;
       if (!marker.hidden) visibleBusCount += 1;
     });
-
     const summary = screen.querySelector("[data-live-map-filter-summary]");
     if (!summary) return;
     const filterSummaries = {
@@ -931,8 +930,11 @@
   };
 
   const startLiveMapSimulation = () => {
+    const map = screen.querySelector(".tab-map");
+    const scene = map?.querySelector(".map-scene");
+    const routePath = map?.querySelector(".map-roads .bus-travel-path");
     const buses = [...screen.querySelectorAll("[data-sim-bus]")];
-    if (!buses.length) return;
+    if (!map || !scene || !routePath || !buses.length) return;
     buses.forEach((bus) => {
       const info = liveBusDetails[Number(bus.dataset.simBus)];
       bus.setAttribute("role", "button");
@@ -941,42 +943,60 @@
       if (info) bus.setAttribute("aria-label", `${info.name}. ${info.route}. ${info.eta} away, ${info.seats} ${info.seats === 1 ? "seat" : "seats"} available, ${info.status.toLowerCase()}.`);
     });
 
-    const route = [
-      [32, 60], [45, 58], [51, 56], [45, 54], [59, 52],
-      [53, 49], [60, 46],
-    ];
-    const segments = route.slice(1).map((point, index) => {
-      const start = route[index];
-      return { start, end: point, length: Math.hypot(point[0] - start[0], point[1] - start[1]) };
-    });
-    const routeLength = segments.reduce((total, segment) => total + segment.length, 0);
-    const duration = 36000;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const placeBus = (bus, distance) => {
-      let remaining = distance;
-      const segment = segments.find((part) => {
-        if (remaining <= part.length) return true;
-        remaining -= part.length;
-        return false;
-      }) || segments[segments.length - 1];
-      const progress = Math.min(1, remaining / segment.length);
-      bus.style.left = `${segment.start[0] + (segment.end[0] - segment.start[0]) * progress}%`;
-      bus.style.top = `${segment.start[1] + (segment.end[1] - segment.start[1]) * progress}%`;
+    const placeOnPath = (marker, path, progress) => {
+      const pathLength = path.getTotalLength();
+      const distance = pathLength * progress;
+      const point = path.getPointAtLength(distance);
+      const nextPoint = path.getPointAtLength(Math.min(pathLength, distance + Math.max(1, pathLength * 0.002)));
+      const viewBox = path.ownerSVGElement.viewBox.baseVal;
+      const scale = Math.min(scene.clientWidth / viewBox.width, scene.clientHeight / viewBox.height);
+      const offsetX = (scene.clientWidth - viewBox.width * scale) / 2;
+      const offsetY = (scene.clientHeight - viewBox.height * scale) / 2;
+      const localX = offsetX + point.x * scale;
+      const localY = offsetY + point.y * scale;
+      marker.style.left = `${localX / scene.offsetWidth * 100}%`;
+      marker.style.top = `${localY / scene.offsetHeight * 100}%`;
+      marker.style.transform = `translate(-50%, -50%) rotate(${Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI}deg)`;
     };
+    const trafficStates = ["normal", "moderate", "congested"];
+    const updateTrafficState = (elapsed) => {
+      const cyclePosition = elapsed % 34000;
+      const state = cyclePosition < 18000 ? trafficStates[0] : cyclePosition < 28000 ? trafficStates[1] : trafficStates[2];
+      map.dataset.trafficState = state;
+      screen.querySelectorAll("[data-traffic-level]").forEach((item) => {
+        item.classList.toggle("is-current", item.dataset.trafficLevel === state);
+      });
+      return state;
+    };
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (reduceMotion) {
-      buses.forEach((bus, index) => placeBus(bus, routeLength * (index ? 0.68 : 0.28)));
+      buses.forEach((bus, index) => {
+        bus.style.visibility = "visible";
+        placeOnPath(bus, routePath, index ? 0.68 : 0.28);
+      });
+      updateTrafficState(0);
       return;
     }
 
     const startedAt = performance.now();
+    const busDuration = 28000;
+    const terminalPause = 2200;
+    const busCycleDuration = busDuration + terminalPause;
     const animate = (now) => {
       if (activeState !== "live-map") return;
+      const elapsed = now - startedAt;
+      updateTrafficState(elapsed);
       buses.forEach((bus, index) => {
         if (bus.matches(":hover, :focus-visible")) return;
-        const offset = index * duration * 0.48;
-        const progress = ((now - startedAt + offset) % duration) / duration;
-        placeBus(bus, routeLength * progress);
+        const cycleTime = (elapsed + index * busDuration * 0.48) % busCycleDuration;
+        if (cycleTime >= busDuration) {
+          bus.style.visibility = "hidden";
+          return;
+        }
+        bus.style.visibility = "visible";
+        const progress = cycleTime / busDuration;
+        placeOnPath(bus, routePath, progress);
       });
       liveMapAnimationFrame = requestAnimationFrame(animate);
     };
