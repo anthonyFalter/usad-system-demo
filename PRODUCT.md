@@ -33,8 +33,8 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 - Traffic-aware ETAs are intended to help management plan around congestion or delays.
 - Passenger-demand visibility is intended to inform route and schedule adjustments.
 - The initiative aims to support public utility vehicle modernization by improving the broader commuting experience as well as vehicle operations.
-- The current deliverable is a UI-only prototype. It must not imply that live transit data, booking, authentication, or operational services are connected.
-- The current prototype scope prioritizes the initial role choice and the user-side login, invalid-credentials, and backend-error screens. Admin screens are deferred.
+- The current deliverable is a UI-only prototype. It must not imply that live transit data, booking, authentication, payments, or operational services are connected.
+- The user-side prototype includes login and email validation, registration and verification states, a commuter home dashboard, an illustrative live-map screen, and booking/ticket flows. Admin screens are deferred.
 
 ## Brand Commitments
 
@@ -47,7 +47,7 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 
 - UI reference image is supplied in the request.
 - Existing image assets are in `assets/3d-images/`.
-- No live transit feed, authentication, booking service, or operations dataset is provided for this UI-only prototype. Do not fabricate live data or claim integrations.
+- No live transit feed, authentication, booking service, payment processor, or operations dataset is provided for this UI-only prototype. The map, vehicles, availability, ETAs, registration/verification, booking, and tickets are illustrative interactions only; do not claim that services or data are live.
 
 ## Product Principles
 
