@@ -54,7 +54,6 @@
   ];
   let notificationFilter = "all";
   let welcomeTimeout = 0;
-  let bottomSheetCloseTimeout = 0;
   let activeFaqCategory = "all";
   let tripData = {
     origin: "Robinsons Place Malolos",
@@ -841,8 +840,6 @@
   const renderScreen = (state, options = {}) => {
     if (welcomeTimeout) window.clearTimeout(welcomeTimeout);
     welcomeTimeout = 0;
-    if (bottomSheetCloseTimeout) window.clearTimeout(bottomSheetCloseTimeout);
-    bottomSheetCloseTimeout = 0;
     stopLiveMapSimulation();
     activeState = state;
     liveMapDrag = null;
@@ -908,21 +905,24 @@
   const closeBottomSheet = (overlay, onClose) => {
     const sheet = overlay.querySelector(".bottom-sheet");
     if (!sheet || overlay.hidden || sheet.classList.contains("is-closing")) return;
-    overlay.classList.add("is-closing");
-    sheet.classList.add("is-closing");
+    let closeFinished = false;
     const finishClose = () => {
-      bottomSheetCloseTimeout = 0;
+      if (closeFinished) return;
+      closeFinished = true;
+      sheet.removeEventListener("animationend", onAnimationEnd);
       if (!overlay.isConnected) return;
       overlay.hidden = true;
       overlay.classList.remove("is-closing");
       sheet.classList.remove("is-closing");
       onClose?.();
     };
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      finishClose();
-    } else {
-      bottomSheetCloseTimeout = window.setTimeout(finishClose, 180);
-    }
+    const onAnimationEnd = (event) => {
+      if (event.target === sheet && event.animationName === "bottom-sheet-dismiss") finishClose();
+    };
+    sheet.addEventListener("animationend", onAnimationEnd);
+    overlay.classList.add("is-closing");
+    sheet.classList.add("is-closing");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) finishClose();
   };
 
   const updateCanvas = () => {
@@ -1274,8 +1274,6 @@
       const bus = liveBusDetails[selectedLiveBus];
       const popup = screen.querySelector("[data-bus-popup]");
       if (!bus || !popup) return;
-      if (bottomSheetCloseTimeout) window.clearTimeout(bottomSheetCloseTimeout);
-      bottomSheetCloseTimeout = 0;
       popup.classList.remove("is-closing");
       popup.querySelector(".bottom-sheet")?.classList.remove("is-closing");
       popup.querySelector("[data-bus-name]").textContent = bus.name;
