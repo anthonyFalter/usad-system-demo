@@ -68,6 +68,7 @@
   ];
   let selectedLiveBus = 0;
   let selectedBusSeatId = "";
+  let quickBookReturnFocus = null;
   let liveMapPan = { x: 0, y: 0 };
   let liveMapZoom = 1;
   let liveMapDrag = null;
@@ -298,7 +299,7 @@
   const quickBookScreen = () => `
     <div class="commuter-app has-modal">
       ${homeScreen()}
-      <div class="modal-scrim">
+      <div class="modal-scrim" data-quick-book-overlay>
         <form class="bottom-sheet quick-book-sheet" data-quick-book>
           <span class="sheet-handle"></span>
           <h2>Quick Book</h2><p class="sheet-subtitle">Find and reserve a seat in seconds</p>
@@ -366,7 +367,9 @@
       <p class="prototype-stamp">Demo confirmation · No payment was processed</p>
     </div>`;
 
-  const liveSeatOverviewScreen = () => `
+  const liveSeatOverviewScreen = () => {
+    const bus = liveBusDetails[selectedLiveBus];
+    return `
     <div class="seat-capacity-page">
       <div class="seat-capacity-shell">
         <section class="seat-capacity-panel panel-map" aria-label="Live seat capacity overview">
@@ -388,31 +391,22 @@
           </div>
           <div class="seat-map-surface">
             ${mapMarkup(false, true)}
-            <button class="seat-map-bubble" type="button" data-screen="live-seat-detail">Bus 01</button>
+            <button class="seat-map-bubble" type="button" data-screen="live-seat-detail">${bus.name}</button>
           </div>
           <div class="seat-bus-card">
             <div class="seat-bus-meta">
               <div class="seat-bus-icon" aria-hidden="true">MLS</div>
               <div>
                 <strong>Bus Information</strong>
-                <span>MLS-042 · Malolos → Trinoma</span>
+                <span>${bus.fleetId} · ${bus.route}</span>
               </div>
             </div>
             <div class="seat-bus-rows">
-              <div><span>Estimated Fare</span><strong>₱80.00</strong></div>
-              <div><span>Available Seats</span><strong>8 seats</strong></div>
+              <div><span>Estimated Fare</span><strong>${bus.fare}</strong></div>
+              <div><span>Available Seats</span><strong>${bus.seats} ${bus.seats === 1 ? "seat" : "seats"}</strong></div>
             </div>
             <div class="seat-layout" aria-label="Seat layout">
-              <span class="seat-seat empty">1A</span>
-              <span class="seat-seat empty">2A</span>
-              <span class="seat-seat selected">3A</span>
-              <span class="seat-seat empty">4A</span>
-              <span class="seat-seat empty">5A</span>
-              <span class="seat-seat empty">1B</span>
-              <span class="seat-seat occupied">2B</span>
-              <span class="seat-seat empty">3B</span>
-              <span class="seat-seat empty">4B</span>
-              <span class="seat-seat empty">5B</span>
+              ${seatLayoutMarkup(bus)}
             </div>
             <div class="seat-legend">
               <span><i class="seat-dot available"></i> Available</span>
@@ -446,11 +440,13 @@
       </div>
     </div>
   `;
+  };
 
   const seatLayoutMarkup = (bus) => Array.from({ length: 10 }, (_, index) => {
     const row = index % 5 + 1;
     const side = index < 5 ? "A" : "B";
-    const status = index < bus.seats ? "empty" : "occupied";
+    const seatId = `${row}${side}`;
+    const status = index < bus.seats ? selectedBusSeatId === seatId ? "selected" : "empty" : "occupied";
     return `<span class="seat-seat ${status}">${row}${side}</span>`;
   }).join("");
 
@@ -470,75 +466,39 @@
 
   const liveSeatDetailScreen = () => {
     const bus = liveBusDetails[selectedLiveBus];
+    const availableSeatIds = Array.from({ length: 10 }, (_, index) => `${Math.floor(index / 2) + 1}${index % 2 ? "B" : "A"}`).slice(0, bus.seats);
+    if (!availableSeatIds.includes(selectedBusSeatId)) selectedBusSeatId = availableSeatIds[0] ?? "";
+    const seatOptions = availableSeatIds.map((seatId) => {
+      const [row, side] = seatId;
+      const description = `Row ${row}, ${side === "A" ? "left" : "right"} side`;
+      return `<option value="${seatId}"${selectedBusSeatId === seatId ? " selected" : ""}>${seatId} · ${description}</option>`;
+    }).join("");
     return `
-    <div class="seat-capacity-page">
-      <div class="seat-capacity-shell">
-        <section class="seat-capacity-panel panel-map" aria-label="Selected bus detail">
-          <header class="seat-capacity-header">
-            <div class="seat-capacity-title-wrap">
-              <span class="seat-live-badge"><i></i> Live</span>
-              <h2>Find Available Seats</h2>
-            </div>
-            <button class="seat-capacity-back" type="button" data-screen="live-seat-overview" aria-label="Back to overview">‹</button>
-          </header>
-          <label class="seat-search" aria-label="Search for buses">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
-            <input type="search" placeholder="Search for bus..." aria-label="Search for buses">
-          </label>
-          <div class="seat-category-tabs" role="tablist" aria-label="Nearby route filters">
-            <button class="is-active" type="button">Bus Near Me</button>
-            <button type="button">Nearby Stops</button>
-            <button type="button">Recent Rid</button>
-          </div>
-          <div class="seat-map-surface">
-            ${mapMarkup(false, true)}
-            <span class="seat-map-bubble is-detail">${bus.name}</span>
-          </div>
-          <div class="seat-bus-card detail-card">
-            <div class="seat-bus-meta">
-              <div class="seat-bus-icon" aria-hidden="true">MLS</div>
-              <div>
-                <strong>Bus Information</strong>
-                <span>${bus.fleetId} · ${bus.route}</span>
-              </div>
-            </div>
-            <div class="seat-bus-rows">
-              <div><span>Estimated Fare</span><strong>${bus.fare}</strong></div>
-              <div><span>Available Seats</span><strong>${bus.seats} ${bus.seats === 1 ? "seat" : "seats"}</strong></div>
-            </div>
-            <div class="seat-layout" aria-label="Seat layout">
-              ${seatLayoutMarkup(bus)}
-            </div>
-            <div class="seat-legend">
-              <span><i class="seat-dot available"></i> Available</span>
-              <span><i class="seat-dot occupied"></i> Occupied</span>
-              <span><i class="seat-dot selected"></i> Selected</span>
-            </div>
-          </div>
-          ${navigation("live-map")}
-        </section>
-
-        <aside class="seat-capacity-panel panel-book" aria-label="Quick booking panel">
-          <div class="seat-book-card">
-            <div class="seat-book-header">
-              <h3>Quick Book</h3>
-              <button type="button" aria-label="Close quick book" data-screen="live-map">×</button>
-            </div>
+    <div class="seat-capacity-page seat-detail-booking">
+      <div class="seat-detail-background" inert aria-hidden="true">${liveSeatOverviewScreen()}</div>
+      <div class="modal-scrim seat-detail-booking-scrim" data-seat-booking-overlay>
+        <form class="bottom-sheet quick-book-sheet seat-detail-booking-sheet" data-quick-book aria-label="Quick Book">
+          <span class="sheet-handle"></span>
+          <div class="seat-detail-booking-scroll">
+            <h2>Quick Book</h2>
             <p class="sheet-subtitle">Find and reserve a seat in seconds</p>
             <div class="route-fields">
               <label><span class="route-dot origin-dot"></span><input name="origin" aria-label="Starting point" value="${escapeHtml(tripData.origin)}" readonly></label>
               <label><span class="route-dot destination-dot"></span><input name="destination" aria-label="Destination" value="${escapeHtml(tripData.destination)}" readonly></label>
             </div>
-            <label class="sheet-label" for="seat-passengers">Passengers</label>
-            <div class="passenger-stepper"><span id="seat-passengers">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
+            <label class="sheet-label" for="passenger-count">Passengers</label>
+            <div class="passenger-stepper"><span id="passenger-count">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
+            <label class="sheet-label" for="live-seat-picker">Seat/s</label>
+            <select id="live-seat-picker" class="seat-picker" name="seat" aria-label="Select a seat">${seatOptions}</select>
             <label class="sheet-label">Payment Method</label>
             <div class="payment-options">
               <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
+              <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
             </div>
-            <button class="sheet-primary" type="button" data-action="open-confirmation">Find Rides <span>→</span></button>
           </div>
-        </aside>
+          <div class="seat-detail-booking-footer"><button class="sheet-primary" type="submit">Find Rides <span>→</span></button></div>
+        </form>
       </div>
     </div>
   `;
@@ -710,9 +670,9 @@
             <span class="sheet-handle"></span>
             <h2 id="bus-popup-title" data-bus-name>Bus 01</h2>
             <p class="sheet-subtitle" data-bus-route>Malolos → Trinoma</p>
-            <div class="route-fields">
+            <div class="bus-popup-scroll" aria-label="Bus details and seat plan">
+            <div class="route-fields bus-fleet-row">
               <label><span class="route-dot origin-dot"></span><input data-bus-fleet aria-label="Bus ID" value="MLS-042" readonly></label>
-              <label><span class="route-dot destination-dot"></span><input data-bus-status aria-label="Bus status" value="On time" readonly></label>
             </div>
             <label class="sheet-label">Available Seats</label>
             <div class="passenger-stepper bus-capacity-stepper"><span>Seat capacity</span><strong data-bus-seats>8</strong><small data-bus-eta>3 min away</small></div>
@@ -724,6 +684,7 @@
             <div class="bus-seat-front"><span>FRONT</span><strong>Driver</strong></div>
             <div class="bus-popup-seat-layout" data-bus-seat-layout role="group" aria-label="Available bus seats"></div>
             <p class="bus-seat-selection" data-seat-selection aria-live="polite">Select an available seat</p>
+            </div>
             <button class="sheet-primary" type="button" data-screen="live-seat-detail">View seat details <span>→</span></button>
             <p class="bus-popup-note">Illustrative demo data · Not live tracking</p>
           </section>
@@ -942,6 +903,56 @@
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) finishClose();
   };
 
+  const openQuickBookOverlay = () => {
+    const currentPage = screen.firstElementChild;
+    if (!currentPage || screen.querySelector("[data-quick-book-overlay]")) return;
+    const template = document.createElement("template");
+    template.innerHTML = quickBookScreen();
+    const overlay = template.content.querySelector("[data-quick-book-overlay]");
+    if (!overlay) return;
+    quickBookReturnFocus = document.activeElement;
+    currentPage.append(overlay);
+    overlay.querySelector(".bottom-sheet")?.focus();
+  };
+
+  const closeQuickBookOverlay = (overlay) => {
+    closeBottomSheet(overlay, () => {
+      overlay.remove();
+      if (activeState === "quick-book") {
+        renderScreen("home");
+        return;
+      }
+      if (quickBookReturnFocus?.isConnected) quickBookReturnFocus.focus();
+      quickBookReturnFocus = null;
+    });
+  };
+
+  const closeSeatBookingOverlay = (overlay) => {
+    closeBottomSheet(overlay, () => {
+      if (activeState === "live-map") {
+        overlay.remove();
+        screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus();
+      } else {
+        renderScreen("live-map");
+      }
+    });
+  };
+
+  const openLiveBusSeatBookingOverlay = () => {
+    const busPopup = screen.querySelector("[data-bus-popup]:not([hidden])");
+    const currentPage = screen.firstElementChild;
+    if (!busPopup || !currentPage) return;
+    const template = document.createElement("template");
+    template.innerHTML = liveSeatDetailScreen();
+    const bookingOverlay = template.content.querySelector("[data-seat-booking-overlay]");
+    if (!bookingOverlay) return;
+    closeBottomSheet(busPopup, () => {
+      busPopup.remove();
+      currentPage.append(bookingOverlay);
+      bookingOverlay.querySelector(".bottom-sheet")?.focus();
+    });
+  };
+
   const updateCanvas = () => {
     world.style.zoom = String(zoom);
     world.style.left = `calc(50% - 196.5px + ${panX / zoom}px)`;
@@ -1092,9 +1103,18 @@
   }, { passive: false });
 
   screen.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && activeState === "quick-book") {
-      const quickBookOverlay = screen.querySelector(".modal-scrim");
-      if (quickBookOverlay) closeBottomSheet(quickBookOverlay, () => renderScreen("home"));
+    if (event.key === "Escape") {
+      const quickBookOverlay = screen.querySelector("[data-quick-book-overlay]");
+      if (quickBookOverlay) {
+        closeQuickBookOverlay(quickBookOverlay);
+        return;
+      }
+    }
+    if (event.key === "Escape" && (activeState === "live-map" || activeState === "live-seat-detail")) {
+      const bookingOverlay = screen.querySelector("[data-seat-booking-overlay]");
+      if (bookingOverlay) {
+        closeSeatBookingOverlay(bookingOverlay);
+      }
       return;
     }
     const busMarker = event.target.closest("[data-sim-bus]");
@@ -1218,7 +1238,7 @@
         tripData.destination = destination.trim();
         renderScreen("find-rides");
       } else {
-        renderScreen("quick-book");
+        openQuickBookOverlay();
       }
       return;
     }
@@ -1271,6 +1291,10 @@
   });
 
   screen.addEventListener("change", (event) => {
+    if (event.target.matches("#live-seat-picker")) {
+      selectedBusSeatId = event.target.value;
+    }
+
     if (event.target.matches("#terms-accepted") && event.target.checked) {
       event.target.removeAttribute("aria-invalid");
       const termsError = screen.querySelector("#terms-error");
@@ -1279,9 +1303,15 @@
   });
 
   screen.addEventListener("click", (event) => {
-    const quickBookOverlay = event.target.closest(".modal-scrim");
-    if (activeState === "quick-book" && quickBookOverlay && event.target === quickBookOverlay) {
-      closeBottomSheet(quickBookOverlay, () => renderScreen("home"));
+    const quickBookOverlay = event.target.closest("[data-quick-book-overlay]");
+    if (quickBookOverlay && event.target === quickBookOverlay) {
+      closeQuickBookOverlay(quickBookOverlay);
+      return;
+    }
+
+    const bookingOverlay = event.target.closest("[data-seat-booking-overlay]");
+    if ((activeState === "live-map" || activeState === "live-seat-detail") && bookingOverlay && event.target === bookingOverlay) {
+      closeSeatBookingOverlay(bookingOverlay);
       return;
     }
 
@@ -1318,7 +1348,6 @@
       popup.querySelector("[data-bus-eta]").textContent = `${bus.eta} away`;
       popup.querySelector("[data-bus-fleet]").value = bus.fleetId;
       popup.querySelector("[data-bus-fare]").textContent = bus.fare;
-      popup.querySelector("[data-bus-status]").value = bus.status;
       popup.querySelector("[data-bus-seat-layout]").innerHTML = busSeatPlanMarkup(bus);
       popup.querySelector("[data-seat-selection]").textContent = selectedBusSeatId ? `Seat ${selectedBusSeatId} selected` : "Select an available seat";
       popup.hidden = false;
@@ -1423,9 +1452,15 @@
       return;
     }
 
-    const stateButton = event.target.closest("[data-screen]");
-    if (stateButton) {
-      renderScreen(stateButton.dataset.screen);
+    const stateButton = event.target.closest('[data-screen="live-seat-detail"]');
+    if (stateButton && activeState === "live-map") {
+      openLiveBusSeatBookingOverlay();
+      return;
+    }
+
+    const navigationButton = event.target.closest("[data-screen]");
+    if (navigationButton) {
+      renderScreen(navigationButton.dataset.screen);
       return;
     }
 
@@ -1433,7 +1468,7 @@
     if (actionButton) {
       const { action } = actionButton.dataset;
       if (action === "quick-book") {
-        renderScreen("quick-book");
+        openQuickBookOverlay();
       } else if (action === "open-confirmation") {
         renderScreen("booking-confirmation");
       } else if (action === "confirm-booking") {

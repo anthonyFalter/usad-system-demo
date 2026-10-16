@@ -2006,6 +2006,29 @@ input:focus-visible,
 .map-attribution { position: absolute; z-index: 2; bottom: 7px; left: 10px; margin: 0; color: #3f4d46; font-size: 10px; pointer-events: none; text-shadow: 0 1px 2px rgba(255,255,255,.9); }
 .tab-map .map-art.is-live { position: absolute; inset: 0; background-color: #e9edeb; }
 .bus-popup-scrim { z-index: 8; }
+.bus-capacity-popup {
+  display: flex;
+  height: 570px;
+  max-height: calc(100% - 16px);
+  flex-direction: column;
+  overflow: hidden;
+}
+.bus-capacity-popup > .sheet-handle,
+.bus-capacity-popup > h2,
+.bus-capacity-popup > .sheet-subtitle,
+.bus-capacity-popup > .sheet-primary,
+.bus-capacity-popup > .bus-popup-note { flex: 0 0 auto; }
+.bus-popup-scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.bus-popup-scroll::-webkit-scrollbar { width: 4px; }
+.bus-popup-scroll::-webkit-scrollbar-thumb { border-radius: 4px; background: #a9c5bb; }
+.bus-fleet-row { margin-top: 8px; }
+.bus-fleet-row::before { display: none; }
 .bus-capacity-stepper small { color: #7d8581; font-size: 10px; }
 .bus-info-list .payment-option { cursor: default; }
 .bus-popup-seat-layout {
@@ -2035,6 +2058,57 @@ input:focus-visible,
   gap: 16px;
   height: 100%;
 }
+.seat-detail-booking {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #f3f7f4;
+}
+.seat-detail-background { position: absolute; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
+.seat-detail-background > .seat-capacity-page { height: 100%; min-height: 0; padding: 0; }
+.seat-detail-background .seat-capacity-shell { display: block; height: 100%; padding: 18px 14px; }
+.seat-detail-background .seat-capacity-panel { height: 100%; min-height: 0; }
+.seat-detail-background .panel-book { display: none; }
+.seat-detail-booking-scrim { z-index: 10; background: rgba(23, 31, 28, .4); backdrop-filter: blur(5px); }
+.seat-detail-booking-sheet {
+  display: flex;
+  height: min(620px, 78%);
+  max-height: 92%;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+.seat-detail-booking-scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.seat-detail-booking-scroll::-webkit-scrollbar { width: 4px; }
+.seat-detail-booking-scroll::-webkit-scrollbar-thumb { border-radius: 4px; background: #a9c5bb; }
+.seat-picker {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid #dfe6e1;
+  border-radius: 10px;
+  background: #f8faf9;
+  color: #1f302a;
+  font-size: 12px;
+}
+.seat-detail-booking-footer {
+  flex: 0 0 auto;
+  margin: 10px -20px 0;
+  padding: 10px 20px 18px;
+  border-top: 1px solid #edf0ee;
+  background: #fff;
+  box-shadow: 0 -5px 14px rgba(19, 38, 30, .06);
+}
+.seat-detail-booking-footer .sheet-primary { margin-top: 0; }
 .seat-capacity-panel {
   position: relative;
   height: 100%;
