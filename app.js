@@ -454,10 +454,7 @@
         <!-- Top Title & Action Header -->
         <header class="admin-header-row">
           <div class="admin-header-title-box">
-            <div class="admin-header-title-line">
-              <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
-              <span class="admin-telemetry-badge">Live Telemetry Active</span>
-            </div>
+            <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
             <p class="admin-header-subtitle">Real-time urban transit status, active vehicle telemetry, driver shifts, and maintenance records.</p>
           </div>
 

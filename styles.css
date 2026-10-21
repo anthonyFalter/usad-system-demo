@@ -3533,7 +3533,7 @@ input:focus-visible,
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 22px 28px 28px;
+  padding: 0 28px 28px;
   background: #090d14;
   gap: 18px;
   scroll-behavior: smooth;
@@ -3581,10 +3581,19 @@ input:focus-visible,
 
 /* Header */
 .admin-header-row {
+  position: sticky;
+  top: 0;
+  z-index: 25;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
+  padding: 20px 0 16px;
+  background: rgba(9, 13, 20, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5);
 }
 
 .admin-header-title-box {
