@@ -278,7 +278,7 @@
     let stateText = `${scaledVal.toLocaleString()} (Low)`;
     if (selectedItem.state === "surge") {
       stateClass = "text-surge";
-      stateText = `${scaledVal.toLocaleString()} (Peak / Surge)`;
+      stateText = `${scaledVal.toLocaleString()} (Peak surge)`;
     } else if (selectedItem.state === "normal") {
       stateClass = "text-normal";
       stateText = `${scaledVal.toLocaleString()} (Normal)`;
@@ -286,15 +286,17 @@
 
     return `
       <div class="analytics-metric-box">
-        <span class="metric-box-label">PEAK WINDOW</span>
+        <span class="metric-box-label">Peak window</span>
         <strong class="metric-box-val">${peakWindow}</strong>
       </div>
+      <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
-        <span class="metric-box-label">PEAK VOLUME</span>
+        <span class="metric-box-label">Peak volume</span>
         <strong class="metric-box-val">${peakVolume.toLocaleString()} /hr</strong>
       </div>
+      <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
-        <span class="metric-box-label">${selectedItem.label} STATE</span>
+        <span class="metric-box-label">${selectedItem.label} demand</span>
         <strong class="metric-box-val ${stateClass}">${stateText}</strong>
       </div>
     `;
@@ -493,7 +495,7 @@
           <span style="color: #64748b;"> | ${bus.speed}</span>
         </td>
         <td>${bus.rate}</td>
-        <td><span class="status-badge ${bus.statusClass}">${bus.status}</span></td>
+        <td><span class="status-badge ${bus.statusClass}"><span class="status-dot"></span>${bus.status}</span></td>
         <td>
           <button class="btn-telemetry" type="button" data-admin-telemetry="${bus.id}">Telemetry</button>
         </td>
@@ -522,24 +524,23 @@
       </div>
     </header>
 
-    <!-- 4 Metric Cards -->
+    <!-- 4 Bento KPI Cards -->
     <section class="admin-metrics-grid" aria-label="Key Performance Indicators">
       <!-- 1. Service Reminders -->
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">SERVICE REMINDERS</span>
+          <span class="admin-metric-label">Service reminders</span>
           <span class="admin-pill-badge badge-total">12 Total</span>
         </div>
-        <div class="admin-reminders-row">
-          <div class="admin-reminder-subcard">
-            <div class="reminder-title">Due Soon</div>
-            <div class="reminder-val cyan">5</div>
-            <div class="reminder-sub cyan">Next 48 Hours</div>
+        <div class="bento-split-2">
+          <div class="bento-split-col">
+            <span class="bento-metric-sublabel">Due soon (Next 48 Hours)</span>
+            <div class="bento-metric-figure cyan">5</div>
           </div>
-          <div class="admin-reminder-subcard">
-            <div class="reminder-title">Overdue</div>
-            <div class="reminder-val red">9</div>
-            <div class="reminder-sub red">Requires Action</div>
+          <div class="bento-split-divider"></div>
+          <div class="bento-split-col">
+            <span class="bento-metric-sublabel">Overdue (Requires Action)</span>
+            <div class="bento-metric-figure red">9</div>
           </div>
         </div>
       </article>
@@ -547,24 +548,23 @@
       <!-- 2. Vehicle Fleet Status -->
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">VEHICLE FLEET STATUS</span>
+          <span class="admin-metric-label">Vehicle fleet status</span>
           <span class="admin-pill-badge badge-registered">82 Registered</span>
         </div>
-        <div class="admin-fleet-status-row">
-          <div class="admin-status-subcard">
-            <div class="status-subcard-title">ACTIVE</div>
-            <div class="status-subcard-val">65</div>
-            <div class="status-subcard-note green">79.2%</div>
+        <div class="bento-split-3">
+          <div class="bento-split-col">
+            <div class="bento-metric-figure green">65</div>
+            <span class="bento-metric-sublabel">Active (79.2%)</span>
           </div>
-          <div class="admin-status-subcard">
-            <div class="status-subcard-title">INACTIVE</div>
-            <div class="status-subcard-val">13</div>
-            <div class="status-subcard-note gray">Depot</div>
+          <div class="bento-split-divider"></div>
+          <div class="bento-split-col">
+            <div class="bento-metric-figure muted">13</div>
+            <span class="bento-metric-sublabel">Inactive (Depot)</span>
           </div>
-          <div class="admin-status-subcard">
-            <div class="status-subcard-title">IN SHOP</div>
-            <div class="status-subcard-val red">4</div>
-            <div class="status-subcard-note red">Repair</div>
+          <div class="bento-split-divider"></div>
+          <div class="bento-split-col">
+            <div class="bento-metric-figure red">4</div>
+            <span class="bento-metric-sublabel">In shop (Repair)</span>
           </div>
         </div>
       </article>
@@ -572,37 +572,37 @@
       <!-- 3. Fuel & Operating Cost -->
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">FUEL &amp; OPERATING COST</span>
+          <span class="admin-metric-label">Fuel &amp; operating cost</span>
           <span class="admin-pill-badge badge-cost">$24.8K Total</span>
         </div>
-        <div class="admin-chart-bars">
-          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 38px;"></div><span class="admin-bar-label">Aug</span></div>
-          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 48px;"></div><span class="admin-bar-label">Sep</span></div>
-          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 22px;"></div><span class="admin-bar-label">Oct</span></div>
-          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 52px;"></div><span class="admin-bar-label">Nov</span></div>
-          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 46px;"></div><span class="admin-bar-label">Dec</span></div>
-          <div class="admin-chart-col"><div class="admin-bar-fill accent" style="height: 18px;"></div><span class="admin-bar-label">Jan</span></div>
+        <div class="bento-kpi-block">
+          <div class="bento-metric-figure">$24,800</div>
+          <div class="admin-chart-bars">
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 38px;"></div><span class="admin-bar-label">Aug</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 48px;"></div><span class="admin-bar-label">Sep</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 22px;"></div><span class="admin-bar-label">Oct</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 52px;"></div><span class="admin-bar-label">Nov</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 46px;"></div><span class="admin-bar-label">Dec</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill accent" style="height: 18px;"></div><span class="admin-bar-label">Jan</span></div>
+          </div>
         </div>
       </article>
 
       <!-- 4. Active Shift Rate -->
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">ACTIVE SHIFT RATE</span>
-          <span class="admin-pill-badge badge-shift">↑ 5.2% vs lw</span>
+          <span class="admin-metric-label">Active shift rate</span>
+          <span class="admin-pill-badge badge-shift">↑ 5.2% vs last week</span>
         </div>
         <div class="admin-shift-rate-content">
           <div class="admin-shift-text-box">
-            <div class="admin-shift-active-line">
-              <span class="admin-shift-dot"></span>
-              <span class="admin-shift-val">88% Active</span>
-            </div>
+            <div class="bento-metric-figure green">88%</div>
             <span class="admin-shift-corridors">6 of 6 Critical Corridors Covered</span>
           </div>
           <div class="admin-donut-wrap">
             <svg class="admin-donut-svg" viewBox="0 0 36 36">
-              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1c2738" stroke-width="3.6"/>
-              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#2FD9A8" stroke-width="3.6" stroke-dasharray="88, 100" stroke-linecap="round"/>
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1E293B" stroke-width="3.6"/>
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10B981" stroke-width="3.6" stroke-dasharray="88, 100" stroke-linecap="round"/>
             </svg>
             <div class="admin-donut-text">6/6</div>
           </div>
@@ -658,7 +658,7 @@
         <div class="admin-card-header">
           <div class="admin-card-header-left">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>RECENT MAINTENANCE &amp; DISPATCH COMMENTS</span>
+            <span>Recent maintenance &amp; dispatch comments</span>
           </div>
         </div>
         <div class="admin-comments-list">
@@ -682,7 +682,7 @@
       <article class="admin-bottom-card">
         <div class="admin-card-header">
           <div class="admin-card-header-left">
-            <span>Upcoming Shift</span>
+            <span>Upcoming shifts</span>
           </div>
         </div>
         <div class="admin-shifts-list">
@@ -866,24 +866,26 @@
       <!-- Card 1: Economic Conditions -->
       <article class="analytics-bottom-card">
         <div class="admin-card-header">
-          <div class="admin-card-header-left" style="text-transform: none;">
+          <div class="admin-card-header-left">
             <div class="card-icon-badge gold">
               <span style="font-size: 13px; font-weight: 700;">₱</span>
             </div>
-            <div style="font-size: 13px; font-weight: 700; color: #fff;">Economic Conditions</div>
+            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Economic conditions</div>
           </div>
         </div>
 
-        <div class="analytics-subbox">
-          <div class="subbox-row">
-            <span style="font-size: 11px; color: #72849a;">Diesel Spot Index</span>
-            <strong style="color: #f87171; font-size: 12px;">₱68.40/L (+4.2%)</strong>
+        <div class="bento-denested-content">
+          <div class="bento-stat-pair">
+            <span class="bento-stat-label">Diesel Spot Index</span>
+            <strong class="bento-stat-val text-red">₱68.40/L (+4.2%)</strong>
           </div>
-          <p class="subbox-text">Elevated fuel prices trigger modal switch from private motorbikes &amp; cars to Trinoma &amp; EDSA trunk buses.</p>
+          <p class="bento-stat-desc">Elevated fuel prices trigger modal switch from private motorbikes &amp; cars to Trinoma &amp; EDSA trunk buses.</p>
         </div>
+
+        <div class="bento-divider-line"></div>
 
         <div class="analytics-card-footer">
-          <span style="color: #64748b; font-size: 11px;">Ridership sensitivity factor:</span>
+          <span style="color: #94a3b8; font-size: 11px;">Ridership sensitivity factor:</span>
           <strong style="color: #10b981; font-size: 11.5px;">0.82 (High Elasticity)</strong>
         </div>
       </article>
@@ -891,24 +893,26 @@
       <!-- Card 2: Weather & Monsoon Impact -->
       <article class="analytics-bottom-card">
         <div class="admin-card-header">
-          <div class="admin-card-header-left" style="text-transform: none;">
+          <div class="admin-card-header-left">
             <div class="card-icon-badge cyan">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
             </div>
-            <div style="font-size: 13px; font-weight: 700; color: #fff;">Weather &amp; Monsoon Impact</div>
+            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Weather &amp; monsoon impact</div>
           </div>
         </div>
 
-        <div class="analytics-subbox">
-          <div class="subbox-row">
-            <span style="font-size: 11px; color: #72849a;">Terminal Dwell Surge</span>
-            <strong style="color: #fbbf24; font-size: 12px;">+35% Wait Time</strong>
+        <div class="bento-denested-content">
+          <div class="bento-stat-pair">
+            <span class="bento-stat-label">Terminal Dwell Surge</span>
+            <strong class="bento-stat-val text-amber">+35% Wait Time</strong>
           </div>
-          <p class="subbox-text">Monsoon showers projected between 4:30 PM - 8 PM. Commuters stranded at Trinoma &amp; Cubao transit shelters.</p>
+          <p class="bento-stat-desc">Monsoon showers projected between 4:30 PM - 8 PM. Commuters stranded at Trinoma &amp; Cubao transit shelters.</p>
         </div>
+
+        <div class="bento-divider-line"></div>
 
         <div class="analytics-card-footer">
-          <span style="color: #64748b; font-size: 11px;">Precipitation probability:</span>
+          <span style="color: #94a3b8; font-size: 11px;">Precipitation probability:</span>
           <strong style="color: #38bdf8; font-size: 11.5px;">85% at 5:00 PM</strong>
         </div>
       </article>
@@ -916,21 +920,23 @@
       <!-- Card 3: AI Dispatch Recommendation -->
       <article class="analytics-bottom-card">
         <div class="admin-card-header">
-          <div class="admin-card-header-left" style="text-transform: none;">
+          <div class="admin-card-header-left">
             <div class="card-icon-badge mint">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <div style="font-size: 13px; font-weight: 700; color: #fff;">AI Dispatch Recommendation</div>
+            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Dispatch recommendation</div>
           </div>
         </div>
 
-        <div class="analytics-subbox" style="padding: 10px 12px;">
+        <div class="bento-denested-content">
           <ul class="recommendation-list">
             <li>• Inject <strong>+3 standby buses</strong> into Route 1 (Trinoma)</li>
             <li>• Compress evening headway from <strong>12m → 5m</strong></li>
             <li>• Borrow <strong>2 standby coaches</strong> from Malolos Feeder</li>
           </ul>
         </div>
+
+        <div class="bento-divider-line"></div>
 
         <div class="analytics-action-row">
           <button class="btn-approve-fleet" type="button" data-admin-action="approve-redistribution">Approve Fleet Redistribution</button>
@@ -1091,7 +1097,7 @@
             <div class="trip-dest-sub">${bus.routeCorridor}</div>
           </td>
           <td>
-            <span class="status-pill-telemetry ${bus.statusType}">${bus.statusText}</span>
+            <span class="status-pill-telemetry ${bus.statusType}"><span class="status-dot"></span>${bus.statusText}</span>
           </td>
           <td>
             <div class="next-stop-name">${bus.nextStop}</div>
@@ -1156,7 +1162,7 @@
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Current Status</span>
             <span class="spec-val-content">
-              <span class="status-pill-telemetry ${unit.statusType}" style="padding: 2px 7px; font-size: 10px;">${unit.statusText}</span>
+              <span class="status-pill-telemetry ${unit.statusType}"><span class="status-dot"></span>${unit.statusText}</span>
             </span>
           </div>
           <div class="dispatch-spec-row">
@@ -1179,7 +1185,7 @@
 
         <!-- 2x2 Dispatcher Interventions -->
         <div class="dispatch-interventions-section">
-          <span class="interventions-label">DISPATCHER INTERVENTIONS</span>
+          <span class="interventions-label">Dispatcher interventions</span>
           <div class="interventions-grid-2x2">
             <button class="intervention-btn" type="button" data-dispatch-action="reroute">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
@@ -2426,7 +2432,7 @@
           </div>
         </td>
         <td>
-          <span class="reports-status-pill ${rep.statusClass}">${rep.status}</span>
+          <span class="reports-status-pill ${rep.statusClass}"><span class="status-dot"></span>${rep.status}</span>
         </td>
         <td>
           <div class="reports-row-actions">
@@ -2520,12 +2526,12 @@
       </div>
     </header>
 
-    <!-- 4 KPI Summary Cards -->
+    <!-- 4 Bento KPI Cards -->
     <section class="reports-kpi-grid" aria-label="Executive Operational Totals">
       <!-- 1. Total Fare Revenue -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">TOTAL FARE REVENUE (MTD)</span>
+          <span class="reports-kpi-label">Total fare revenue (MTD)</span>
           <span class="reports-growth-badge positive">+6.8% vs last mo</span>
         </div>
         <div class="reports-kpi-figure">₱1,248,650.00</div>
@@ -2535,7 +2541,7 @@
       <!-- 2. Passenger Volume -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">TOTAL PASSENGERS (MTD)</span>
+          <span class="reports-kpi-label">Total passengers (MTD)</span>
           <span class="reports-growth-badge positive">92.4% Load</span>
         </div>
         <div class="reports-kpi-figure">142,880 Pax</div>
@@ -2545,7 +2551,7 @@
       <!-- 3. Fleet On-Time Performance -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">FLEET ON-TIME RATE</span>
+          <span class="reports-kpi-label">Fleet on-time rate</span>
           <span class="reports-growth-badge target">Target: 90.0%</span>
         </div>
         <div class="reports-kpi-figure accent">92.8% OTP</div>
@@ -2555,7 +2561,7 @@
       <!-- 4. Fuel & Operating Mileage -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">FUEL &amp; OPERATING MILEAGE</span>
+          <span class="reports-kpi-label">Fuel &amp; operating mileage</span>
           <span class="reports-growth-badge neutral">18,420 L Diesel</span>
         </div>
         <div class="reports-kpi-figure">63,010 km</div>
