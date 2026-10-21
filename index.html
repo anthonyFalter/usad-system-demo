@@ -1,74 +1,93 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#1d1d1d">
-    <meta name="description" content="USAD commuter app interface prototype">
-    <title>USAD — Which one?</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="app.js" defer></script>
-  </head>
-  <body>
-    <main>
-      <section class="role-page" id="role-page" aria-labelledby="role-heading">
-        <div class="role-panel">
-          <a class="wordmark" href="#role-page" aria-label="USAD home">
-            <span class="brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M7 10v2.5a5 5 0 0 0 10 0V10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-                <path d="M12 3.5v9m0-9-3 3m3-3 3 3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <span>USAD</span>
-          </a>
-          <h1 id="role-heading">Which one?</h1>
-          <p class="role-copy">Choose how you want to continue.</p>
-          <div class="role-actions">
-            <button class="role-button role-button-primary" type="button" data-open="user">
-              <span>User</span>
-              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button class="role-button role-button-secondary" type="button" data-open="admin">
-              <span>Admin</span>
-              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </div>
-          <p class="role-note" id="role-note" role="status" aria-live="polite"></p>
-        </div>
-        <span class="role-footer">Saraza TRD Transport Services Corp.</span>
-      </section>
 
-      <section class="workspace-page" id="workspace-page" aria-label="USAD user prototype" hidden>
-        <header class="workspace-header">
-          <button class="back-button" id="back-button" type="button">
-            <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M16 10H4m4 4-4-4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>Roles</span>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1d1d1d">
+  <meta name="description" content="USAD commuter app interface prototype">
+  <title>USAD — Which one?</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+
+<body>
+  <main>
+    <section class="role-page" id="role-page" aria-labelledby="role-heading">
+      <div class="role-panel">
+        <a class="wordmark" href="#role-page" aria-label="USAD home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M7 10v2.5a5 5 0 0 0 10 0V10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+              <path d="M12 3.5v9m0-9-3 3m3-3 3 3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span>USAD</span>
+        </a>
+        <h1 id="role-heading">Which one?</h1>
+        <p class="role-copy">Choose how you want to continue.</p>
+        <div class="role-actions">
+          <button class="role-button role-button-primary" type="button" data-open="user">
+            <span>User</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+              <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
           </button>
-          <div class="workspace-title">
-            <span class="workspace-title-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M7 10v2.5a5 5 0 0 0 10 0V10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M12 3.5v9m0-9-3 3m3-3 3 3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            <strong>USAD</strong>
-            <span class="workspace-divider" aria-hidden="true"></span>
-            <span id="workspace-role-label">User</span>
-          </div>
-          <div class="zoom-controls" aria-label="Prototype screen zoom controls">
-            <button class="zoom-button" type="button" data-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
-            <output class="zoom-level" id="zoom-level" aria-live="polite">75%</output>
-            <button class="zoom-button" type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
-            <span class="zoom-separator" aria-hidden="true"></span>
-            <button class="fit-button" id="fit-button" type="button" title="Reset screen position and zoom">Reset</button>
-          </div>
-        </header>
-
-        <div class="canvas-viewport" id="canvas-viewport" tabindex="0" aria-label="Single mobile screen prototype. Drag the empty canvas to move; use plus and minus to zoom.">
-          <div class="canvas-world" id="canvas-world">
-            <div class="phone-screen" id="phone-screen" aria-live="polite"></div>
-          </div>
+          <button class="role-button role-button-secondary" type="button" data-open="admin">
+            <span>Admin</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+              <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </button>
         </div>
-        <p class="canvas-hint"><span aria-hidden="true">↔</span> Drag empty space to pan <span class="hint-divider">·</span> Use + / − to zoom <span class="hint-divider">·</span> Scroll to zoom</p>
-      </section>
-    </main>
-  </body>
+        <p class="role-note" id="role-note" role="status" aria-live="polite"></p>
+      </div>
+      <span class="role-footer">Saraza TRD Transport Services Corp.</span>
+    </section>
+
+    <section class="workspace-page" id="workspace-page" aria-label="USAD user prototype" hidden>
+      <header class="workspace-header">
+        <button class="back-button" id="back-button" type="button">
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+            <path d="M16 10H4m4 4-4-4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          <span>Roles</span>
+        </button>
+        <div class="workspace-title">
+          <span class="workspace-title-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M7 10v2.5a5 5 0 0 0 10 0V10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+              <path d="M12 3.5v9m0-9-3 3m3-3 3 3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </span>
+          <strong>USAD</strong>
+          <span class="workspace-divider" aria-hidden="true"></span>
+          <span id="workspace-role-label">User</span>
+        </div>
+        <div class="zoom-controls" aria-label="Prototype screen zoom controls">
+          <button class="zoom-button" type="button" data-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+          <output class="zoom-level" id="zoom-level" aria-live="polite">75%</output>
+          <button class="zoom-button" type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+          <span class="zoom-separator" aria-hidden="true"></span>
+          <button class="fit-button" id="fit-button" type="button" title="Reset screen position and zoom">Reset</button>
+        </div>
+      </header>
+
+      <div class="canvas-viewport" id="canvas-viewport" tabindex="0"
+        aria-label="Single mobile screen prototype. Drag the empty canvas to move; use plus and minus to zoom.">
+        <div class="canvas-world" id="canvas-world">
+          <div class="phone-screen" id="phone-screen" aria-live="polite"></div>
+        </div>
+      </div>
+      <p class="canvas-hint"><span aria-hidden="true">↔</span> Drag empty space to pan <span
+          class="hint-divider">·</span> Use + / − to zoom <span class="hint-divider">·</span> Scroll to zoom</p>
+    </section>
+  </main>
+</body>
+
 </html>
