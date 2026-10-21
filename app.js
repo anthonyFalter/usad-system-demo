@@ -1316,10 +1316,6 @@
 
       <div class="admin-header-actions">
         <div class="admin-header-pills-row">
-          <span class="admin-header-pill badge-telemetry">
-            <span class="pulse-dot-mint"></span>
-            <span>TELEMETRY LIVE</span>
-          </span>
           <span class="admin-header-pill">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <span data-live-clock>14:48:22 PHT</span>
