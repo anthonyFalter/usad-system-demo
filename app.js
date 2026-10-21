@@ -4666,14 +4666,31 @@
       return;
     }
 
-    const cctvToggleAiBtn = event.target.closest("[data-cctv-toggle-ai]");
-    if (cctvToggleAiBtn) {
-      cameraAiDetectionEnabled = !cameraAiDetectionEnabled;
-      cctvToggleAiBtn.classList.toggle("is-active", cameraAiDetectionEnabled);
-      const span = cctvToggleAiBtn.querySelector("span");
-      if (span) span.textContent = `AI HUD: ${cameraAiDetectionEnabled ? "ON" : "OFF"}`;
+    // Toggle switches inside Feed Settings popup
+    const cctvToggleSwitch = event.target.closest("[data-cctv-toggle]");
+    if (cctvToggleSwitch) {
+      const toggleType = cctvToggleSwitch.dataset.cctvToggle;
+      if (toggleType === "ai") {
+        cameraAiDetectionEnabled = !cameraAiDetectionEnabled;
+      } else if (toggleType === "scanlines") {
+        cameraScanlinesEnabled = !cameraScanlinesEnabled;
+      } else if (toggleType === "osd") {
+        cameraOsdEnabled = !cameraOsdEnabled;
+      }
+      const isNowOn = toggleType === "ai" ? cameraAiDetectionEnabled :
+                      toggleType === "scanlines" ? cameraScanlinesEnabled : cameraOsdEnabled;
+      cctvToggleSwitch.classList.toggle("is-on", isNowOn);
+      cctvToggleSwitch.setAttribute("aria-checked", isNowOn ? "true" : "false");
+
       const grid = screen.querySelector("#cctv-grid-container");
       if (grid) grid.innerHTML = renderCameraFeedsGrid();
+      return;
+    }
+
+    // Dismiss settings popup when clicking outside the menu wrap
+    if (cctvSettingsPopupOpen && !event.target.closest(".cctv-settings-menu-wrap")) {
+      cctvSettingsPopupOpen = false;
+      renderScreen("admin-dashboard");
       return;
     }
 
@@ -4692,7 +4709,15 @@
     if (cctvActionBtn) {
       const action = cctvActionBtn.dataset.cctvAction;
       const camId = cctvActionBtn.dataset.cctvId;
-      if (action === "focus") {
+      if (action === "toggle-settings-popup") {
+        cctvSettingsPopupOpen = !cctvSettingsPopupOpen;
+        renderScreen("admin-dashboard");
+        return;
+      } else if (action === "close-settings-popup") {
+        cctvSettingsPopupOpen = false;
+        renderScreen("admin-dashboard");
+        return;
+      } else if (action === "focus") {
         if (activeCameraLayout === "focus" && focusedCameraId === camId) {
           activeCameraLayout = "3x2";
         } else {

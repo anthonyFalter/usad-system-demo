@@ -6866,6 +6866,205 @@ input:focus-visible,
   border-color: #2fd9a8;
 }
 
+/* Feed Settings Popup & Animated Toggle Switches */
+.cctv-settings-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.cctv-btn-settings {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #101824;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 13px;
+  color: #94a3b8;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.cctv-btn-settings svg {
+  width: 14px;
+  height: 14px;
+  color: #8da2bb;
+  transition: transform 0.25s ease, color 0.18s ease;
+}
+
+.cctv-btn-settings:hover {
+  background: #162232;
+  color: #f1f5f9;
+  border-color: #2b3b52;
+}
+
+.cctv-btn-settings:hover svg {
+  color: #2fd9a8;
+  transform: rotate(25deg);
+}
+
+.cctv-btn-settings.is-active {
+  background: #0d221c;
+  border-color: rgba(47, 217, 168, 0.5);
+  color: #2fd9a8;
+  box-shadow: 0 0 14px rgba(47, 217, 168, 0.15);
+}
+
+.cctv-btn-settings.is-active svg {
+  color: #2fd9a8;
+  transform: rotate(45deg);
+}
+
+.cctv-settings-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: rgba(13, 21, 34, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #1f2e42;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  z-index: 100;
+  animation: cctvPopupFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cctvPopupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cctv-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #182333;
+}
+
+.cctv-popup-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.cctv-popup-close-btn {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  font-size: 13px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.cctv-popup-close-btn:hover {
+  background: #182333;
+  color: #ffffff;
+}
+
+.cctv-popup-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cctv-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.cctv-toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  user-select: none;
+}
+
+.cctv-toggle-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.cctv-toggle-desc {
+  font-size: 10.5px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+/* Modern Sliding Toggle Switch Button */
+.admin-toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 99px;
+  background: #182434;
+  border: 1px solid #28374c;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+  transition: background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-toggle-switch:hover {
+  border-color: #3b4e6b;
+}
+
+.admin-toggle-switch.is-on {
+  background: #2fd9a8;
+  border-color: #2fd9a8;
+  box-shadow: 0 0 12px rgba(47, 217, 168, 0.4);
+}
+
+.admin-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.22s ease;
+}
+
+.admin-toggle-switch.is-on .admin-toggle-thumb {
+  transform: translateX(20px);
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+
 
 
 
