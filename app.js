@@ -16,6 +16,7 @@
 
   let currentRole = "user";
   let adminShowError = false;
+  let mobileLoginShowError = false;
 
   const mark = `
     <span class="app-mark" aria-hidden="true">
@@ -3204,6 +3205,10 @@
         ${showError ? '<button class="text-link service-link" type="button" data-screen="backend-error">Having trouble? View service status</button>' : ""}
         <p class="interaction-message" data-message role="status" aria-live="polite"></p>
       </form>
+    </div>
+    <div class="auth-helper-bar">
+      <button class="auth-helper-chip" type="button" data-mobile-action="autofill-demo" title="Auto-fill with commuter demo account">Auto-fill Demo Account</button>
+      <button class="auth-helper-chip" type="button" data-mobile-action="toggle-error" title="Toggle error alert banner">${showError ? "Hide Error Banner" : "Show Error Banner"}</button>
     </div>`;
 
   const backendErrorScreen = () => `
@@ -4140,8 +4145,9 @@
     } else if (state === "admin-dashboard") {
       screen.innerHTML = adminDashboardScreen();
     } else if (state === "login") {
-      screen.innerHTML = loginScreen();
+      screen.innerHTML = loginScreen(mobileLoginShowError);
     } else if (state === "login-error") {
+      mobileLoginShowError = true;
       screen.innerHTML = loginScreen(true);
     } else if (state === "register") {
       screen.innerHTML = registerScreen();
@@ -4325,6 +4331,7 @@
     } else {
       world.classList.remove("is-admin");
       screen.classList.remove("is-admin");
+      mobileLoginShowError = false;
       renderScreen("login");
     }
     resetCanvas();
@@ -4814,22 +4821,25 @@
       if (alert) alert.hidden = true;
     }
 
-    if (event.target.matches("#login-email")) {
+    if (event.target.matches("#login-email, #login-password")) {
       const emailError = screen.querySelector("#email-error");
-      if (emailError) emailError.hidden = true;
+      const passwordError = screen.querySelector("#login-password-error");
+      if (event.target.id === "login-email" && emailError) emailError.hidden = true;
+      if (event.target.id === "login-password" && passwordError) passwordError.hidden = true;
       event.target.removeAttribute("aria-invalid");
+      const formAlert = screen.querySelector(".form-alert");
+      if (formAlert) formAlert.remove();
+      const loginForm = screen.querySelector(".login-form");
+      if (loginForm) loginForm.classList.remove("is-error");
+      mobileLoginShowError = false;
+      const toggleBtn = screen.querySelector('[data-mobile-action="toggle-error"]');
+      if (toggleBtn) toggleBtn.textContent = "Show Error Banner";
     }
 
     if (event.target.matches("#register-email, #register-username, #register-password, #register-confirm-password")) {
       event.target.removeAttribute("aria-invalid");
       const fieldError = screen.querySelector(`#${event.target.id}-error`);
       if (fieldError) fieldError.hidden = true;
-    }
-
-    if (event.target.matches("#login-password")) {
-      const passwordError = screen.querySelector("#login-password-error");
-      if (passwordError) passwordError.hidden = true;
-      event.target.removeAttribute("aria-invalid");
     }
 
     if (event.target.matches("[data-profile-field]")) {
@@ -4974,6 +4984,38 @@
         if (pageSpan) {
           pageSpan.textContent = adminAction === "prev-page" ? "Page 1 of 4" : "Page 2 of 4";
         }
+      }
+      return;
+    }
+
+    const mobileActionBtn = event.target.closest("[data-mobile-action]");
+    if (mobileActionBtn) {
+      const { mobileAction } = mobileActionBtn.dataset;
+      if (mobileAction === "autofill-demo") {
+        const emailInput = screen.querySelector("#login-email");
+        const passwordInput = screen.querySelector("#login-password");
+        if (emailInput) {
+          emailInput.value = "jocky@saraza.com";
+          emailInput.removeAttribute("aria-invalid");
+        }
+        if (passwordInput) {
+          passwordInput.value = "Password123!";
+          passwordInput.removeAttribute("aria-invalid");
+        }
+        const emailError = screen.querySelector("#email-error");
+        const passwordError = screen.querySelector("#login-password-error");
+        if (emailError) emailError.hidden = true;
+        if (passwordError) passwordError.hidden = true;
+        const formAlert = screen.querySelector(".form-alert");
+        if (formAlert) formAlert.remove();
+        const loginForm = screen.querySelector(".login-form");
+        if (loginForm) loginForm.classList.remove("is-error");
+        mobileLoginShowError = false;
+        const toggleBtn = screen.querySelector('[data-mobile-action="toggle-error"]');
+        if (toggleBtn) toggleBtn.textContent = "Show Error Banner";
+      } else if (mobileAction === "toggle-error") {
+        mobileLoginShowError = !mobileLoginShowError;
+        renderScreen(mobileLoginShowError ? "login-error" : "login");
       }
       return;
     }
