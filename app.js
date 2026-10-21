@@ -738,14 +738,7 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <div class="admin-header-title-line" style="display: flex; align-items: center; gap: 12px;">
-          <h1 class="admin-header-title">Predictive Analytics</h1>
-          <span class="analytics-pill-badge badge-mint" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 11px;">
-            <span style="width: 6px; height: 6px; border-radius: 50%; background: #2fd9a8; box-shadow: 0 0 6px #2fd9a8;"></span>
-            ML Demand Engine Active
-          </span>
-        </div>
-        <p class="admin-header-subtitle">Machine-learning predictions for commuter surges, passenger load trends, seasonal weather spikes, and fuel-economic transit impact.</p>
+        <h1 class="admin-header-title">Predictive Analytics</h1>
       </div>
 
       <div class="admin-header-actions">
