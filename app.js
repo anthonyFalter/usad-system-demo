@@ -510,7 +510,7 @@
         </select>
         <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>+ Assign Dispatch</span>
+          <span>Assign Dispatch</span>
         </button>
       </div>
     </header>
@@ -1312,7 +1312,7 @@
       <div class="admin-header-actions">
         <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>+ Assign Dispatch</span>
+          <span>Assign Dispatch</span>
         </button>
       </div>
     </header>
@@ -2073,7 +2073,7 @@
         <!-- Register Camera Button -->
         <button class="staff-btn-add-member" type="button" data-cctv-action="add-device">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>+ Add Feed</span>
+          <span>Add Feed</span>
         </button>
       </div>
     </header>
@@ -2779,7 +2779,7 @@
       isInfoOnly = true;
     } else if (type === "assign-dispatch") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A2 2 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>`;
-      title = "+ Assign Vehicle Dispatch";
+      title = "Assign Vehicle Dispatch";
       desc = "Assign a ready driver and route corridor to activate live telematics.";
       customHtml = `
         <form class="admin-login-form" data-admin-assign-form style="margin-top: 14px; text-align: left;">
