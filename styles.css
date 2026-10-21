@@ -5917,8 +5917,21 @@ input:focus-visible,
   vertical-align: middle;
 }
 
+.staff-data-table tr {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
 .staff-data-table tr:hover {
   background: rgba(255, 255, 255, 0.02);
+}
+
+.staff-data-table tr.is-selected {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.staff-data-table tr.is-selected:hover {
+  background: rgba(245, 158, 11, 0.09);
 }
 
 .staff-checkbox {
@@ -5947,12 +5960,17 @@ input:focus-visible,
   place-items: center;
   flex-shrink: 0;
   user-select: none;
+  border: 1px solid transparent;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.staff-avatar.amber {
+.staff-avatar.amber,
+.staff-avatar.is-selected,
+.staff-data-table tr.is-selected .staff-avatar {
   background: #78350f;
   color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-color: rgba(251, 191, 36, 0.45);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
 }
 
 .staff-name-wrap {

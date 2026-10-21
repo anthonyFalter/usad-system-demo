@@ -1450,7 +1450,7 @@
       name: "Cyrhyl Naval",
       staffId: "A05DEVP381 • DRV",
       initials: "CN",
-      avatarClass: "amber",
+      avatarClass: "",
       role: "Driver",
       roleKey: "driver",
       busNo: "02",
@@ -1571,13 +1571,13 @@
       else if (staff.statusKey === "off") statusDot = `<span class="status-dot-gray"></span>`;
 
       return `
-        <tr data-staff-row="${staff.id}">
+        <tr data-staff-row="${staff.id}" class="${isChecked ? "is-selected" : ""}">
           <td>
             <input type="checkbox" class="staff-checkbox" data-staff-checkbox="${staff.id}" ${isChecked ? "checked" : ""} aria-label="Select ${escapeHtml(staff.name)}">
           </td>
           <td>
             <div class="staff-member-cell">
-              <div class="staff-avatar ${staff.avatarClass}">${staff.initials}</div>
+              <div class="staff-avatar ${staff.avatarClass}${isChecked ? " is-selected" : ""}">${staff.initials}</div>
               <div class="staff-name-wrap">
                 <span class="staff-name-text">${escapeHtml(staff.name)}</span>
                 <span class="staff-id-text">${escapeHtml(staff.staffId)}</span>
@@ -3937,6 +3937,30 @@
       } else {
         staffSelectedRows.delete(id);
       }
+      const row = screen.querySelector(`[data-staff-row="${id}"]`);
+      if (row) {
+        const isChecked = staffSelectedRows.has(id);
+        row.classList.toggle("is-selected", isChecked);
+        const avatar = row.querySelector(".staff-avatar");
+        if (avatar) avatar.classList.toggle("is-selected", isChecked);
+      }
+      return;
+    }
+
+    const staffRow = event.target.closest("[data-staff-row]");
+    if (staffRow && !event.target.closest("[data-staff-action]") && !event.target.closest("[data-staff-checkbox]")) {
+      const id = staffRow.dataset.staffRow;
+      if (staffSelectedRows.has(id)) {
+        staffSelectedRows.delete(id);
+      } else {
+        staffSelectedRows.add(id);
+      }
+      const isChecked = staffSelectedRows.has(id);
+      staffRow.classList.toggle("is-selected", isChecked);
+      const checkbox = staffRow.querySelector("[data-staff-checkbox]");
+      if (checkbox) checkbox.checked = isChecked;
+      const avatar = staffRow.querySelector(".staff-avatar");
+      if (avatar) avatar.classList.toggle("is-selected", isChecked);
       return;
     }
 
