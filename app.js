@@ -8,10 +8,14 @@
   const zoomOutput = document.querySelector("#zoom-level");
   const backButton = document.querySelector("#back-button");
   const fitButton = document.querySelector("#fit-button");
+  const workspaceRoleLabel = document.querySelector("#workspace-role-label");
 
   if (!rolePage || !workspacePage || !roleNote || !viewport || !world || !screen || !zoomOutput || !backButton || !fitButton) {
     throw new Error("USAD prototype could not initialize: required interface elements are missing.");
   }
+
+  let currentRole = "user";
+  let adminShowError = false;
 
   const mark = `
     <span class="app-mark" aria-hidden="true">
@@ -121,6 +125,239 @@
   [rolePage, workspacePage, screen].forEach((root) => minimumFontSizeObserver.observe(root, { childList: true, subtree: true }));
 
   const unreadNotificationCount = () => notifications.filter((notification) => notification.unread).length;
+
+  const adminAppMark = `
+    <span class="admin-app-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M7 10v2.5a5 5 0 0 0 10 0V10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M12 3.5v9m0-9-3 3m3-3 3 3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>`;
+
+  const fingerprintIcon = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
+      <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
+      <path d="M2 16h.01"/>
+      <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
+      <path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 1.17-.02 2"/>
+      <path d="M5.3 12.8a8 8 0 0 1 12.9-4.2"/>
+      <path d="M4 18c0-2.3 0-6 2-9a8 8 0 0 1 13 0c1.5 2.2 1.8 5.7 1.8 7"/>
+      <path d="M8 21a12.7 12.7 0 0 1 .5-4"/>
+    </svg>`;
+
+  const idCardIcon = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="2.5"/>
+      <rect x="5.5" y="8.5" width="4.5" height="5.5" rx="1"/>
+      <path d="M13.5 10h5"/>
+      <path d="M13.5 13h3.5"/>
+    </svg>`;
+
+  const adminLoginScreen = (showError = false) => `
+    <div class="admin-auth-screen" data-admin-screen="login">
+      <div class="admin-auth-card">
+        ${adminAppMark}
+        <h1 class="admin-auth-title">Introducing, <span>USAD</span></h1>
+        ${showError ? '<div class="admin-auth-alert" id="admin-auth-alert" role="alert">Invalid Email or Password</div>' : ""}
+        <form class="admin-login-form" data-admin-login-form novalidate>
+          <div class="admin-form-field">
+            <input class="admin-input" id="admin-email" name="email" type="email" placeholder="Email" autocomplete="username"${showError ? ' aria-invalid="true"' : ""}>
+          </div>
+          <div class="admin-form-field">
+            <input class="admin-input" id="admin-password" name="password" type="password" placeholder="Password" autocomplete="current-password"${showError ? ' aria-invalid="true"' : ""}>
+          </div>
+          <button class="admin-forgot-link" type="button" data-admin-action="forgot-password">Forgot password?</button>
+          <button class="admin-login-button" type="submit">Login</button>
+        </form>
+        <div class="admin-auth-tiles" role="group" aria-label="Alternative authentication methods">
+          <button class="admin-auth-tile" type="button" data-admin-auth="fingerprint" aria-label="Biometric fingerprint login" title="Biometric Fingerprint Scanner">
+            ${fingerprintIcon}
+          </button>
+          <button class="admin-auth-tile" type="button" data-admin-auth="smartcard" aria-label="Staff Smart ID badge login" title="Staff RFID / Smart Badge">
+            ${idCardIcon}
+          </button>
+          <button class="admin-auth-tile" type="button" data-admin-auth="key" aria-label="Secondary biometric scanner" title="Secondary Biometric Scanner">
+            ${fingerprintIcon}
+          </button>
+        </div>
+        <p class="admin-security-note">
+          Admin side can only log in by us when we give them an account. And they cannot register for one.
+        </p>
+      </div>
+      <div class="admin-helper-bar">
+        <button class="admin-helper-chip" type="button" data-admin-action="autofill-demo" title="Auto-fill with admin@saraza.com">Auto-fill Demo Account</button>
+        <button class="admin-helper-chip" type="button" data-admin-action="toggle-error" title="Toggle error alert banner">${showError ? "Hide Error Banner" : "Show Error Banner"}</button>
+      </div>
+    </div>`;
+
+  const adminDashboardScreen = () => `
+    <div class="admin-dashboard-screen" data-admin-screen="dashboard">
+      <header class="admin-topbar">
+        <div class="admin-topbar-left">
+          <div class="admin-topbar-brand">
+            ${adminAppMark}
+            <div><strong>USAD</strong> <span>Operations Portal</span></div>
+          </div>
+          <span class="admin-badge-online">System Live</span>
+        </div>
+        <div class="admin-topbar-right">
+          <div class="admin-user-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
+            <span>Operator: Jocky Cabatbat (SRZ-ADM-042)</span>
+          </div>
+          <button class="admin-signout-btn" type="button" data-admin-action="sign-out">Sign Out</button>
+        </div>
+      </header>
+
+      <main class="admin-main-content">
+        <section class="admin-kpi-grid" aria-label="Fleet KPIs">
+          <article class="admin-kpi-card">
+            <header><span>Active Fleet</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A2 2 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></header>
+            <p class="admin-kpi-value">12 Mini Buses</p>
+            <p class="admin-kpi-sub">10 on-route · 2 standby</p>
+          </article>
+          <article class="admin-kpi-card">
+            <header><span>Today's Recorded Fare</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v12"/></svg></header>
+            <p class="admin-kpi-value">₱42,560.00</p>
+            <p class="admin-kpi-sub">U-Pouch &amp; GCash digital log</p>
+          </article>
+          <article class="admin-kpi-card">
+            <header><span>Daily Commuters</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></header>
+            <p class="admin-kpi-value">1,280</p>
+            <p class="admin-kpi-sub">Boardings verified</p>
+          </article>
+          <article class="admin-kpi-card">
+            <header><span>On-Time Dispatch</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></header>
+            <p class="admin-kpi-value">98.4%</p>
+            <p class="admin-kpi-sub">NLEX &amp; Tabang routes on schedule</p>
+          </article>
+        </section>
+
+        <section class="admin-panels-grid">
+          <div class="admin-panel">
+            <div class="admin-panel-header">
+              <h2 class="admin-panel-title">Real-Time Fleet Deployment</h2>
+              <span class="status-pill status-transit">Automated Dispatch Active</span>
+            </div>
+            <table class="admin-fleet-table">
+              <thead>
+                <tr>
+                  <th>Fleet Unit</th>
+                  <th>Assigned Driver</th>
+                  <th>Route</th>
+                  <th>Seat Load</th>
+                  <th>Status</th>
+                  <th>Next Arrival</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Bus 01 (MLS-042)</strong></td>
+                  <td>R. Santos (ID-09)</td>
+                  <td>Robinsons Malolos → Trinoma</td>
+                  <td>16 / 24 seats (8 free)</td>
+                  <td><span class="status-pill status-transit">In Transit</span></td>
+                  <td>3 min away</td>
+                </tr>
+                <tr>
+                  <td><strong>Bus 02 (MLS-018)</strong></td>
+                  <td>E. Bautista (ID-14)</td>
+                  <td>Robinsons Malolos → Trinoma</td>
+                  <td>23 / 24 seats (1 free)</td>
+                  <td><span class="status-pill status-transit">In Transit</span></td>
+                  <td>Less than 1 min</td>
+                </tr>
+                <tr>
+                  <td><strong>Bus 03 (MLS-105)</strong></td>
+                  <td>D. Navarro (ID-21)</td>
+                  <td>Malolos Express → North EDSA</td>
+                  <td>08 / 24 seats (16 free)</td>
+                  <td><span class="status-pill status-boarding">Boarding</span></td>
+                  <td>Departs 8:45 AM</td>
+                </tr>
+                <tr>
+                  <td><strong>Bus 04 (TRN-009)</strong></td>
+                  <td>M. Garcia (ID-05)</td>
+                  <td>Trinoma EDSA Terminal Bay</td>
+                  <td>00 / 24 seats</td>
+                  <td><span class="status-pill status-standby">Standby</span></td>
+                  <td>Departs 9:15 AM</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="admin-panel">
+            <div class="admin-panel-header">
+              <h2 class="admin-panel-title">Operations &amp; Security Policy</h2>
+            </div>
+            <div class="admin-notice-box">
+              <strong>Admin Provisioning Rule</strong>
+              Admin accounts can only be provisioned internally by Saraza TRD Operations. Self-registration is strictly disabled to protect fleet dispatch data.
+            </div>
+            <div class="admin-notice-box">
+              <strong>Automated Discrepancy Auditing</strong>
+              Transitioning from manual pen-and-paper tracking to real-time digital logging. Zero discrepancies detected across today's ₱42,560 fare collections.
+            </div>
+            <button class="admin-modal-button-secondary" type="button" style="width: 100%; margin-top: 10px;" data-admin-action="sign-out">
+              Return to Admin Login Screen
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>`;
+
+  const openAdminModal = (type) => {
+    const existing = screen.querySelector(".admin-modal-backdrop");
+    if (existing) existing.remove();
+    const modal = document.createElement("div");
+    modal.className = "admin-modal-backdrop";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+
+    let icon = fingerprintIcon;
+    let title = "Biometric Verification";
+    let desc = "Place administrator finger on hardware biometric scanner to authenticate.";
+    let primaryBtn = "Simulate Scan &amp; Login";
+    let isInfoOnly = false;
+
+    if (type === "smartcard") {
+      icon = idCardIcon;
+      title = "Staff RFID / Smart Badge";
+      desc = "Hold Saraza TRD Operations NFC Badge (#SRZ-ADM-042) near the reader.";
+      primaryBtn = "Simulate Badge Tap &amp; Login";
+    } else if (type === "key") {
+      icon = fingerprintIcon;
+      title = "Secondary Biometric Scanner";
+      desc = "Touch secondary biometric sensor or insert hardware security key.";
+      primaryBtn = "Simulate Scan &amp; Login";
+    } else if (type === "forgot-password") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>`;
+      title = "Administrator Password Assistance";
+      desc = "For regulatory and operational security, administrator passwords cannot be reset online.<br><br>Please contact the <strong>Saraza TRD Systems Administrator</strong> or your <strong>Operations Supervisor</strong> to reissue your credentials.";
+      primaryBtn = "Understood";
+      isInfoOnly = true;
+    }
+
+    modal.innerHTML = `
+      <div class="admin-modal-box">
+        <div class="admin-modal-icon-wrapper">
+          <div class="admin-pulse-ring"></div>
+          ${icon}
+        </div>
+        <h3 class="admin-modal-title">${title}</h3>
+        <p class="admin-modal-desc">${desc}</p>
+        <div class="admin-modal-actions">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+          <button class="admin-modal-button-primary" type="button" ${isInfoOnly ? "data-admin-modal-close" : "data-admin-modal-auth"}>${primaryBtn}</button>
+        </div>
+      </div>
+    `;
+
+    screen.append(modal);
+    modal.querySelector(".admin-modal-button-primary")?.focus();
+  };
 
   const loginScreen = (showError = false) => `
     <div class="auth-content">
@@ -1080,7 +1317,11 @@
     activeState = state;
     liveMapDrag = null;
     screen.replaceChildren();
-    if (state === "login") {
+    if (state === "admin-login") {
+      screen.innerHTML = adminLoginScreen(adminShowError);
+    } else if (state === "admin-dashboard") {
+      screen.innerHTML = adminDashboardScreen();
+    } else if (state === "login") {
       screen.innerHTML = loginScreen();
     } else if (state === "login-error") {
       screen.innerHTML = loginScreen(true);
@@ -1223,42 +1464,68 @@
 
   const updateCanvas = () => {
     world.style.zoom = String(zoom);
-    world.style.left = `calc(50% - 196.5px + ${panX / zoom}px)`;
-    world.style.top = `calc(50% - 426px + ${panY / zoom}px)`;
+    if (currentRole === "admin") {
+      world.style.left = `calc(50% - 590px + ${panX / zoom}px)`;
+      world.style.top = `calc(50% - 370px + ${panY / zoom}px)`;
+    } else {
+      world.style.left = `calc(50% - 196.5px + ${panX / zoom}px)`;
+      world.style.top = `calc(50% - 426px + ${panY / zoom}px)`;
+    }
     zoomOutput.value = `${Math.round(zoom * 100)}%`;
     zoomOutput.textContent = `${Math.round(zoom * 100)}%`;
   };
 
   const resetCanvas = () => {
-    zoom = 1;
-    panX = 0;
-    panY = Math.max(0, (852 * zoom - viewport.clientHeight) / 2 + 12);
+    if (currentRole === "admin") {
+      const availW = Math.max(320, viewport.clientWidth - 48);
+      const availH = Math.max(320, viewport.clientHeight - 48);
+      const fitZoom = Math.min(1, Math.max(0.4, Math.min(availW / 1180, availH / 740)));
+      zoom = Math.round(fitZoom * 20) / 20 || 0.75;
+      panX = 0;
+      panY = 0;
+    } else {
+      zoom = 1;
+      panX = 0;
+      panY = Math.max(0, (852 * zoom - viewport.clientHeight) / 2 + 12);
+    }
     updateCanvas();
   };
 
-  const openWorkspace = () => {
+  const openWorkspace = (role = "user") => {
+    currentRole = role;
     rolePage.hidden = true;
     workspacePage.hidden = false;
     roleNote.textContent = "";
-    renderScreen("login");
+    if (workspaceRoleLabel) {
+      workspaceRoleLabel.textContent = role === "admin" ? "Admin" : "User";
+    }
+    if (role === "admin") {
+      world.classList.add("is-admin");
+      screen.classList.add("is-admin");
+      adminShowError = false;
+      renderScreen("admin-login");
+    } else {
+      world.classList.remove("is-admin");
+      screen.classList.remove("is-admin");
+      renderScreen("login");
+    }
     resetCanvas();
     viewport.focus({ preventScroll: true });
   };
 
   document.querySelectorAll("[data-open]").forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.open === "user") {
-        openWorkspace();
-      } else {
-        roleNote.textContent = "Admin experience is coming soon.";
-      }
+      openWorkspace(button.dataset.open);
     });
   });
 
   backButton.addEventListener("click", () => {
     workspacePage.hidden = true;
     rolePage.hidden = false;
-    document.querySelector('[data-open="user"]').focus();
+    world.classList.remove("is-admin");
+    screen.classList.remove("is-admin");
+    const target = document.querySelector(`[data-open="${currentRole}"]`) ?? document.querySelector('[data-open="user"]');
+    target?.focus();
   });
 
   document.querySelectorAll("[data-zoom]").forEach((button) => {
@@ -1421,6 +1688,24 @@
   });
 
   screen.addEventListener("submit", (event) => {
+    if (event.target.matches("[data-admin-login-form]")) {
+      event.preventDefault();
+      const emailInput = screen.querySelector("#admin-email");
+      const passwordInput = screen.querySelector("#admin-password");
+      if (!emailInput || !passwordInput) return;
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      if (!email || !password) {
+        adminShowError = true;
+        renderScreen("admin-login");
+        screen.querySelector("#admin-email")?.focus();
+        return;
+      }
+      adminShowError = false;
+      renderScreen("admin-dashboard");
+      return;
+    }
+
     if (event.target.matches("[data-login-form]")) {
       event.preventDefault();
       const email = screen.querySelector("#login-email");
@@ -1548,6 +1833,12 @@
       updateLiveMapView();
     }
 
+    if (event.target.matches("#admin-email, #admin-password")) {
+      event.target.removeAttribute("aria-invalid");
+      const alert = screen.querySelector("#admin-auth-alert");
+      if (alert) alert.hidden = true;
+    }
+
     if (event.target.matches("#login-email")) {
       const emailError = screen.querySelector("#email-error");
       if (emailError) emailError.hidden = true;
@@ -1609,6 +1900,59 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const adminActionBtn = event.target.closest("[data-admin-action]");
+    if (adminActionBtn) {
+      const { adminAction } = adminActionBtn.dataset;
+      if (adminAction === "forgot-password") {
+        openAdminModal("forgot-password");
+      } else if (adminAction === "autofill-demo") {
+        const emailInput = screen.querySelector("#admin-email");
+        const passwordInput = screen.querySelector("#admin-password");
+        if (emailInput) {
+          emailInput.value = "admin@saraza.com";
+          emailInput.removeAttribute("aria-invalid");
+        }
+        if (passwordInput) {
+          passwordInput.value = "AdminPass123!";
+          passwordInput.removeAttribute("aria-invalid");
+        }
+        adminShowError = false;
+        const alert = screen.querySelector("#admin-auth-alert");
+        if (alert) alert.hidden = true;
+      } else if (adminAction === "toggle-error") {
+        adminShowError = !adminShowError;
+        renderScreen("admin-login");
+      } else if (adminAction === "sign-out") {
+        adminShowError = false;
+        renderScreen("admin-login");
+      }
+      return;
+    }
+
+    const adminAuthTile = event.target.closest("[data-admin-auth]");
+    if (adminAuthTile) {
+      openAdminModal(adminAuthTile.dataset.adminAuth);
+      return;
+    }
+
+    if (event.target.closest("[data-admin-modal-close]")) {
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      return;
+    }
+
+    if (event.target.closest("[data-admin-modal-auth]")) {
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      adminShowError = false;
+      renderScreen("admin-dashboard");
+      return;
+    }
+
+    const modalBackdrop = event.target.closest(".admin-modal-backdrop");
+    if (modalBackdrop && event.target === modalBackdrop) {
+      modalBackdrop.remove();
+      return;
+    }
+
     const quickBookOverlay = event.target.closest("[data-quick-book-overlay]");
     if (quickBookOverlay && event.target === quickBookOverlay) {
       closeQuickBookOverlay(quickBookOverlay);
