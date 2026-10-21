@@ -2692,16 +2692,16 @@
       <!-- Main Operational Area -->
       <main class="admin-main-container">
         ${activeAdminSidebarTab === "predictive-analytics"
-          ? adminPredictiveAnalyticsView()
-          : activeAdminSidebarTab === "fleet-dispatch"
-            ? adminFleetDispatchView()
-            : activeAdminSidebarTab === "staff-resources"
-              ? adminStaffResourcesView()
-              : activeAdminSidebarTab === "sensor-camera"
-                ? adminSensorCameraView()
-                : activeAdminSidebarTab === "reports"
-                  ? adminReportsView()
-                  : adminLiveOperationsView()}
+      ? adminPredictiveAnalyticsView()
+      : activeAdminSidebarTab === "fleet-dispatch"
+        ? adminFleetDispatchView()
+        : activeAdminSidebarTab === "staff-resources"
+          ? adminStaffResourcesView()
+          : activeAdminSidebarTab === "sensor-camera"
+            ? adminSensorCameraView()
+            : activeAdminSidebarTab === "reports"
+              ? adminReportsView()
+              : adminLiveOperationsView()}
       </main>
     </div>`;
 
@@ -3414,7 +3414,7 @@
           ${discountVerificationMessage ? `<p class="verification-message" data-verification-message role="status" aria-live="polite">${escapeHtml(discountVerificationMessage)}</p>` : ""}
           <button class="verification-primary" type="button" data-verification-action="review">Continue to Verification <span aria-hidden="true">→</span></button>`
       : discountVerificationStep === 2
-      ? `<section class="verification-review" aria-labelledby="verification-review-title">
+        ? `<section class="verification-review" aria-labelledby="verification-review-title">
           <h2 id="verification-review-title">Review your documents</h2>
           <p>Check that your concession type and ID images are correct.</p>
           <div class="verification-review-type"><strong>Concession Type</strong><span>${concessionTypes.find((type) => type.id === discountVerificationType)?.label}</span></div>
@@ -3423,7 +3423,7 @@
           <p class="verification-message" data-verification-message role="status" aria-live="polite">${escapeHtml(discountVerificationMessage)}</p>
           <div class="verification-review-actions"><button type="button" class="verification-secondary" data-verification-action="edit">Edit Documents</button><button type="button" class="verification-primary" data-verification-action="submit"${discountVerificationConfirmed ? "" : " disabled"}>Submit for Verification</button></div>
         </section>`
-      : `<section class="verification-complete" aria-labelledby="verification-complete-title">
+        : `<section class="verification-complete" aria-labelledby="verification-complete-title">
           <span class="verification-complete-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
           <h2 id="verification-complete-title">Request ready</h2>
           <p>Your ${concessionTypes.find((type) => type.id === discountVerificationType)?.label} ID is marked <strong>Pending</strong> in this prototype.</p>
@@ -3789,11 +3789,11 @@
     const content = state === "notifications"
       ? notificationContent
       : state === "live-map"
-      ? liveMapScreen()
-      : state === "tickets"
-        ? tripHistoryScreen()
-        : state === "profile"
-          ? `<div class="account-page account-profile-page">
+        ? liveMapScreen()
+        : state === "tickets"
+          ? tripHistoryScreen()
+          : state === "profile"
+            ? `<div class="account-page account-profile-page">
               <section class="profile-user-card" aria-label="Account profile">
                 <span class="account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
                 <div class="profile-user-copy"><strong>${escapeHtml(registrationData.username || "JockyThePythonKing")}</strong><span>${escapeHtml([accountProfile.firstName, accountProfile.middleName, accountProfile.lastName].filter(Boolean).join(" "))}</span><span class="profile-status-badge${discountVerificationStatus === "pending" ? " is-pending" : ""}">${discountVerificationStatus === "pending" ? "Pending" : "Unverified"}</span></div>
@@ -3844,7 +3844,7 @@
               <p class="account-message profile-message" data-message role="status" aria-live="polite"></p>
               <button class="profile-support-banner" type="button" data-info="Customer service is not connected in this prototype."><span>Can’t find the topic you are looking for?</span><small>24/7 Live Customer Service</small><i aria-hidden="true">?</i></button>
             </div>`
-          : `<div class="faq-page">
+            : `<div class="faq-page">
               <section class="faq-intro">
                 <h2>Got Questions?</h2>
                 <label class="faq-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input type="search" data-faq-search placeholder="Search help topics..." aria-label="Search frequently asked questions"></label>
@@ -3878,10 +3878,10 @@
       ? ""
       : state === "profile"
         ? `<header class="settings-header profile-settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="profile-settings-title"><h1>Account Profile</h1></div></header>`
-      : hasBrandedHeader
-        ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="${state === "faq" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
-        : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
-      const busPopup = state === "live-map" ? `
+        : hasBrandedHeader
+          ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="${state === "faq" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
+          : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
+    const busPopup = state === "live-map" ? `
         <div class="modal-scrim bus-popup-scrim" data-bus-popup hidden>
           <section class="bottom-sheet quick-book-sheet bus-capacity-popup" role="dialog" aria-modal="true" aria-labelledby="bus-popup-title" tabindex="-1">
             <span class="sheet-handle"></span>
@@ -3918,7 +3918,7 @@
             <p class="bus-popup-note">Illustrative demo data · Not live tracking</p>
           </section>
         </div>` : "";
-      return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}${state === "profile" ? " profile-scroll" : ""}${state === "tickets" ? " ticket-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame && state !== "profile" && state !== "tickets" ? "" : navigation(state)}${busPopup}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
+    return `<div class="commuter-app secondary-tab${isSettingsFrame ? " settings-frame" : ""}"><div class="tab-scroll${isSettingsFrame ? " settings-scroll" : ""}${state === "profile" ? " profile-scroll" : ""}${state === "tickets" ? " ticket-scroll" : ""}">${header}<div class="tab-content">${content}</div></div>${isSettingsFrame && state !== "profile" && state !== "tickets" ? "" : navigation(state)}${busPopup}${state === "live-map" || isSettingsFrame ? "" : '<p class="prototype-stamp">Illustrative demo · No live service connected</p>'}</div>`;
   };
 
   const updateFaqResults = () => {
@@ -5267,7 +5267,7 @@
         cameraOsdEnabled = !cameraOsdEnabled;
       }
       const isNowOn = toggleType === "ai" ? cameraAiDetectionEnabled :
-                      toggleType === "scanlines" ? cameraScanlinesEnabled : cameraOsdEnabled;
+        toggleType === "scanlines" ? cameraScanlinesEnabled : cameraOsdEnabled;
       cctvToggleSwitch.classList.toggle("is-on", isNowOn);
       cctvToggleSwitch.setAttribute("aria-checked", isNowOn ? "true" : "false");
 
