@@ -194,7 +194,85 @@
   let activeFleetFilter = "all";
   let fleetSearchQuery = "";
   let activeCorridorFilter = "all";
-  let activeAdminSidebarTab = "live-operations";
+  let activeAdminSidebarTab = "predictive-analytics";
+  let predictiveSelectedHour = 17; // 5 PM
+  let predictiveTransitLoadScale = 100;
+  let predictiveOperatingProfile = "Intercity / Airport";
+
+  const predictiveForecastHours = [
+    { hour: 0, label: "12 AM", val: 280, state: "low", heat: "green", showLabel: true },
+    { hour: 1, label: "1 AM", val: 320, state: "low", heat: "green", showLabel: true },
+    { hour: 2, label: "2 AM", val: 250, state: "low", heat: "green", showLabel: true },
+    { hour: 3, label: "3 AM", val: 310, state: "low", heat: "green", showLabel: true },
+    { hour: 4, label: "4 AM", val: 380, state: "low", heat: "green", showLabel: true },
+    { hour: 5, label: "5 AM", val: 520, state: "low", heat: "green", showLabel: true },
+    { hour: 6, label: "6 AM", val: 820, state: "normal", heat: "blue", showLabel: true },
+    { hour: 7, label: "7 AM", val: 940, state: "normal", heat: "blue", showLabel: false },
+    { hour: 8, label: "8 AM", val: 1040, state: "normal", heat: "blue", showLabel: false },
+    { hour: 9, label: "9 AM", val: 920, state: "normal", heat: "blue", showLabel: true },
+    { hour: 10, label: "10 AM", val: 960, state: "normal", heat: "blue", showLabel: false },
+    { hour: 11, label: "11 AM", val: 980, state: "normal", heat: "blue", showLabel: false },
+    { hour: 12, label: "12 PM", val: 1050, state: "normal", heat: "blue", showLabel: true },
+    { hour: 13, label: "1 PM", val: 1020, state: "normal", heat: "blue", showLabel: false },
+    { hour: 14, label: "2 PM", val: 1080, state: "normal", heat: "blue", showLabel: false },
+    { hour: 15, label: "3 PM", val: 1130, state: "surge", heat: "red", showLabel: true },
+    { hour: 16, label: "4 PM", val: 1160, state: "surge", heat: "red", showLabel: false },
+    { hour: 17, label: "5 PM", val: 1190, state: "surge", heat: "red", showLabel: false },
+    { hour: 18, label: "6 PM", val: 1150, state: "surge", heat: "red", showLabel: true },
+    { hour: 19, label: "7 PM", val: 1120, state: "surge", heat: "red", showLabel: false },
+    { hour: 20, label: "8 PM", val: 980, state: "normal", heat: "blue", showLabel: false },
+    { hour: 21, label: "9 PM", val: 920, state: "normal", heat: "blue", showLabel: true },
+    { hour: 22, label: "10 PM", val: 740, state: "normal", heat: "blue", showLabel: false },
+    { hour: 23, label: "11 PM", val: 450, state: "low", heat: "green", showLabel: true }
+  ];
+
+  const renderForecastBars = () => {
+    return predictiveForecastHours.map((item) => {
+      const scaledVal = Math.round(item.val * (predictiveTransitLoadScale / 100));
+      const heightPx = Math.min(156, Math.max(14, Math.round((scaledVal / 1400) * 148)));
+      const isSelected = item.hour === predictiveSelectedHour;
+      return `
+        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-hour="${item.hour}" title="${item.label}: ${scaledVal.toLocaleString()} commuters/hr">
+          ${isSelected ? `<div class="bar-selected-badge">${scaledVal.toLocaleString()}</div>` : ""}
+          <div class="chart-bar-fill ${item.state}" style="height: ${heightPx}px;"></div>
+          <div class="bar-heat-pill ${item.heat}"></div>
+          <span class="bar-time-label">${item.showLabel ? item.label : ""}</span>
+        </div>
+      `;
+    }).join("");
+  };
+
+  const renderPredictiveStats = () => {
+    const selectedItem = predictiveForecastHours.find((h) => h.hour === predictiveSelectedHour) ?? predictiveForecastHours[17];
+    const scaledVal = Math.round(selectedItem.val * (predictiveTransitLoadScale / 100));
+    const peakVolume = Math.round(1190 * (predictiveTransitLoadScale / 100));
+    const peakWindow = selectedItem.state === "surge" ? "4 hrs surge" : selectedItem.hour === 8 ? "3 hrs morning rush" : "Steady flow";
+
+    let stateClass = "text-low";
+    let stateText = `${scaledVal.toLocaleString()} (Low)`;
+    if (selectedItem.state === "surge") {
+      stateClass = "text-surge";
+      stateText = `${scaledVal.toLocaleString()} (Peak / Surge)`;
+    } else if (selectedItem.state === "normal") {
+      stateClass = "text-normal";
+      stateText = `${scaledVal.toLocaleString()} (Normal)`;
+    }
+
+    return `
+      <div class="analytics-metric-box">
+        <span class="metric-box-label">PEAK WINDOW</span>
+        <strong class="metric-box-val">${peakWindow}</strong>
+      </div>
+      <div class="analytics-metric-box">
+        <span class="metric-box-label">PEAK VOLUME</span>
+        <strong class="metric-box-val">${peakVolume.toLocaleString()} /hr</strong>
+      </div>
+      <div class="analytics-metric-box">
+        <span class="metric-box-label">${selectedItem.label} STATE</span>
+        <strong class="metric-box-val ${stateClass}">${stateText}</strong>
+      </div>
+    `;
+  };
 
   const adminFleetData = [
     {
@@ -397,6 +475,470 @@
     `).join("");
   };
 
+  const adminLiveOperationsView = () => `
+    <!-- Top Title & Action Header -->
+    <header class="admin-header-row">
+      <div class="admin-header-title-box">
+        <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
+        <p class="admin-header-subtitle">Real-time urban transit status, active vehicle telemetry, driver shifts, and maintenance records.</p>
+      </div>
+
+      <div class="admin-header-actions">
+        <select class="admin-select-corridor" data-admin-corridor aria-label="Select Corridors">
+          <option value="all">All Corridors (Trinoma / Malolos / EDSA)</option>
+          <option value="trinoma">Trinoma Express Corridor</option>
+          <option value="malolos">Malolos Central Loop</option>
+          <option value="feeder">NLEX Feeder Route</option>
+        </select>
+        <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>+ Assign Dispatch</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 4 Metric Cards -->
+    <section class="admin-metrics-grid" aria-label="Key Performance Indicators">
+      <!-- 1. Service Reminders -->
+      <article class="admin-metric-card">
+        <div class="admin-metric-header">
+          <span class="admin-metric-label">SERVICE REMINDERS</span>
+          <span class="admin-pill-badge badge-total">12 Total</span>
+        </div>
+        <div class="admin-reminders-row">
+          <div class="admin-reminder-subcard">
+            <div class="reminder-title">Due Soon</div>
+            <div class="reminder-val cyan">5</div>
+            <div class="reminder-sub cyan">Next 48 Hours</div>
+          </div>
+          <div class="admin-reminder-subcard">
+            <div class="reminder-title">Overdue</div>
+            <div class="reminder-val red">9</div>
+            <div class="reminder-sub red">Requires Action</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 2. Vehicle Fleet Status -->
+      <article class="admin-metric-card">
+        <div class="admin-metric-header">
+          <span class="admin-metric-label">VEHICLE FLEET STATUS</span>
+          <span class="admin-pill-badge badge-registered">82 Registered</span>
+        </div>
+        <div class="admin-fleet-status-row">
+          <div class="admin-status-subcard">
+            <div class="status-subcard-title">ACTIVE</div>
+            <div class="status-subcard-val">65</div>
+            <div class="status-subcard-note green">79.2%</div>
+          </div>
+          <div class="admin-status-subcard">
+            <div class="status-subcard-title">INACTIVE</div>
+            <div class="status-subcard-val">13</div>
+            <div class="status-subcard-note gray">Depot</div>
+          </div>
+          <div class="admin-status-subcard">
+            <div class="status-subcard-title">IN SHOP</div>
+            <div class="status-subcard-val red">4</div>
+            <div class="status-subcard-note red">Repair</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 3. Fuel & Operating Cost -->
+      <article class="admin-metric-card">
+        <div class="admin-metric-header">
+          <span class="admin-metric-label">FUEL &amp; OPERATING COST</span>
+          <span class="admin-pill-badge badge-cost">$24.8K Total</span>
+        </div>
+        <div class="admin-chart-bars">
+          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 38px;"></div><span class="admin-bar-label">Aug</span></div>
+          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 48px;"></div><span class="admin-bar-label">Sep</span></div>
+          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 22px;"></div><span class="admin-bar-label">Oct</span></div>
+          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 52px;"></div><span class="admin-bar-label">Nov</span></div>
+          <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 46px;"></div><span class="admin-bar-label">Dec</span></div>
+          <div class="admin-chart-col"><div class="admin-bar-fill accent" style="height: 18px;"></div><span class="admin-bar-label">Jan</span></div>
+        </div>
+      </article>
+
+      <!-- 4. Active Shift Rate -->
+      <article class="admin-metric-card">
+        <div class="admin-metric-header">
+          <span class="admin-metric-label">ACTIVE SHIFT RATE</span>
+          <span class="admin-pill-badge badge-shift">↑ 5.2% vs lw</span>
+        </div>
+        <div class="admin-shift-rate-content">
+          <div class="admin-shift-text-box">
+            <div class="admin-shift-active-line">
+              <span class="admin-shift-dot"></span>
+              <span class="admin-shift-val">88% Active</span>
+            </div>
+            <span class="admin-shift-corridors">6 of 6 Critical Corridors Covered</span>
+          </div>
+          <div class="admin-donut-wrap">
+            <svg class="admin-donut-svg" viewBox="0 0 36 36">
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1c2738" stroke-width="3.6"/>
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#2FD9A8" stroke-width="3.6" stroke-dasharray="88, 100" stroke-linecap="round"/>
+            </svg>
+            <div class="admin-donut-text">6/6</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Active Fleet Vehicles & Dispatch Directory -->
+    <section class="admin-directory-panel">
+      <div class="admin-directory-header">
+        <h2 class="admin-directory-title">Active Fleet Vehicles &amp; Dispatch Directory</h2>
+        <div class="admin-directory-tabs" role="tablist">
+          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Live (8)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Duty (6)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (1)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (1)</button>
+        </div>
+        <div class="admin-table-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search driver, bus, route..." value="${escapeHtml(fleetSearchQuery)}" data-admin-fleet-search>
+        </div>
+      </div>
+
+      <table class="admin-directory-table">
+        <thead>
+          <tr>
+            <th>BUS NO.</th>
+            <th>DRIVER</th>
+            <th>DISPATCHER</th>
+            <th>DESIGNATION / ROUTE</th>
+            <th>FUEL &amp; GPS SPEED</th>
+            <th>RATE / MAX HRS</th>
+            <th>STATUS</th>
+            <th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="admin-fleet-tbody">
+          ${renderAdminFleetRows()}
+        </tbody>
+      </table>
+
+      <div class="admin-pagination">
+        <button type="button" data-admin-action="prev-page">Prev</button>
+        <span>Page 1 of 4</span>
+        <button type="button" data-admin-action="next-page">Next</button>
+      </div>
+    </section>
+
+    <!-- Bottom 3 Grid Cards -->
+    <section class="admin-bottom-grid">
+      <!-- Card 1: Recent Comments -->
+      <article class="admin-bottom-card">
+        <div class="admin-card-header">
+          <div class="admin-card-header-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>RECENT MAINTENANCE &amp; DISPATCH COMMENTS</span>
+          </div>
+          <span class="admin-badge-sync">Live Sync</span>
+        </div>
+        <div class="admin-comments-list">
+          ${adminCommentsData.map((c) => `
+            <div class="admin-comment-item">
+              <div class="admin-comment-meta">
+                <div>
+                  <span class="admin-comment-author">${c.author}</span>
+                  <span style="color: #64748b;"> commented on service entry </span>
+                  <span class="admin-comment-tag ${c.tagColor}">${c.tag}</span>
+                </div>
+                <span class="admin-comment-time">${c.time}</span>
+              </div>
+              <p class="admin-comment-text">${c.text}</p>
+            </div>
+          `).join("")}
+        </div>
+      </article>
+
+      <!-- Card 2: Upcoming Shift -->
+      <article class="admin-bottom-card">
+        <div class="admin-card-header">
+          <div class="admin-card-header-left">
+            <span>Upcoming Shift</span>
+          </div>
+          <span class="admin-badge-swaps">2 Swaps</span>
+        </div>
+        <div class="admin-shifts-list">
+          ${adminShiftsData.map((shift) => `
+            <div class="admin-shift-item">
+              <div class="admin-shift-details">
+                <div class="admin-shift-bus-title">
+                  <span class="dot"></span>
+                  <span>${shift.bus}</span>
+                </div>
+                <span class="admin-shift-people">Driver: ${shift.driver}</span>
+                <span class="admin-shift-people">Dispatcher: ${shift.dispatcher}</span>
+              </div>
+              <span class="admin-shift-time-badge">${shift.time}</span>
+            </div>
+          `).join("")}
+        </div>
+      </article>
+
+      <!-- Card 3: Route Corridor Map -->
+      <article class="admin-bottom-card" style="padding: 10px;">
+        <div class="admin-map-container" aria-label="Route Corridor Map from Malolos to Quezon City">
+          <svg class="admin-map-svg" viewBox="0 0 380 230" preserveAspectRatio="none">
+            <!-- Background Map Layers -->
+            <rect width="380" height="230" fill="#d9e3db"/>
+            
+            <!-- Water Coast (Manila Bay) -->
+            <path d="M 0 100 Q 80 140, 100 230 L 0 230 Z" fill="#b9d6e8"/>
+            <path d="M 0 160 Q 60 180, 80 230 L 0 230 Z" fill="#9ec5de"/>
+
+            <!-- Secondary roads network -->
+            <path d="M 60 20 L 140 80 L 190 60 L 260 90 L 330 60" stroke="#f0f3ee" stroke-width="2.5" fill="none"/>
+            <path d="M 120 20 L 170 120 L 230 140 L 320 180" stroke="#f0f3ee" stroke-width="2.5" fill="none"/>
+            <path d="M 210 20 L 220 100 L 290 120 L 350 160" stroke="#f0f3ee" stroke-width="2" fill="none"/>
+            <path d="M 10 70 L 120 110 L 210 180 L 260 230" stroke="#f0f3ee" stroke-width="2" fill="none"/>
+            <path d="M 200 180 L 320 200 L 380 180" stroke="#f0f3ee" stroke-width="2" fill="none"/>
+
+            <!-- Expressways / Arterials -->
+            <path d="M 70 30 L 140 100 L 210 160 L 290 200" stroke="#e8d998" stroke-width="3" fill="none"/>
+            <path d="M 130 90 L 270 160" stroke="#f8e79b" stroke-width="2" fill="none"/>
+
+            <!-- Transit Corridor Route (Blue Line from Malolos B to Quezon City A) -->
+            <path d="M 125 78 Q 155 100, 185 130 T 260 178" stroke="#3b82f6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path d="M 125 78 Q 155 100, 185 130 T 260 178" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+            <!-- Towns & Location Labels -->
+            <text x="35" y="32" font-size="9" fill="#526270" font-family="sans-serif">Apalit</text>
+            <text x="30" y="88" font-size="9" fill="#526270" font-family="sans-serif">Hagonoy</text>
+            <text x="138" y="68" font-size="10.5" font-weight="700" fill="#1e293b" font-family="sans-serif">Malolos</text>
+            <text x="135" y="105" font-size="8.5" fill="#526270" font-family="sans-serif">Guiguinto</text>
+            <text x="165" y="140" font-size="8.5" fill="#526270" font-family="sans-serif">Bocaue</text>
+            <text x="188" y="178" font-size="8.5" fill="#526270" font-family="sans-serif">Valenzuela</text>
+            <text x="215" y="45" font-size="8.5" fill="#526270" font-family="sans-serif">Plaridel</text>
+            <text x="250" y="65" font-size="8.5" fill="#526270" font-family="sans-serif">Pandi</text>
+            <text x="280" y="100" font-size="9.5" font-weight="600" fill="#334155" font-family="sans-serif">SJDM</text>
+            <text x="310" y="55" font-size="8.5" fill="#526270" font-family="sans-serif">Norzagaray</text>
+            <text x="330" y="130" font-size="8.5" fill="#526270" font-family="sans-serif">Rodriguez</text>
+            <text x="325" y="152" font-size="8.5" fill="#526270" font-family="sans-serif">San Mateo</text>
+            <text x="210" y="222" font-size="9" fill="#526270" font-family="sans-serif">Manila</text>
+            <text x="272" y="174" font-size="11" font-weight="700" fill="#0f172a" font-family="sans-serif">Quezon City</text>
+
+            <!-- Marker B (Malolos) -->
+            <circle cx="125" cy="74" r="9" fill="#dc2626"/>
+            <text x="125" y="78" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
+
+            <!-- Marker A (Quezon City / Trinoma) -->
+            <circle cx="260" cy="178" r="9" fill="#dc2626"/>
+            <text x="260" y="182" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
+          </svg>
+        </div>
+      </article>
+    </section>
+  `;
+
+  const adminPredictiveAnalyticsView = () => `
+    <!-- Top Title & Action Header -->
+    <header class="admin-header-row">
+      <div class="admin-header-title-box">
+        <div class="admin-header-title-line" style="display: flex; align-items: center; gap: 12px;">
+          <h1 class="admin-header-title">Predictive Analytics</h1>
+          <span class="analytics-pill-badge badge-mint" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 11px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #2fd9a8; box-shadow: 0 0 6px #2fd9a8;"></span>
+            ML Demand Engine Active
+          </span>
+        </div>
+        <p class="admin-header-subtitle">Machine-learning predictions for commuter surges, passenger load trends, seasonal weather spikes, and fuel-economic transit impact.</p>
+      </div>
+
+      <div class="admin-header-actions">
+        <select class="admin-select-corridor" data-analytics-route aria-label="Select Route">
+          <option value="Route 1: Trinoma Express (High Priority)">Route 1: Trinoma Express (High Priority)</option>
+          <option value="Route 2: Malolos Central Loop">Route 2: Malolos Central Loop</option>
+          <option value="Route 3: EDSA Trunk Line">Route 3: EDSA Trunk Line</option>
+        </select>
+        <select class="admin-select-corridor" data-analytics-range aria-label="Select Forecast Range">
+          <option value="Today — 24hr Forecast">Today — 24hr Forecast</option>
+          <option value="Tomorrow — 24hr Forecast">Tomorrow — 24hr Forecast</option>
+          <option value="Weekend Surge Projection">Weekend Surge Projection</option>
+        </select>
+        <button class="admin-btn-assign" type="button" data-admin-action="export-surge" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: 700;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Export Surge Report</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Demand & Forecast Card -->
+    <section class="admin-analytics-card">
+      <div class="analytics-card-header">
+        <div class="analytics-legend">
+          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Congestion states:</span>
+          <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">Peak / Surge</span></span>
+          <span class="legend-item"><span class="legend-dot blue"></span><span style="color: #93c5fd;">Normal</span></span>
+          <span class="legend-item"><span class="legend-dot green"></span><span style="color: #6ee7b7;">Low</span></span>
+        </div>
+        <div class="analytics-confidence">
+          Model Confidence: <strong style="color: #2fd9a8;">96.4%</strong> <span style="color: #64748b;">(Updated 4 mins ago)</span>
+        </div>
+      </div>
+
+      <!-- Chart Wrap -->
+      <div class="analytics-chart-wrap">
+        <div class="chart-y-axis">
+          <span>1.5k</span>
+          <span>1.1k</span>
+          <span>750</span>
+          <span>400</span>
+          <span>0</span>
+          <span style="color: #64748b; font-size: 10px; margin-top: 4px;">Heat</span>
+        </div>
+
+        <div class="chart-plot-container">
+          <!-- Threshold lines -->
+          <div class="chart-threshold-line line-peak" style="bottom: 72%;">
+            <span class="threshold-label text-red">Peak Limit (1,080)</span>
+          </div>
+          <div class="chart-threshold-line line-normal" style="bottom: 38%;">
+            <span class="threshold-label text-blue">Normal Threshold (570)</span>
+          </div>
+
+          <!-- Bars row -->
+          <div class="chart-bars-row" id="analytics-bars-container">
+            ${renderForecastBars()}
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Metrics Strip -->
+      <div class="analytics-metrics-strip" id="analytics-metrics-container">
+        ${renderPredictiveStats()}
+      </div>
+
+      <!-- Bottom Controls inside Card -->
+      <div class="analytics-controls-bar">
+        <div class="analytics-ctrl-col">
+          <label class="ctrl-label">Operating profile</label>
+          <select class="analytics-ctrl-select" data-analytics-profile>
+            <option value="Intercity / Airport" ${predictiveOperatingProfile === "Intercity / Airport" ? "selected" : ""}>Intercity / Airport</option>
+            <option value="Metropolitan Trunk" ${predictiveOperatingProfile === "Metropolitan Trunk" ? "selected" : ""}>Metropolitan Trunk</option>
+            <option value="Feeder Shuttle" ${predictiveOperatingProfile === "Feeder Shuttle" ? "selected" : ""}>Feeder Shuttle</option>
+          </select>
+        </div>
+
+        <div class="analytics-ctrl-col slider-col">
+          <div class="slider-label-row">
+            <span class="ctrl-label">Transit load scale</span>
+            <span class="scale-val" id="scale-val-display">${predictiveTransitLoadScale}%</span>
+          </div>
+          <input type="range" class="analytics-slider" min="50" max="150" step="5" value="${predictiveTransitLoadScale}" data-analytics-scale aria-label="Transit load scale">
+        </div>
+
+        <div class="analytics-ctrl-col scrub-col">
+          <div class="scrub-label-row">
+            <span class="ctrl-label">Scrub hour inspection</span>
+            <button class="scrub-reset-btn" type="button" data-scrub-hour="17">Reset selection</button>
+          </div>
+          <div class="scrub-buttons">
+            <button class="scrub-pill-btn${predictiveSelectedHour === 8 ? " is-active" : ""}" type="button" data-scrub-hour="8">8 AM Morning Peak</button>
+            <button class="scrub-pill-btn${predictiveSelectedHour === 17 ? " is-active" : ""}" type="button" data-scrub-hour="17">5 PM Evening Peak</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom 3 Context Cards -->
+    <section class="analytics-bottom-grid">
+      <!-- Card 1: Economic Conditions -->
+      <article class="analytics-bottom-card">
+        <div class="admin-card-header">
+          <div class="admin-card-header-left" style="text-transform: none;">
+            <div class="card-icon-badge gold">
+              <span style="font-size: 13px; font-weight: 700;">₱</span>
+            </div>
+            <div>
+              <div style="font-size: 13px; font-weight: 700; color: #fff;">Economic Conditions</div>
+              <div style="font-size: 10.5px; color: #72849a;">Fuel Elasticity &amp; Shift</div>
+            </div>
+          </div>
+          <span class="analytics-pill-badge badge-gold">Shift: +18%</span>
+        </div>
+
+        <div class="analytics-subbox">
+          <div class="subbox-row">
+            <span style="font-size: 11px; color: #72849a;">Diesel Spot Index</span>
+            <strong style="color: #f87171; font-size: 12px;">₱68.40/L (+4.2%)</strong>
+          </div>
+          <p class="subbox-text">Elevated fuel prices trigger modal switch from private motorbikes &amp; cars to Trinoma &amp; EDSA trunk buses.</p>
+        </div>
+
+        <div class="analytics-card-footer">
+          <span style="color: #64748b; font-size: 11px;">Ridership sensitivity factor:</span>
+          <strong style="color: #10b981; font-size: 11.5px;">0.82 (High Elasticity)</strong>
+        </div>
+      </article>
+
+      <!-- Card 2: Weather & Monsoon Impact -->
+      <article class="analytics-bottom-card">
+        <div class="admin-card-header">
+          <div class="admin-card-header-left" style="text-transform: none;">
+            <div class="card-icon-badge cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 13px; font-weight: 700; color: #fff;">Weather &amp; Monsoon Impact</div>
+              <div style="font-size: 10.5px; color: #72849a;">SW Habagat Doppler Feed</div>
+            </div>
+          </div>
+          <span class="analytics-pill-badge badge-cyan">Heavy Rain</span>
+        </div>
+
+        <div class="analytics-subbox">
+          <div class="subbox-row">
+            <span style="font-size: 11px; color: #72849a;">Terminal Dwell Surge</span>
+            <strong style="color: #fbbf24; font-size: 12px;">+35% Wait Time</strong>
+          </div>
+          <p class="subbox-text">Monsoon showers projected between 4:30 PM - 8 PM. Commuters stranded at Trinoma &amp; Cubao transit shelters.</p>
+        </div>
+
+        <div class="analytics-card-footer">
+          <span style="color: #64748b; font-size: 11px;">Precipitation probability:</span>
+          <strong style="color: #38bdf8; font-size: 11.5px;">85% at 5:00 PM</strong>
+        </div>
+      </article>
+
+      <!-- Card 3: AI Dispatch Recommendation -->
+      <article class="analytics-bottom-card">
+        <div class="admin-card-header">
+          <div class="admin-card-header-left" style="text-transform: none;">
+            <div class="card-icon-badge mint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div>
+              <div style="font-size: 13px; font-weight: 700; color: #fff;">AI Dispatch Recommendation</div>
+              <div style="font-size: 10.5px; color: #72849a;">Auto-Optimization Ready</div>
+            </div>
+          </div>
+          <span class="analytics-pill-badge badge-mint">High Priority</span>
+        </div>
+
+        <div class="analytics-subbox" style="padding: 10px 12px;">
+          <ul class="recommendation-list">
+            <li>• Inject <strong>+3 standby buses</strong> into Route 1 (Trinoma)</li>
+            <li>• Compress evening headway from <strong>12m → 5m</strong></li>
+            <li>• Borrow <strong>2 standby coaches</strong> from Malolos Feeder</li>
+          </ul>
+        </div>
+
+        <div class="analytics-action-row">
+          <button class="btn-approve-fleet" type="button" data-admin-action="approve-redistribution">Approve Fleet Redistribution</button>
+          <button class="btn-simulate-surge" type="button" data-admin-action="simulate-surge">Simulate</button>
+        </div>
+      </article>
+    </section>
+  `;
+
   const adminDashboardScreen = () => `
     <div class="admin-dashboard-layout" data-admin-screen="dashboard">
       <!-- Left Sidebar -->
@@ -413,27 +955,27 @@
           </div>
 
           <nav class="admin-nav" aria-label="Operations Navigation">
-            <button class="admin-nav-item is-active" type="button" data-admin-nav="live-operations">
+            <button class="admin-nav-item${activeAdminSidebarTab === "live-operations" || activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="live-operations">
               <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
               <span>Live Operations</span>
             </button>
-            <button class="admin-nav-item" type="button" data-admin-nav="predictive-analytics">
+            <button class="admin-nav-item${activeAdminSidebarTab === "predictive-analytics" ? " is-active" : ""}" type="button" data-admin-nav="predictive-analytics">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
               <span>Predictive Analytics</span>
             </button>
-            <button class="admin-nav-item" type="button" data-admin-nav="fleet-dispatch">
+            <button class="admin-nav-item${activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="fleet-dispatch">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               <span>Fleet Monitoring and Dispatch</span>
             </button>
-            <button class="admin-nav-item" type="button" data-admin-nav="staff-resources">
+            <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               <span>Staff &amp; Resources</span>
             </button>
-            <button class="admin-nav-item" type="button" data-admin-nav="sensor-camera">
+            <button class="admin-nav-item${activeAdminSidebarTab === "sensor-camera" ? " is-active" : ""}" type="button" data-admin-nav="sensor-camera">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
               <span>Sensor &amp; Camera Management</span>
             </button>
-            <button class="admin-nav-item" type="button" data-admin-nav="reports">
+            <button class="admin-nav-item${activeAdminSidebarTab === "reports" ? " is-active" : ""}" type="button" data-admin-nav="reports">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               <span>Reports</span>
             </button>
@@ -451,262 +993,7 @@
 
       <!-- Main Operational Area -->
       <main class="admin-main-container">
-        <!-- Top Title & Action Header -->
-        <header class="admin-header-row">
-          <div class="admin-header-title-box">
-            <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
-            <p class="admin-header-subtitle">Real-time urban transit status, active vehicle telemetry, driver shifts, and maintenance records.</p>
-          </div>
-
-          <div class="admin-header-actions">
-            <select class="admin-select-corridor" data-admin-corridor aria-label="Select Corridors">
-              <option value="all">All Corridors (Trinoma / Malolos / EDSA)</option>
-              <option value="trinoma">Trinoma Express Corridor</option>
-              <option value="malolos">Malolos Central Loop</option>
-              <option value="feeder">NLEX Feeder Route</option>
-            </select>
-            <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <span>+ Assign Dispatch</span>
-            </button>
-          </div>
-        </header>
-
-        <!-- 4 Metric Cards -->
-        <section class="admin-metrics-grid" aria-label="Key Performance Indicators">
-          <!-- 1. Service Reminders -->
-          <article class="admin-metric-card">
-            <div class="admin-metric-header">
-              <span class="admin-metric-label">SERVICE REMINDERS</span>
-              <span class="admin-pill-badge badge-total">12 Total</span>
-            </div>
-            <div class="admin-reminders-row">
-              <div class="admin-reminder-subcard">
-                <div class="reminder-title">Due Soon</div>
-                <div class="reminder-val cyan">5</div>
-                <div class="reminder-sub cyan">Next 48 Hours</div>
-              </div>
-              <div class="admin-reminder-subcard">
-                <div class="reminder-title">Overdue</div>
-                <div class="reminder-val red">9</div>
-                <div class="reminder-sub red">Requires Action</div>
-              </div>
-            </div>
-          </article>
-
-          <!-- 2. Vehicle Fleet Status -->
-          <article class="admin-metric-card">
-            <div class="admin-metric-header">
-              <span class="admin-metric-label">VEHICLE FLEET STATUS</span>
-              <span class="admin-pill-badge badge-registered">82 Registered</span>
-            </div>
-            <div class="admin-fleet-status-row">
-              <div class="admin-status-subcard">
-                <div class="status-subcard-title">ACTIVE</div>
-                <div class="status-subcard-val">65</div>
-                <div class="status-subcard-note green">79.2%</div>
-              </div>
-              <div class="admin-status-subcard">
-                <div class="status-subcard-title">INACTIVE</div>
-                <div class="status-subcard-val">13</div>
-                <div class="status-subcard-note gray">Depot</div>
-              </div>
-              <div class="admin-status-subcard">
-                <div class="status-subcard-title">IN SHOP</div>
-                <div class="status-subcard-val red">4</div>
-                <div class="status-subcard-note red">Repair</div>
-              </div>
-            </div>
-          </article>
-
-          <!-- 3. Fuel & Operating Cost -->
-          <article class="admin-metric-card">
-            <div class="admin-metric-header">
-              <span class="admin-metric-label">FUEL &amp; OPERATING COST</span>
-              <span class="admin-pill-badge badge-cost">$24.8K Total</span>
-            </div>
-            <div class="admin-chart-bars">
-              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 38px;"></div><span class="admin-bar-label">Aug</span></div>
-              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 48px;"></div><span class="admin-bar-label">Sep</span></div>
-              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 22px;"></div><span class="admin-bar-label">Oct</span></div>
-              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 52px;"></div><span class="admin-bar-label">Nov</span></div>
-              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 46px;"></div><span class="admin-bar-label">Dec</span></div>
-              <div class="admin-chart-col"><div class="admin-bar-fill accent" style="height: 18px;"></div><span class="admin-bar-label">Jan</span></div>
-            </div>
-          </article>
-
-          <!-- 4. Active Shift Rate -->
-          <article class="admin-metric-card">
-            <div class="admin-metric-header">
-              <span class="admin-metric-label">ACTIVE SHIFT RATE</span>
-              <span class="admin-pill-badge badge-shift">↑ 5.2% vs lw</span>
-            </div>
-            <div class="admin-shift-rate-content">
-              <div class="admin-shift-text-box">
-                <div class="admin-shift-active-line">
-                  <span class="admin-shift-dot"></span>
-                  <span class="admin-shift-val">88% Active</span>
-                </div>
-                <span class="admin-shift-corridors">6 of 6 Critical Corridors Covered</span>
-              </div>
-              <div class="admin-donut-wrap">
-                <svg class="admin-donut-svg" viewBox="0 0 36 36">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1c2738" stroke-width="3.6"/>
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#2FD9A8" stroke-width="3.6" stroke-dasharray="88, 100" stroke-linecap="round"/>
-                </svg>
-                <div class="admin-donut-text">6/6</div>
-              </div>
-            </div>
-          </article>
-        </section>
-
-        <!-- Active Fleet Vehicles & Dispatch Directory -->
-        <section class="admin-directory-panel">
-          <div class="admin-directory-header">
-            <h2 class="admin-directory-title">Active Fleet Vehicles &amp; Dispatch Directory</h2>
-            <div class="admin-directory-tabs" role="tablist">
-              <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Live (8)</button>
-              <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Duty (6)</button>
-              <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (1)</button>
-              <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (1)</button>
-            </div>
-            <div class="admin-table-search">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="text" placeholder="Search driver, bus, route..." value="${escapeHtml(fleetSearchQuery)}" data-admin-fleet-search>
-            </div>
-          </div>
-
-          <table class="admin-directory-table">
-            <thead>
-              <tr>
-                <th>BUS NO.</th>
-                <th>DRIVER</th>
-                <th>DISPATCHER</th>
-                <th>DESIGNATION / ROUTE</th>
-                <th>FUEL &amp; GPS SPEED</th>
-                <th>RATE / MAX HRS</th>
-                <th>STATUS</th>
-                <th>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody id="admin-fleet-tbody">
-              ${renderAdminFleetRows()}
-            </tbody>
-          </table>
-
-          <div class="admin-pagination">
-            <button type="button" data-admin-action="prev-page">Prev</button>
-            <span>Page 1 of 4</span>
-            <button type="button" data-admin-action="next-page">Next</button>
-          </div>
-        </section>
-
-        <!-- Bottom 3 Grid Cards -->
-        <section class="admin-bottom-grid">
-          <!-- Card 1: Recent Comments -->
-          <article class="admin-bottom-card">
-            <div class="admin-card-header">
-              <div class="admin-card-header-left">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>RECENT MAINTENANCE &amp; DISPATCH COMMENTS</span>
-              </div>
-              <span class="admin-badge-sync">Live Sync</span>
-            </div>
-            <div class="admin-comments-list">
-              ${adminCommentsData.map((c) => `
-                <div class="admin-comment-item">
-                  <div class="admin-comment-meta">
-                    <div>
-                      <span class="admin-comment-author">${c.author}</span>
-                      <span style="color: #64748b;"> commented on service entry </span>
-                      <span class="admin-comment-tag ${c.tagColor}">${c.tag}</span>
-                    </div>
-                    <span class="admin-comment-time">${c.time}</span>
-                  </div>
-                  <p class="admin-comment-text">${c.text}</p>
-                </div>
-              `).join("")}
-            </div>
-          </article>
-
-          <!-- Card 2: Upcoming Shift -->
-          <article class="admin-bottom-card">
-            <div class="admin-card-header">
-              <div class="admin-card-header-left">
-                <span>Upcoming Shift</span>
-              </div>
-              <span class="admin-badge-swaps">2 Swaps</span>
-            </div>
-            <div class="admin-shifts-list">
-              ${adminShiftsData.map((shift) => `
-                <div class="admin-shift-item">
-                  <div class="admin-shift-details">
-                    <div class="admin-shift-bus-title">
-                      <span class="dot"></span>
-                      <span>${shift.bus}</span>
-                    </div>
-                    <span class="admin-shift-people">Driver: ${shift.driver}</span>
-                    <span class="admin-shift-people">Dispatcher: ${shift.dispatcher}</span>
-                  </div>
-                  <span class="admin-shift-time-badge">${shift.time}</span>
-                </div>
-              `).join("")}
-            </div>
-          </article>
-
-          <!-- Card 3: Route Corridor Map -->
-          <article class="admin-bottom-card" style="padding: 10px;">
-            <div class="admin-map-container" aria-label="Route Corridor Map from Malolos to Quezon City">
-              <svg class="admin-map-svg" viewBox="0 0 380 230" preserveAspectRatio="none">
-                <!-- Background Map Layers -->
-                <rect width="380" height="230" fill="#d9e3db"/>
-                
-                <!-- Water Coast (Manila Bay) -->
-                <path d="M 0 100 Q 80 140, 100 230 L 0 230 Z" fill="#b9d6e8"/>
-                <path d="M 0 160 Q 60 180, 80 230 L 0 230 Z" fill="#9ec5de"/>
-
-                <!-- Secondary roads network -->
-                <path d="M 60 20 L 140 80 L 190 60 L 260 90 L 330 60" stroke="#f0f3ee" stroke-width="2.5" fill="none"/>
-                <path d="M 120 20 L 170 120 L 230 140 L 320 180" stroke="#f0f3ee" stroke-width="2.5" fill="none"/>
-                <path d="M 210 20 L 220 100 L 290 120 L 350 160" stroke="#f0f3ee" stroke-width="2" fill="none"/>
-                <path d="M 10 70 L 120 110 L 210 180 L 260 230" stroke="#f0f3ee" stroke-width="2" fill="none"/>
-                <path d="M 200 180 L 320 200 L 380 180" stroke="#f0f3ee" stroke-width="2" fill="none"/>
-
-                <!-- Expressways / Arterials -->
-                <path d="M 70 30 L 140 100 L 210 160 L 290 200" stroke="#e8d998" stroke-width="3" fill="none"/>
-                <path d="M 130 90 L 270 160" stroke="#f8e79b" stroke-width="2" fill="none"/>
-
-                <!-- Transit Corridor Route (Blue Line from Malolos B to Quezon City A) -->
-                <path d="M 125 78 Q 155 100, 185 130 T 260 178" stroke="#3b82f6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                <path d="M 125 78 Q 155 100, 185 130 T 260 178" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-
-                <!-- Towns & Location Labels -->
-                <text x="35" y="32" font-size="9" fill="#526270" font-family="sans-serif">Apalit</text>
-                <text x="30" y="88" font-size="9" fill="#526270" font-family="sans-serif">Hagonoy</text>
-                <text x="138" y="68" font-size="10.5" font-weight="700" fill="#1e293b" font-family="sans-serif">Malolos</text>
-                <text x="135" y="105" font-size="8.5" fill="#526270" font-family="sans-serif">Guiguinto</text>
-                <text x="165" y="140" font-size="8.5" fill="#526270" font-family="sans-serif">Bocaue</text>
-                <text x="188" y="178" font-size="8.5" fill="#526270" font-family="sans-serif">Valenzuela</text>
-                <text x="215" y="45" font-size="8.5" fill="#526270" font-family="sans-serif">Plaridel</text>
-                <text x="250" y="65" font-size="8.5" fill="#526270" font-family="sans-serif">Pandi</text>
-                <text x="280" y="100" font-size="9.5" font-weight="600" fill="#334155" font-family="sans-serif">SJDM</text>
-                <text x="310" y="55" font-size="8.5" fill="#526270" font-family="sans-serif">Norzagaray</text>
-                <text x="330" y="130" font-size="8.5" fill="#526270" font-family="sans-serif">Rodriguez</text>
-                <text x="325" y="152" font-size="8.5" fill="#526270" font-family="sans-serif">San Mateo</text>
-                <text x="210" y="222" font-size="9" fill="#526270" font-family="sans-serif">Manila</text>
-                <text x="272" y="174" font-size="11" font-weight="700" fill="#0f172a" font-family="sans-serif">Quezon City</text>
-
-                <!-- Marker B (Malolos) -->
-                <circle cx="125" cy="74" r="9" fill="#dc2626"/>
-                <text x="125" y="78" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
-
-                <!-- Marker A (Quezon City / Trinoma) -->
-                <circle cx="260" cy="178" r="9" fill="#dc2626"/>
-                <text x="260" y="182" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
-              </svg>
-            </div>
-          </article>
-        </section>
+        ${activeAdminSidebarTab === "predictive-analytics" ? adminPredictiveAnalyticsView() : adminLiveOperationsView()}
       </main>
     </div>`;
 
@@ -821,6 +1108,24 @@
         </div>
         <button class="admin-modal-button-secondary" type="button" style="width: 100%;" data-admin-modal-close>Close Telemetry Feed</button>
       `;
+      isInfoOnly = true;
+    } else if (type === "export-surge") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+      title = "Export Surge Report (PDF / CSV)";
+      desc = "Compiling 24-hour predictive transit surge analysis for <strong>Route 1: Trinoma Express</strong>.<br><br>Peak Volume: <strong>1,190 commuters/hr</strong><br>Monsoon Impact: <strong>+35% dwell surge</strong><br>Forecast Model Convergence: <strong>96.4%</strong>";
+      primaryBtn = "Download Operations Report";
+      isInfoOnly = true;
+    } else if (type === "approve-redistribution") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+      title = "Fleet Redistribution Approved";
+      desc = "AI dispatch plan has been transmitted to operations control:<br><br>• <strong>+3 standby buses</strong> dispatched to Route 1 (Trinoma)<br>• Evening headway compressed from <strong>12m → 5m</strong><br>• <strong>2 standby coaches</strong> borrowed from Malolos Feeder";
+      primaryBtn = "Done";
+      isInfoOnly = true;
+    } else if (type === "simulate-surge") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>`;
+      title = "Monte Carlo Surge Simulation";
+      desc = "Model executed with 1,000 synthetic commuter agents.<br><br>Result: <strong>-42% Projected Queue Wait Time</strong> across Trinoma &amp; Cubao transit shelters with 98.4% system reliability.";
+      primaryBtn = "Close Simulation";
       isInfoOnly = true;
     }
 
@@ -2345,6 +2650,16 @@
       if (tbody) tbody.innerHTML = renderAdminFleetRows();
     }
 
+    if (event.target.matches("[data-analytics-scale]")) {
+      predictiveTransitLoadScale = Number(event.target.value);
+      const display = screen.querySelector("#scale-val-display");
+      if (display) display.textContent = `${predictiveTransitLoadScale}%`;
+      const barsContainer = screen.querySelector("#analytics-bars-container");
+      if (barsContainer) barsContainer.innerHTML = renderForecastBars();
+      const metricsContainer = screen.querySelector("#analytics-metrics-container");
+      if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
+    }
+
     if (event.target.matches("#admin-email, #admin-password")) {
       event.target.removeAttribute("aria-invalid");
       const alert = screen.querySelector("#admin-auth-alert");
@@ -2408,6 +2723,10 @@
       activeCorridorFilter = event.target.value;
     }
 
+    if (event.target.matches("[data-analytics-profile]")) {
+      predictiveOperatingProfile = event.target.value;
+    }
+
     if (event.target.matches("#terms-accepted") && event.target.checked) {
       event.target.removeAttribute("aria-invalid");
       const termsError = screen.querySelector("#terms-error");
@@ -2445,6 +2764,12 @@
         openAdminModal("assign-dispatch");
       } else if (adminAction === "user-menu") {
         openAdminModal("user-menu");
+      } else if (adminAction === "export-surge") {
+        openAdminModal("export-surge");
+      } else if (adminAction === "approve-redistribution") {
+        openAdminModal("approve-redistribution");
+      } else if (adminAction === "simulate-surge") {
+        openAdminModal("simulate-surge");
       } else if (adminAction === "prev-page" || adminAction === "next-page") {
         // Prototype pagination indicator
         const pageSpan = screen.querySelector(".admin-pagination span");
@@ -2452,6 +2777,32 @@
           pageSpan.textContent = adminAction === "prev-page" ? "Page 1 of 4" : "Page 2 of 4";
         }
       }
+      return;
+    }
+
+    const scrubBtn = event.target.closest("[data-scrub-hour]");
+    if (scrubBtn) {
+      predictiveSelectedHour = Number(scrubBtn.dataset.scrubHour);
+      screen.querySelectorAll("[data-scrub-hour]").forEach((btn) => {
+        btn.classList.toggle("is-active", Number(btn.dataset.scrubHour) === predictiveSelectedHour);
+      });
+      const barsContainer = screen.querySelector("#analytics-bars-container");
+      if (barsContainer) barsContainer.innerHTML = renderForecastBars();
+      const metricsContainer = screen.querySelector("#analytics-metrics-container");
+      if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
+      return;
+    }
+
+    const chartCol = event.target.closest("[data-chart-hour]");
+    if (chartCol) {
+      predictiveSelectedHour = Number(chartCol.dataset.chartHour);
+      screen.querySelectorAll("[data-scrub-hour]").forEach((btn) => {
+        btn.classList.toggle("is-active", Number(btn.dataset.scrubHour) === predictiveSelectedHour);
+      });
+      const barsContainer = screen.querySelector("#analytics-bars-container");
+      if (barsContainer) barsContainer.innerHTML = renderForecastBars();
+      const metricsContainer = screen.querySelector("#analytics-metrics-container");
+      if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
       return;
     }
 
@@ -2475,9 +2826,7 @@
     const navItem = event.target.closest("[data-admin-nav]");
     if (navItem) {
       activeAdminSidebarTab = navItem.dataset.adminNav;
-      screen.querySelectorAll("[data-admin-nav]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn === navItem);
-      });
+      renderScreen("admin-dashboard");
       return;
     }
 
