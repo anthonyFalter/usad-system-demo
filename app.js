@@ -211,6 +211,9 @@
   let activeCameraLayout = "3x2"; // "3x2", "2x2", "focus"
   let focusedCameraId = "cam-01";
   let cameraAiDetectionEnabled = true;
+  let cameraScanlinesEnabled = true;
+  let cameraOsdEnabled = true;
+  let cctvSettingsPopupOpen = false;
   let cameraWaveformTab = "monitor"; // "monitor", "ai", "debug"
   let cameraSearchQuery = "";
   let predictiveSelectedHour = 17; // 5 PM
@@ -1936,8 +1939,7 @@
         <!-- Video Viewport with Scanlines, Crosshairs & AI Detections -->
         <div class="cctv-video-viewport" data-cctv-action="focus" data-cctv-id="${cam.id}">
           <img src="${cam.image}" alt="${cam.title}" class="cctv-video-img" loading="lazy">
-          <div class="cctv-scanlines"></div>
-          <div class="cctv-crosshair"></div>
+          ${cameraScanlinesEnabled ? `<div class="cctv-scanlines"></div><div class="cctv-crosshair"></div>` : ""}
           ${cameraAiDetectionEnabled ? cam.aiDetections.map((det) => `
             <div class="cctv-ai-box ${det.color}" style="top: ${det.top}; left: ${det.left}; width: ${det.width}; height: ${det.height};">
               <span class="cctv-ai-label">${det.label}</span>
@@ -1946,6 +1948,7 @@
         </div>
 
         <!-- Bottom OSD Bar -->
+        ${cameraOsdEnabled ? `
         <div class="cctv-osd-bottom">
           <div class="cctv-telemetry-tags">
             <span class="cctv-tag">UPTIME <strong>${cam.uptime}</strong></span>
@@ -1962,6 +1965,7 @@
             </button>
           </div>
         </div>
+        ` : ""}
       </div>
     `;
   };
@@ -2055,11 +2059,60 @@
           </button>
         </div>
 
-        <!-- AI HUD Toggle -->
-        <button class="cctv-btn-ai${cameraAiDetectionEnabled ? " is-active" : ""}" type="button" data-cctv-toggle-ai title="Toggle AI Object &amp; Passenger Bounding Boxes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-          <span>AI HUD: ${cameraAiDetectionEnabled ? "ON" : "OFF"}</span>
-        </button>
+        <!-- Feed Settings Popup Button & Dropdown -->
+        <div class="cctv-settings-menu-wrap">
+          <button class="cctv-btn-settings${cctvSettingsPopupOpen ? " is-active" : ""}" type="button" data-cctv-action="toggle-settings-popup" title="Surveillance Display &amp; AI Settings" aria-expanded="${cctvSettingsPopupOpen}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span>Feed Settings</span>
+          </button>
+
+          ${cctvSettingsPopupOpen ? `
+            <div class="cctv-settings-popup" id="cctv-settings-popup" role="dialog" aria-label="Surveillance Feed Options">
+              <div class="cctv-popup-header">
+                <span class="cctv-popup-title">Feed Display Options</span>
+                <button class="cctv-popup-close-btn" type="button" data-cctv-action="close-settings-popup" aria-label="Close settings popup">✕</button>
+              </div>
+
+              <div class="cctv-popup-items">
+                <!-- AI HUD Toggle Row -->
+                <div class="cctv-toggle-row">
+                  <div class="cctv-toggle-info">
+                    <span class="cctv-toggle-label">AI Object &amp; Passenger HUD</span>
+                    <span class="cctv-toggle-desc">Overlay detection boxes &amp; passenger telemetry</span>
+                  </div>
+                  <button class="admin-toggle-switch${cameraAiDetectionEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="ai" role="switch" aria-checked="${cameraAiDetectionEnabled}" aria-label="Toggle AI Detection HUD">
+                    <span class="admin-toggle-thumb"></span>
+                  </button>
+                </div>
+
+                <!-- CRT Scanlines Toggle Row -->
+                <div class="cctv-toggle-row">
+                  <div class="cctv-toggle-info">
+                    <span class="cctv-toggle-label">CRT Scanline &amp; Reticle FX</span>
+                    <span class="cctv-toggle-desc">Simulate optical CCTV phosphor scanlines</span>
+                  </div>
+                  <button class="admin-toggle-switch${cameraScanlinesEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="scanlines" role="switch" aria-checked="${cameraScanlinesEnabled}" aria-label="Toggle Scanlines">
+                    <span class="admin-toggle-thumb"></span>
+                  </button>
+                </div>
+
+                <!-- Live OSD Bar Toggle Row -->
+                <div class="cctv-toggle-row">
+                  <div class="cctv-toggle-info">
+                    <span class="cctv-toggle-label">Live Telemetry OSD Bar</span>
+                    <span class="cctv-toggle-desc">Show bitrate, latency, and uptime tags</span>
+                  </div>
+                  <button class="admin-toggle-switch${cameraOsdEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="osd" role="switch" aria-checked="${cameraOsdEnabled}" aria-label="Toggle OSD Bar">
+                    <span class="admin-toggle-thumb"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ` : ""}
+        </div>
 
         <!-- Register Camera Button -->
         <button class="staff-btn-add-member" type="button" data-cctv-action="add-device">
