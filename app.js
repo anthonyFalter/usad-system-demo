@@ -575,15 +575,18 @@
           <span class="admin-metric-label">Fuel &amp; operating cost</span>
           <span class="admin-pill-badge badge-cost">$24.8K Total</span>
         </div>
-        <div class="bento-kpi-block">
-          <div class="bento-metric-figure">$24,800</div>
+        <div class="admin-fuel-kpi-content">
+          <div class="admin-fuel-text-box">
+            <div class="bento-metric-figure">$24,800</div>
+            <span class="bento-metric-sublabel">Monthly total</span>
+          </div>
           <div class="admin-chart-bars">
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 38px;"></div><span class="admin-bar-label">Aug</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 48px;"></div><span class="admin-bar-label">Sep</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 22px;"></div><span class="admin-bar-label">Oct</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 52px;"></div><span class="admin-bar-label">Nov</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 46px;"></div><span class="admin-bar-label">Dec</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill accent" style="height: 18px;"></div><span class="admin-bar-label">Jan</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 24px;"></div><span class="admin-bar-label">Aug</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 32px;"></div><span class="admin-bar-label">Sep</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 16px;"></div><span class="admin-bar-label">Oct</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 38px;"></div><span class="admin-bar-label">Nov</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 30px;"></div><span class="admin-bar-label">Dec</span></div>
+            <div class="admin-chart-col"><div class="admin-bar-fill accent" style="height: 12px;"></div><span class="admin-bar-label">Jan</span></div>
           </div>
         </div>
       </article>
