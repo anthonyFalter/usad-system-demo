@@ -2696,6 +2696,11 @@
             <span class="admin-user-name">Jocky King Cabataña</span>
             <span class="admin-user-role">Administrator</span>
           </div>
+          <svg class="admin-user-logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
         </button>
       </aside>
 
@@ -2747,13 +2752,38 @@
       primaryBtn = "Understood";
       isInfoOnly = true;
     } else if (type === "user-menu") {
-      icon = `<div class="admin-user-avatar" style="width: 52px; height: 52px; font-size: 16px;">JC</div>`;
-      title = "Administrator: Jocky King Cabataña";
-      desc = "Logged in as <strong>Super Administrator</strong> (ID: SRZ-ADM-042)<br>Assigned Station: Saraza Central Operations Control<br>Role Permissions: Telemetry, Fleet Dispatch, Driver Scheduling.";
-      primaryBtn = "Sign Out to Login Screen";
+      icon = `<div class="admin-user-avatar admin-user-avatar-modal">JC</div>`;
+      title = "Jocky King Cabataña";
+      desc = `<span class="admin-profile-badge">Active · Super Administrator</span>`;
       customHtml = `
-        <div style="margin-top: 14px;">
-          <button class="admin-signout-btn" type="button" style="width: 100%; height: 38px;" data-admin-action="sign-out">Sign Out</button>
+        <div class="admin-profile-details">
+          <div class="admin-profile-row">
+            <span class="admin-profile-label">Administrator ID</span>
+            <span class="admin-profile-value">SRZ-ADM-042</span>
+          </div>
+          <div class="admin-profile-row">
+            <span class="admin-profile-label">Assigned Station</span>
+            <span class="admin-profile-value">Saraza Central Operations Control</span>
+          </div>
+          <div class="admin-profile-row">
+            <span class="admin-profile-label">System Privileges</span>
+            <span class="admin-profile-value">Telemetry, Fleet Dispatch, Scheduling</span>
+          </div>
+          <div class="admin-profile-row">
+            <span class="admin-profile-label">Security Clearance</span>
+            <span class="admin-profile-value" style="color: #2FD9A8;">Biometric &amp; Smartcard Verified</span>
+          </div>
+        </div>
+        <div class="admin-modal-actions" style="margin-top: 18px;">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Stay Signed In</button>
+          <button class="admin-signout-btn" type="button" data-admin-action="sign-out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span>Sign Out</span>
+          </button>
         </div>
       `;
       isInfoOnly = true;
@@ -4966,6 +4996,7 @@
         adminShowError = !adminShowError;
         renderScreen("admin-login");
       } else if (adminAction === "sign-out") {
+        screen.querySelector(".admin-modal-backdrop")?.remove();
         adminShowError = false;
         renderScreen("admin-login");
       } else if (adminAction === "open-assign") {

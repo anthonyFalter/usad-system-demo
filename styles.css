@@ -3408,6 +3408,126 @@ input:focus-visible,
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* Administrator Profile & Sign Out Button */
+.admin-user-avatar-modal {
+  width: 56px;
+  height: 56px;
+  font-size: 18px;
+  background: rgba(47, 217, 168, 0.15);
+  border: 2px solid var(--brand);
+  color: var(--brand);
+  box-shadow: 0 0 24px rgba(47, 217, 168, 0.25);
+}
+
+.admin-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: rgba(47, 217, 168, 0.12);
+  border: 1px solid rgba(47, 217, 168, 0.35);
+  color: #2FD9A8;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.admin-profile-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2FD9A8;
+  box-shadow: 0 0 8px #2FD9A8;
+}
+
+.admin-profile-details {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 20px;
+  padding: 14px 16px;
+  background: #0c121d;
+  border: 1px solid #1e2838;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.admin-profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding-bottom: 8px;
+}
+
+.admin-profile-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.admin-profile-label {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.admin-profile-value {
+  color: #e2e8f0;
+  font-weight: 600;
+  text-align: right;
+  font-size: 12px;
+}
+
+.admin-signout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.16) 0%, rgba(220, 38, 38, 0.28) 100%);
+  color: #fca5a5;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.admin-signout-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.admin-signout-btn:active {
+  transform: translateY(0);
+  background: #dc2626;
+}
+
+.admin-signout-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.admin-signout-btn:hover svg {
+  transform: translateX(2px);
+}
+
+
 /* ==========================================================================
    Admin Operations Console Dashboard (Fleet Monitoring & Dispatch)
    ========================================================================== */
@@ -3510,7 +3630,8 @@ input:focus-visible,
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 4px 0;
+  padding: 10px 8px;
+  margin-top: 14px;
   border-top: 1px solid #1e293b;
   cursor: pointer;
   background: transparent;
@@ -3519,6 +3640,26 @@ input:focus-visible,
   border-bottom: 0;
   width: 100%;
   text-align: left;
+  border-radius: 8px;
+  transition: background 0.18s ease;
+}
+
+.admin-sidebar-user:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-user-logout-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.admin-sidebar-user:hover .admin-user-logout-icon {
+  color: #f87171;
+  transform: translateX(1px);
 }
 
 .admin-user-avatar {
