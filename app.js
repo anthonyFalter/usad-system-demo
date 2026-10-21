@@ -191,119 +191,524 @@
       </div>
     </div>`;
 
-  const adminDashboardScreen = () => `
-    <div class="admin-dashboard-screen" data-admin-screen="dashboard">
-      <header class="admin-topbar">
-        <div class="admin-topbar-left">
-          <div class="admin-topbar-brand">
-            ${adminAppMark}
-            <div><strong>USAD</strong> <span>Operations Portal</span></div>
-          </div>
-          <span class="admin-badge-online">System Live</span>
-        </div>
-        <div class="admin-topbar-right">
-          <div class="admin-user-pill">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
-            <span>Operator: Jocky Cabatbat (SRZ-ADM-042)</span>
-          </div>
-          <button class="admin-signout-btn" type="button" data-admin-action="sign-out">Sign Out</button>
-        </div>
-      </header>
+  let activeFleetFilter = "all";
+  let fleetSearchQuery = "";
+  let activeCorridorFilter = "all";
+  let activeAdminSidebarTab = "live-operations";
 
-      <main class="admin-main-content">
-        <section class="admin-kpi-grid" aria-label="Fleet KPIs">
-          <article class="admin-kpi-card">
-            <header><span>Active Fleet</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A2 2 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></header>
-            <p class="admin-kpi-value">12 Mini Buses</p>
-            <p class="admin-kpi-sub">10 on-route · 2 standby</p>
+  const adminFleetData = [
+    {
+      id: "bus-01",
+      busNo: "Bus 01",
+      driver: "Jocky King Garcia",
+      dispatcher: "Klintroy Suerte Felipe",
+      route: "Trinoma Express",
+      fuel: "86% Fuel",
+      fuelType: "cyan",
+      speed: "42 km/h",
+      rate: "$4.5 / 10h",
+      status: "On Duty",
+      statusClass: "on-duty",
+      dot: "green",
+      filterCategory: "on-duty",
+      telemetry: { speed: "42 km/h", fuel: "86%", gps: "14.8521° N, 120.8164° E (NLEX Northbound)", tire: "34 PSI", temp: "88°C", passengers: "18 / 24", oil: "Optimal" }
+    },
+    {
+      id: "bus-02",
+      busNo: "Bus 02",
+      driver: "Cyrhyl Naval",
+      dispatcher: "Ross Anthony Jobs",
+      route: "Trinoma Feeder",
+      fuel: "54% Fuel",
+      fuelType: "yellow",
+      speed: "0 km/h (Depot)",
+      rate: "$4.5 / 5h",
+      status: "On break",
+      statusClass: "on-break",
+      dot: "orange",
+      filterCategory: "on-break",
+      telemetry: { speed: "0 km/h", fuel: "54%", gps: "14.8480° N, 120.8110° E (Depot Bay 2)", tire: "33 PSI", temp: "42°C", passengers: "0 / 24", oil: "Good" }
+    },
+    {
+      id: "bus-03",
+      busNo: "Bus 03",
+      driver: "Eldrei Acero",
+      dispatcher: "—",
+      route: "Trinoma Reserve",
+      fuel: "92% Fuel",
+      fuelType: "cyan",
+      speed: "Parked",
+      rate: "$4.5 / 5h",
+      status: "Off Duty",
+      statusClass: "off-duty",
+      dot: "gray",
+      filterCategory: "standby",
+      telemetry: { speed: "0 km/h", fuel: "92%", gps: "14.8512° N, 120.8140° E (Robinsons Malolos)", tire: "35 PSI", temp: "38°C", passengers: "0 / 24", oil: "Optimal" }
+    },
+    {
+      id: "bus-04",
+      busNo: "Bus 04",
+      driver: "Royce Zaldivar",
+      dispatcher: "John Dela Cruz",
+      route: "Trinoma Express",
+      fuel: "71% Fuel",
+      fuelType: "cyan",
+      speed: "55 km/h",
+      rate: "$4.5 / 5h",
+      status: "On Duty",
+      statusClass: "on-duty",
+      dot: "green",
+      filterCategory: "on-duty",
+      telemetry: { speed: "55 km/h", fuel: "71%", gps: "14.7350° N, 120.9580° E (NLEX Balintawak)", tire: "35 PSI", temp: "91°C", passengers: "22 / 24", oil: "Optimal" }
+    },
+    {
+      id: "bus-05",
+      busNo: "Bus 05",
+      driver: "Jericho Rosales",
+      dispatcher: "Wanda Maximoff",
+      route: "Trinoma Loop",
+      fuel: "62% Fuel",
+      fuelType: "cyan",
+      speed: "38 km/h",
+      rate: "$4.5 / 5h",
+      status: "On Duty",
+      statusClass: "on-duty",
+      dot: "green",
+      filterCategory: "on-duty",
+      telemetry: { speed: "38 km/h", fuel: "62%", gps: "14.6540° N, 121.0330° E (North Avenue EDSA)", tire: "34 PSI", temp: "87°C", passengers: "16 / 24", oil: "Optimal" }
+    },
+    {
+      id: "bus-06",
+      busNo: "Bus 06",
+      driver: "Joshua Garcia",
+      dispatcher: "Piolo Pascual",
+      route: "Malolos Central",
+      fuel: "90% Fuel",
+      fuelType: "cyan",
+      speed: "48 km/h",
+      rate: "$4.5 / 5h",
+      status: "On Duty",
+      statusClass: "on-duty",
+      dot: "green",
+      filterCategory: "on-duty",
+      telemetry: { speed: "48 km/h", fuel: "90%", gps: "14.8620° N, 120.8220° E (Malolos Crossing)", tire: "34 PSI", temp: "89°C", passengers: "14 / 24", oil: "Optimal" }
+    }
+  ];
+
+  const adminCommentsData = [
+    {
+      author: "Louis Mathews",
+      tag: "#44",
+      tagColor: "cyan",
+      time: "18 min ago",
+      text: "Repaired passenger door sensor &amp; calibrated boarding hydraulics."
+    },
+    {
+      author: "Martha Godwin",
+      tag: "#36",
+      tagColor: "cyan",
+      time: "2 hours ago",
+      text: "Fixed cracked windshield wiper bracket; vehicle certified roadworthy."
+    },
+    {
+      author: "Martha Godwin",
+      tag: "#36",
+      tagColor: "cyan",
+      time: "2 hours ago",
+      text: "Fixed cracked windshield wiper bracket; vehicle certified roadworthy."
+    },
+    {
+      author: "Robert Watkins",
+      tag: "#160312",
+      tagColor: "gold",
+      time: "3 hours ago",
+      text: "Heavy congestion logged at Trinoma junction - rerouting Bus 04 via feeder."
+    },
+    {
+      author: "Robert Watkins",
+      tag: "#160312",
+      tagColor: "gold",
+      time: "3 hours ago",
+      text: "Heavy congestion logged at Trinoma junction - rerouting Bus 04 via feeder."
+    }
+  ];
+
+  const adminShiftsData = [
+    {
+      bus: "Bus 01 · Evening",
+      driver: "Ariana Grande",
+      dispatcher: "Judy Ann Santos",
+      time: "18:00"
+    },
+    {
+      bus: "Bus 01 · Evening",
+      driver: "Ariana Grande",
+      dispatcher: "Judy Ann Santos",
+      time: "18:00"
+    },
+    {
+      bus: "Bus 02 · Night",
+      driver: "Selena Gomez",
+      dispatcher: "Pending Verification",
+      time: "21:00"
+    }
+  ];
+
+  const renderAdminFleetRows = () => {
+    const query = fleetSearchQuery.toLowerCase().trim();
+    const rows = adminFleetData.filter((item) => {
+      if (activeFleetFilter === "on-duty" && item.filterCategory !== "on-duty") return false;
+      if (activeFleetFilter === "on-break" && item.filterCategory !== "on-break") return false;
+      if (activeFleetFilter === "standby" && item.filterCategory !== "standby") return false;
+      if (!query) return true;
+      return (
+        item.busNo.toLowerCase().includes(query) ||
+        item.driver.toLowerCase().includes(query) ||
+        item.dispatcher.toLowerCase().includes(query) ||
+        item.route.toLowerCase().includes(query)
+      );
+    });
+
+    if (rows.length === 0) {
+      return `<tr><td colspan="8" style="text-align: center; padding: 24px; color: #64748b;">No matching vehicles or dispatch records found.</td></tr>`;
+    }
+
+    return rows.map((bus) => `
+      <tr data-bus-id="${bus.id}">
+        <td>
+          <div class="admin-bus-cell">
+            <span class="bus-dot ${bus.dot}"></span>
+            <span>${bus.busNo}</span>
+          </div>
+        </td>
+        <td>${bus.driver}</td>
+        <td>${bus.dispatcher}</td>
+        <td>${bus.route}</td>
+        <td>
+          <span class="fuel-text ${bus.fuelType}">${bus.fuel}</span>
+          <span style="color: #64748b;"> | ${bus.speed}</span>
+        </td>
+        <td>${bus.rate}</td>
+        <td><span class="status-badge ${bus.statusClass}">${bus.status}</span></td>
+        <td>
+          <button class="btn-telemetry" type="button" data-admin-telemetry="${bus.id}">Telemetry</button>
+        </td>
+      </tr>
+    `).join("");
+  };
+
+  const adminDashboardScreen = () => `
+    <div class="admin-dashboard-layout" data-admin-screen="dashboard">
+      <!-- Left Sidebar -->
+      <aside class="admin-sidebar">
+        <div>
+          <div class="admin-sidebar-brand">
+            <div class="admin-sidebar-brand-icon">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 10v2.5a5 5 0 0 0 10 0V10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+                <path d="M12 3.5v9m0-9-3 3m3-3 3 3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="admin-sidebar-brand-text">USAD</span>
+          </div>
+
+          <nav class="admin-nav" aria-label="Operations Navigation">
+            <button class="admin-nav-item is-active" type="button" data-admin-nav="live-operations">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+              <span>Live Operations</span>
+            </button>
+            <button class="admin-nav-item" type="button" data-admin-nav="predictive-analytics">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+              <span>Predictive Analytics</span>
+            </button>
+            <button class="admin-nav-item" type="button" data-admin-nav="fleet-dispatch">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Fleet Monitoring and Dispatch</span>
+            </button>
+            <button class="admin-nav-item" type="button" data-admin-nav="staff-resources">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>Staff &amp; Resources</span>
+            </button>
+            <button class="admin-nav-item" type="button" data-admin-nav="sensor-camera">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              <span>Sensor &amp; Camera Management</span>
+            </button>
+            <button class="admin-nav-item" type="button" data-admin-nav="reports">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Reports</span>
+            </button>
+          </nav>
+        </div>
+
+        <button class="admin-sidebar-user" type="button" data-admin-action="user-menu" title="Click to view administrator profile or sign out">
+          <div class="admin-user-avatar">JC</div>
+          <div class="admin-user-details">
+            <span class="admin-user-name">Jocky King Cabataña</span>
+            <span class="admin-user-role">Administrator</span>
+          </div>
+        </button>
+      </aside>
+
+      <!-- Main Operational Area -->
+      <main class="admin-main-container">
+        <!-- Top Title & Action Header -->
+        <header class="admin-header-row">
+          <div class="admin-header-title-box">
+            <div class="admin-header-title-line">
+              <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
+              <span class="admin-telemetry-badge">Live Telemetry Active</span>
+            </div>
+            <p class="admin-header-subtitle">Real-time urban transit status, active vehicle telemetry, driver shifts, and maintenance records.</p>
+          </div>
+
+          <div class="admin-header-actions">
+            <select class="admin-select-corridor" data-admin-corridor aria-label="Select Corridors">
+              <option value="all">All Corridors (Trinoma / Malolos / EDSA)</option>
+              <option value="trinoma">Trinoma Express Corridor</option>
+              <option value="malolos">Malolos Central Loop</option>
+              <option value="feeder">NLEX Feeder Route</option>
+            </select>
+            <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>+ Assign Dispatch</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- 4 Metric Cards -->
+        <section class="admin-metrics-grid" aria-label="Key Performance Indicators">
+          <!-- 1. Service Reminders -->
+          <article class="admin-metric-card">
+            <div class="admin-metric-header">
+              <span class="admin-metric-label">SERVICE REMINDERS</span>
+              <span class="admin-pill-badge badge-total">12 Total</span>
+            </div>
+            <div class="admin-reminders-row">
+              <div class="admin-reminder-subcard">
+                <div class="reminder-title">Due Soon</div>
+                <div class="reminder-val cyan">5</div>
+                <div class="reminder-sub cyan">Next 48 Hours</div>
+              </div>
+              <div class="admin-reminder-subcard">
+                <div class="reminder-title">Overdue</div>
+                <div class="reminder-val red">9</div>
+                <div class="reminder-sub red">Requires Action</div>
+              </div>
+            </div>
           </article>
-          <article class="admin-kpi-card">
-            <header><span>Today's Recorded Fare</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v12"/></svg></header>
-            <p class="admin-kpi-value">₱42,560.00</p>
-            <p class="admin-kpi-sub">U-Pouch &amp; GCash digital log</p>
+
+          <!-- 2. Vehicle Fleet Status -->
+          <article class="admin-metric-card">
+            <div class="admin-metric-header">
+              <span class="admin-metric-label">VEHICLE FLEET STATUS</span>
+              <span class="admin-pill-badge badge-registered">82 Registered</span>
+            </div>
+            <div class="admin-fleet-status-row">
+              <div class="admin-status-subcard">
+                <div class="status-subcard-title">ACTIVE</div>
+                <div class="status-subcard-val">65</div>
+                <div class="status-subcard-note green">79.2%</div>
+              </div>
+              <div class="admin-status-subcard">
+                <div class="status-subcard-title">INACTIVE</div>
+                <div class="status-subcard-val">13</div>
+                <div class="status-subcard-note gray">Depot</div>
+              </div>
+              <div class="admin-status-subcard">
+                <div class="status-subcard-title">IN SHOP</div>
+                <div class="status-subcard-val red">4</div>
+                <div class="status-subcard-note red">Repair</div>
+              </div>
+            </div>
           </article>
-          <article class="admin-kpi-card">
-            <header><span>Daily Commuters</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></header>
-            <p class="admin-kpi-value">1,280</p>
-            <p class="admin-kpi-sub">Boardings verified</p>
+
+          <!-- 3. Fuel & Operating Cost -->
+          <article class="admin-metric-card">
+            <div class="admin-metric-header">
+              <span class="admin-metric-label">FUEL &amp; OPERATING COST</span>
+              <span class="admin-pill-badge badge-cost">$24.8K Total</span>
+            </div>
+            <div class="admin-chart-bars">
+              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 38px;"></div><span class="admin-bar-label">Aug</span></div>
+              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 48px;"></div><span class="admin-bar-label">Sep</span></div>
+              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 22px;"></div><span class="admin-bar-label">Oct</span></div>
+              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 52px;"></div><span class="admin-bar-label">Nov</span></div>
+              <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 46px;"></div><span class="admin-bar-label">Dec</span></div>
+              <div class="admin-chart-col"><div class="admin-bar-fill accent" style="height: 18px;"></div><span class="admin-bar-label">Jan</span></div>
+            </div>
           </article>
-          <article class="admin-kpi-card">
-            <header><span>On-Time Dispatch</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></header>
-            <p class="admin-kpi-value">98.4%</p>
-            <p class="admin-kpi-sub">NLEX &amp; Tabang routes on schedule</p>
+
+          <!-- 4. Active Shift Rate -->
+          <article class="admin-metric-card">
+            <div class="admin-metric-header">
+              <span class="admin-metric-label">ACTIVE SHIFT RATE</span>
+              <span class="admin-pill-badge badge-shift">↑ 5.2% vs lw</span>
+            </div>
+            <div class="admin-shift-rate-content">
+              <div class="admin-shift-text-box">
+                <div class="admin-shift-active-line">
+                  <span class="admin-shift-dot"></span>
+                  <span class="admin-shift-val">88% Active</span>
+                </div>
+                <span class="admin-shift-corridors">6 of 6 Critical Corridors Covered</span>
+              </div>
+              <div class="admin-donut-wrap">
+                <svg class="admin-donut-svg" viewBox="0 0 36 36">
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1c2738" stroke-width="3.6"/>
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#2FD9A8" stroke-width="3.6" stroke-dasharray="88, 100" stroke-linecap="round"/>
+                </svg>
+                <div class="admin-donut-text">6/6</div>
+              </div>
+            </div>
           </article>
         </section>
 
-        <section class="admin-panels-grid">
-          <div class="admin-panel">
-            <div class="admin-panel-header">
-              <h2 class="admin-panel-title">Real-Time Fleet Deployment</h2>
-              <span class="status-pill status-transit">Automated Dispatch Active</span>
+        <!-- Active Fleet Vehicles & Dispatch Directory -->
+        <section class="admin-directory-panel">
+          <div class="admin-directory-header">
+            <h2 class="admin-directory-title">Active Fleet Vehicles &amp; Dispatch Directory</h2>
+            <div class="admin-directory-tabs" role="tablist">
+              <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Live (8)</button>
+              <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Duty (6)</button>
+              <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (1)</button>
+              <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (1)</button>
             </div>
-            <table class="admin-fleet-table">
-              <thead>
-                <tr>
-                  <th>Fleet Unit</th>
-                  <th>Assigned Driver</th>
-                  <th>Route</th>
-                  <th>Seat Load</th>
-                  <th>Status</th>
-                  <th>Next Arrival</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>Bus 01 (MLS-042)</strong></td>
-                  <td>R. Santos (ID-09)</td>
-                  <td>Robinsons Malolos → Trinoma</td>
-                  <td>16 / 24 seats (8 free)</td>
-                  <td><span class="status-pill status-transit">In Transit</span></td>
-                  <td>3 min away</td>
-                </tr>
-                <tr>
-                  <td><strong>Bus 02 (MLS-018)</strong></td>
-                  <td>E. Bautista (ID-14)</td>
-                  <td>Robinsons Malolos → Trinoma</td>
-                  <td>23 / 24 seats (1 free)</td>
-                  <td><span class="status-pill status-transit">In Transit</span></td>
-                  <td>Less than 1 min</td>
-                </tr>
-                <tr>
-                  <td><strong>Bus 03 (MLS-105)</strong></td>
-                  <td>D. Navarro (ID-21)</td>
-                  <td>Malolos Express → North EDSA</td>
-                  <td>08 / 24 seats (16 free)</td>
-                  <td><span class="status-pill status-boarding">Boarding</span></td>
-                  <td>Departs 8:45 AM</td>
-                </tr>
-                <tr>
-                  <td><strong>Bus 04 (TRN-009)</strong></td>
-                  <td>M. Garcia (ID-05)</td>
-                  <td>Trinoma EDSA Terminal Bay</td>
-                  <td>00 / 24 seats</td>
-                  <td><span class="status-pill status-standby">Standby</span></td>
-                  <td>Departs 9:15 AM</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="admin-table-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" placeholder="Search driver, bus, route..." value="${escapeHtml(fleetSearchQuery)}" data-admin-fleet-search>
+            </div>
           </div>
 
-          <div class="admin-panel">
-            <div class="admin-panel-header">
-              <h2 class="admin-panel-title">Operations &amp; Security Policy</h2>
-            </div>
-            <div class="admin-notice-box">
-              <strong>Admin Provisioning Rule</strong>
-              Admin accounts can only be provisioned internally by Saraza TRD Operations. Self-registration is strictly disabled to protect fleet dispatch data.
-            </div>
-            <div class="admin-notice-box">
-              <strong>Automated Discrepancy Auditing</strong>
-              Transitioning from manual pen-and-paper tracking to real-time digital logging. Zero discrepancies detected across today's ₱42,560 fare collections.
-            </div>
-            <button class="admin-modal-button-secondary" type="button" style="width: 100%; margin-top: 10px;" data-admin-action="sign-out">
-              Return to Admin Login Screen
-            </button>
+          <table class="admin-directory-table">
+            <thead>
+              <tr>
+                <th>BUS NO.</th>
+                <th>DRIVER</th>
+                <th>DISPATCHER</th>
+                <th>DESIGNATION / ROUTE</th>
+                <th>FUEL &amp; GPS SPEED</th>
+                <th>RATE / MAX HRS</th>
+                <th>STATUS</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="admin-fleet-tbody">
+              ${renderAdminFleetRows()}
+            </tbody>
+          </table>
+
+          <div class="admin-pagination">
+            <button type="button" data-admin-action="prev-page">Prev</button>
+            <span>Page 1 of 4</span>
+            <button type="button" data-admin-action="next-page">Next</button>
           </div>
+        </section>
+
+        <!-- Bottom 3 Grid Cards -->
+        <section class="admin-bottom-grid">
+          <!-- Card 1: Recent Comments -->
+          <article class="admin-bottom-card">
+            <div class="admin-card-header">
+              <div class="admin-card-header-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>RECENT MAINTENANCE &amp; DISPATCH COMMENTS</span>
+              </div>
+              <span class="admin-badge-sync">Live Sync</span>
+            </div>
+            <div class="admin-comments-list">
+              ${adminCommentsData.map((c) => `
+                <div class="admin-comment-item">
+                  <div class="admin-comment-meta">
+                    <div>
+                      <span class="admin-comment-author">${c.author}</span>
+                      <span style="color: #64748b;"> commented on service entry </span>
+                      <span class="admin-comment-tag ${c.tagColor}">${c.tag}</span>
+                    </div>
+                    <span class="admin-comment-time">${c.time}</span>
+                  </div>
+                  <p class="admin-comment-text">${c.text}</p>
+                </div>
+              `).join("")}
+            </div>
+          </article>
+
+          <!-- Card 2: Upcoming Shift -->
+          <article class="admin-bottom-card">
+            <div class="admin-card-header">
+              <div class="admin-card-header-left">
+                <span>Upcoming Shift</span>
+              </div>
+              <span class="admin-badge-swaps">2 Swaps</span>
+            </div>
+            <div class="admin-shifts-list">
+              ${adminShiftsData.map((shift) => `
+                <div class="admin-shift-item">
+                  <div class="admin-shift-details">
+                    <div class="admin-shift-bus-title">
+                      <span class="dot"></span>
+                      <span>${shift.bus}</span>
+                    </div>
+                    <span class="admin-shift-people">Driver: ${shift.driver}</span>
+                    <span class="admin-shift-people">Dispatcher: ${shift.dispatcher}</span>
+                  </div>
+                  <span class="admin-shift-time-badge">${shift.time}</span>
+                </div>
+              `).join("")}
+            </div>
+          </article>
+
+          <!-- Card 3: Route Corridor Map -->
+          <article class="admin-bottom-card" style="padding: 10px;">
+            <div class="admin-map-container" aria-label="Route Corridor Map from Malolos to Quezon City">
+              <svg class="admin-map-svg" viewBox="0 0 380 230" preserveAspectRatio="none">
+                <!-- Background Map Layers -->
+                <rect width="380" height="230" fill="#d9e3db"/>
+                
+                <!-- Water Coast (Manila Bay) -->
+                <path d="M 0 100 Q 80 140, 100 230 L 0 230 Z" fill="#b9d6e8"/>
+                <path d="M 0 160 Q 60 180, 80 230 L 0 230 Z" fill="#9ec5de"/>
+
+                <!-- Secondary roads network -->
+                <path d="M 60 20 L 140 80 L 190 60 L 260 90 L 330 60" stroke="#f0f3ee" stroke-width="2.5" fill="none"/>
+                <path d="M 120 20 L 170 120 L 230 140 L 320 180" stroke="#f0f3ee" stroke-width="2.5" fill="none"/>
+                <path d="M 210 20 L 220 100 L 290 120 L 350 160" stroke="#f0f3ee" stroke-width="2" fill="none"/>
+                <path d="M 10 70 L 120 110 L 210 180 L 260 230" stroke="#f0f3ee" stroke-width="2" fill="none"/>
+                <path d="M 200 180 L 320 200 L 380 180" stroke="#f0f3ee" stroke-width="2" fill="none"/>
+
+                <!-- Expressways / Arterials -->
+                <path d="M 70 30 L 140 100 L 210 160 L 290 200" stroke="#e8d998" stroke-width="3" fill="none"/>
+                <path d="M 130 90 L 270 160" stroke="#f8e79b" stroke-width="2" fill="none"/>
+
+                <!-- Transit Corridor Route (Blue Line from Malolos B to Quezon City A) -->
+                <path d="M 125 78 Q 155 100, 185 130 T 260 178" stroke="#3b82f6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                <path d="M 125 78 Q 155 100, 185 130 T 260 178" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+                <!-- Towns & Location Labels -->
+                <text x="35" y="32" font-size="9" fill="#526270" font-family="sans-serif">Apalit</text>
+                <text x="30" y="88" font-size="9" fill="#526270" font-family="sans-serif">Hagonoy</text>
+                <text x="138" y="68" font-size="10.5" font-weight="700" fill="#1e293b" font-family="sans-serif">Malolos</text>
+                <text x="135" y="105" font-size="8.5" fill="#526270" font-family="sans-serif">Guiguinto</text>
+                <text x="165" y="140" font-size="8.5" fill="#526270" font-family="sans-serif">Bocaue</text>
+                <text x="188" y="178" font-size="8.5" fill="#526270" font-family="sans-serif">Valenzuela</text>
+                <text x="215" y="45" font-size="8.5" fill="#526270" font-family="sans-serif">Plaridel</text>
+                <text x="250" y="65" font-size="8.5" fill="#526270" font-family="sans-serif">Pandi</text>
+                <text x="280" y="100" font-size="9.5" font-weight="600" fill="#334155" font-family="sans-serif">SJDM</text>
+                <text x="310" y="55" font-size="8.5" fill="#526270" font-family="sans-serif">Norzagaray</text>
+                <text x="330" y="130" font-size="8.5" fill="#526270" font-family="sans-serif">Rodriguez</text>
+                <text x="325" y="152" font-size="8.5" fill="#526270" font-family="sans-serif">San Mateo</text>
+                <text x="210" y="222" font-size="9" fill="#526270" font-family="sans-serif">Manila</text>
+                <text x="272" y="174" font-size="11" font-weight="700" fill="#0f172a" font-family="sans-serif">Quezon City</text>
+
+                <!-- Marker B (Malolos) -->
+                <circle cx="125" cy="74" r="9" fill="#dc2626"/>
+                <text x="125" y="78" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
+
+                <!-- Marker A (Quezon City / Trinoma) -->
+                <circle cx="260" cy="178" r="9" fill="#dc2626"/>
+                <text x="260" y="182" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
+              </svg>
+            </div>
+          </article>
         </section>
       </main>
     </div>`;
@@ -321,6 +726,7 @@
     let desc = "Place administrator finger on hardware biometric scanner to authenticate.";
     let primaryBtn = "Simulate Scan &amp; Login";
     let isInfoOnly = false;
+    let customHtml = "";
 
     if (type === "smartcard") {
       icon = idCardIcon;
@@ -338,6 +744,87 @@
       desc = "For regulatory and operational security, administrator passwords cannot be reset online.<br><br>Please contact the <strong>Saraza TRD Systems Administrator</strong> or your <strong>Operations Supervisor</strong> to reissue your credentials.";
       primaryBtn = "Understood";
       isInfoOnly = true;
+    } else if (type === "user-menu") {
+      icon = `<div class="admin-user-avatar" style="width: 52px; height: 52px; font-size: 16px;">JC</div>`;
+      title = "Administrator: Jocky King Cabataña";
+      desc = "Logged in as <strong>Super Administrator</strong> (ID: SRZ-ADM-042)<br>Assigned Station: Saraza Central Operations Control<br>Role Permissions: Telemetry, Fleet Dispatch, Driver Scheduling.";
+      primaryBtn = "Sign Out to Login Screen";
+      customHtml = `
+        <div style="margin-top: 14px;">
+          <button class="admin-signout-btn" type="button" style="width: 100%; height: 38px;" data-admin-action="sign-out">Sign Out</button>
+        </div>
+      `;
+      isInfoOnly = true;
+    } else if (type === "assign-dispatch") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A2 2 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>`;
+      title = "+ Assign Vehicle Dispatch";
+      desc = "Assign a ready driver and route corridor to activate live telematics.";
+      customHtml = `
+        <form class="admin-login-form" data-admin-assign-form style="margin-top: 14px; text-align: left;">
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Select Vehicle</label>
+            <select class="admin-input" id="assign-bus" style="height: 40px;">
+              <option value="Bus 01">Bus 01 (MLS-042) - Ready</option>
+              <option value="Bus 02">Bus 02 (MLS-018) - On Break</option>
+              <option value="Bus 03">Bus 03 (MLS-105) - Reserve</option>
+              <option value="Bus 04">Bus 04 (TRN-009) - Ready</option>
+            </select>
+          </div>
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assign Driver</label>
+            <input class="admin-input" id="assign-driver" value="Jocky King Garcia" placeholder="Enter driver name" style="height: 40px;">
+          </div>
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Route</label>
+            <select class="admin-input" id="assign-route" style="height: 40px;">
+              <option value="Trinoma Express">Trinoma Express Corridor</option>
+              <option value="Trinoma Feeder">Trinoma Feeder Line</option>
+              <option value="Malolos Central">Malolos Central Loop</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="submit">Confirm Dispatch</button>
+          </div>
+        </form>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("telemetry-")) {
+      const busId = type.replace("telemetry-", "");
+      const bus = adminFleetData.find((b) => b.id === busId) ?? adminFleetData[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
+      title = `Live Telemetry — ${bus.busNo}`;
+      desc = `Vehicle Telematics Active · Route: <strong>${bus.route}</strong><br>Driver: <strong>${bus.driver}</strong>`;
+      customHtml = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; text-align: left; font-size: 11.5px;">
+          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
+            <span style="color: #64748b; display: block; font-size: 10px;">CURRENT SPEED</span>
+            <strong style="color: #2FD9A8; font-size: 15px;">${bus.telemetry.speed}</strong>
+          </div>
+          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
+            <span style="color: #64748b; display: block; font-size: 10px;">FUEL LEVEL</span>
+            <strong style="color: #38bdf8; font-size: 15px;">${bus.telemetry.fuel}</strong>
+          </div>
+          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
+            <span style="color: #64748b; display: block; font-size: 10px;">TIRE PRESSURE</span>
+            <strong style="color: #cbd5e1; font-size: 14px;">${bus.telemetry.tire}</strong>
+          </div>
+          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
+            <span style="color: #64748b; display: block; font-size: 10px;">ENGINE TEMP</span>
+            <strong style="color: #cbd5e1; font-size: 14px;">${bus.telemetry.temp}</strong>
+          </div>
+          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838; grid-column: span 2;">
+            <span style="color: #64748b; display: block; font-size: 10px;">GPS TELEMATICS LOCATION</span>
+            <span style="color: #ffffff; font-size: 12px;">${bus.telemetry.gps}</span>
+          </div>
+          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838; grid-column: span 2;">
+            <span style="color: #64748b; display: block; font-size: 10px;">PASSENGER ONBOARD LOAD</span>
+            <strong style="color: #2FD9A8; font-size: 13px;">${bus.telemetry.passengers} Seats Occupied</strong>
+          </div>
+        </div>
+        <button class="admin-modal-button-secondary" type="button" style="width: 100%;" data-admin-modal-close>Close Telemetry Feed</button>
+      `;
+      isInfoOnly = true;
     }
 
     modal.innerHTML = `
@@ -348,15 +835,17 @@
         </div>
         <h3 class="admin-modal-title">${title}</h3>
         <p class="admin-modal-desc">${desc}</p>
-        <div class="admin-modal-actions">
-          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
-          <button class="admin-modal-button-primary" type="button" ${isInfoOnly ? "data-admin-modal-close" : "data-admin-modal-auth"}>${primaryBtn}</button>
-        </div>
+        ${customHtml || `
+          <div class="admin-modal-actions">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="button" ${isInfoOnly ? "data-admin-modal-close" : "data-admin-modal-auth"}>${primaryBtn}</button>
+          </div>
+        `}
       </div>
     `;
 
     screen.append(modal);
-    modal.querySelector(".admin-modal-button-primary")?.focus();
+    modal.querySelector(".admin-modal-button-primary, .admin-modal-button-secondary")?.focus();
   };
 
   const loginScreen = (showError = false) => `
@@ -1465,8 +1954,8 @@
   const updateCanvas = () => {
     world.style.zoom = String(zoom);
     if (currentRole === "admin") {
-      world.style.left = `calc(50% - 590px + ${panX / zoom}px)`;
-      world.style.top = `calc(50% - 370px + ${panY / zoom}px)`;
+      world.style.left = `calc(50% - 690px + ${panX / zoom}px)`;
+      world.style.top = `calc(50% - 435px + ${panY / zoom}px)`;
     } else {
       world.style.left = `calc(50% - 196.5px + ${panX / zoom}px)`;
       world.style.top = `calc(50% - 426px + ${panY / zoom}px)`;
@@ -1479,7 +1968,7 @@
     if (currentRole === "admin") {
       const availW = Math.max(320, viewport.clientWidth - 48);
       const availH = Math.max(320, viewport.clientHeight - 48);
-      const fitZoom = Math.min(1, Math.max(0.4, Math.min(availW / 1180, availH / 740)));
+      const fitZoom = Math.min(1, Math.max(0.35, Math.min(availW / 1380, availH / 870)));
       zoom = Math.round(fitZoom * 20) / 20 || 0.75;
       panX = 0;
       panY = 0;
@@ -1706,6 +2195,26 @@
       return;
     }
 
+    if (event.target.matches("[data-admin-assign-form]")) {
+      event.preventDefault();
+      const busVal = screen.querySelector("#assign-bus")?.value ?? "Bus 01";
+      const driverVal = screen.querySelector("#assign-driver")?.value?.trim() || "Assigned Driver";
+      const routeVal = screen.querySelector("#assign-route")?.value || "Trinoma Express";
+      const targetBus = adminFleetData.find((b) => b.busNo.toLowerCase() === busVal.toLowerCase() || b.id.toLowerCase() === busVal.toLowerCase().replace(" ", "-"));
+      if (targetBus) {
+        targetBus.driver = driverVal;
+        targetBus.route = routeVal;
+        targetBus.status = "On Duty";
+        targetBus.statusClass = "on-duty";
+        targetBus.dot = "green";
+        targetBus.filterCategory = "on-duty";
+      }
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const tbody = screen.querySelector("#admin-fleet-tbody");
+      if (tbody) tbody.innerHTML = renderAdminFleetRows();
+      return;
+    }
+
     if (event.target.matches("[data-login-form]")) {
       event.preventDefault();
       const email = screen.querySelector("#login-email");
@@ -1833,6 +2342,12 @@
       updateLiveMapView();
     }
 
+    if (event.target.matches("[data-admin-fleet-search]")) {
+      fleetSearchQuery = event.target.value;
+      const tbody = screen.querySelector("#admin-fleet-tbody");
+      if (tbody) tbody.innerHTML = renderAdminFleetRows();
+    }
+
     if (event.target.matches("#admin-email, #admin-password")) {
       event.target.removeAttribute("aria-invalid");
       const alert = screen.querySelector("#admin-auth-alert");
@@ -1892,6 +2407,10 @@
       return;
     }
 
+    if (event.target.matches("[data-admin-corridor]")) {
+      activeCorridorFilter = event.target.value;
+    }
+
     if (event.target.matches("#terms-accepted") && event.target.checked) {
       event.target.removeAttribute("aria-invalid");
       const termsError = screen.querySelector("#terms-error");
@@ -1925,7 +2444,43 @@
       } else if (adminAction === "sign-out") {
         adminShowError = false;
         renderScreen("admin-login");
+      } else if (adminAction === "open-assign") {
+        openAdminModal("assign-dispatch");
+      } else if (adminAction === "user-menu") {
+        openAdminModal("user-menu");
+      } else if (adminAction === "prev-page" || adminAction === "next-page") {
+        // Prototype pagination indicator
+        const pageSpan = screen.querySelector(".admin-pagination span");
+        if (pageSpan) {
+          pageSpan.textContent = adminAction === "prev-page" ? "Page 1 of 4" : "Page 2 of 4";
+        }
       }
+      return;
+    }
+
+    const fleetFilterBtn = event.target.closest("[data-admin-fleet-filter]");
+    if (fleetFilterBtn) {
+      activeFleetFilter = fleetFilterBtn.dataset.adminFleetFilter;
+      screen.querySelectorAll("[data-admin-fleet-filter]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn === fleetFilterBtn);
+      });
+      const tbody = screen.querySelector("#admin-fleet-tbody");
+      if (tbody) tbody.innerHTML = renderAdminFleetRows();
+      return;
+    }
+
+    const telemetryBtn = event.target.closest("[data-admin-telemetry]");
+    if (telemetryBtn) {
+      openAdminModal(`telemetry-${telemetryBtn.dataset.adminTelemetry}`);
+      return;
+    }
+
+    const navItem = event.target.closest("[data-admin-nav]");
+    if (navItem) {
+      activeAdminSidebarTab = navItem.dataset.adminNav;
+      screen.querySelectorAll("[data-admin-nav]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn === navItem);
+      });
       return;
     }
 
