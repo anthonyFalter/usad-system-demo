@@ -219,6 +219,11 @@
   let predictiveSelectedHour = 17; // 5 PM
   let predictiveTransitLoadScale = 100;
   let predictiveOperatingProfile = "Intercity / Airport";
+  let activeReportsCategoryFilter = "all"; // "all", "financial", "otp", "crew", "fuel"
+  let activeReportsDateRange = "month"; // "month", "today", "week", "last-month", "q3"
+  let activeReportsCorridor = "all"; // "all", "trinoma", "edsa", "malolos", "c5"
+  let reportsSearchQuery = "";
+  let selectedReportDetailId = "REP-2026-1048";
 
   const predictiveForecastHours = [
     { hour: 0, label: "12 AM", val: 280, state: "low", heat: "green", showLabel: true },
@@ -2176,6 +2181,462 @@
     </section>
   `;
 
+  const adminReportsData = [
+    {
+      id: "REP-2026-1048",
+      title: "Daily Fare Revenue & U-Pouch Reconciliation",
+      category: "financial",
+      categoryLabel: "Revenue & Finance",
+      dateRange: "Oct 20, 2026",
+      summaryMetric: "₱148,220.00",
+      secondaryMetric: "4,620 Passenger Fares",
+      author: "Accounting Bot (Automated)",
+      status: "Audited",
+      statusClass: "audited",
+      fileFormat: "PDF + CSV",
+      fileSize: "1.4 MB",
+      corridor: "all",
+      corridorLabel: "All Corridors",
+      details: {
+        cashFare: "₱92,400.00 (62.3%)",
+        rfidFare: "₱55,820.00 (37.7%)",
+        discountsApplied: "₱16,420.00 (Student / Senior / PWD)",
+        totalTrips: 142,
+        auditorNote: "All physical fare boxes matched digital conductor ticket validator manifests."
+      }
+    },
+    {
+      id: "REP-2026-1047",
+      title: "Fleet Headway Variance & On-Time Performance",
+      category: "otp",
+      categoryLabel: "Fleet & Headway",
+      dateRange: "Oct 14 - Oct 20, 2026",
+      summaryMetric: "93.4% OTP",
+      secondaryMetric: "Avg Headway Deviation: +2.1m",
+      author: "Dispatch Control (Shift A)",
+      status: "Audited",
+      statusClass: "audited",
+      fileFormat: "PDF",
+      fileSize: "2.1 MB",
+      corridor: "edsa",
+      corridorLabel: "EDSA Carousel Loop",
+      details: {
+        tripsScheduled: 840,
+        tripsCompleted: 836,
+        tripsDelayed: 52,
+        cancellations: 4,
+        auditorNote: "Peak afternoon rain on Oct 18 caused +8m deviation at Guadalupe choke point."
+      }
+    },
+    {
+      id: "REP-2026-1046",
+      title: "Driver Shift Hours & Safety Compliance Audit",
+      category: "crew",
+      categoryLabel: "Crew & Personnel",
+      dateRange: "Oct 01 - Oct 15, 2026",
+      summaryMetric: "1,840 Hours Logged",
+      secondaryMetric: "98.8% Rest Rule Compliance",
+      author: "Jocky King Cabataña (Admin)",
+      status: "Pending Review",
+      statusClass: "pending",
+      fileFormat: "CSV",
+      fileSize: "840 KB",
+      corridor: "all",
+      corridorLabel: "All Corridors",
+      details: {
+        activeDrivers: 96,
+        overtimeShifts: 14,
+        violations: 0,
+        safetyIncidents: 0,
+        auditorNote: "Shift handover resting periods fully verified against DOTr omnibus guidelines."
+      }
+    },
+    {
+      id: "REP-2026-1045",
+      title: "Euro V Diesel Consumption & Fleet Fuel Efficiency",
+      category: "fuel",
+      categoryLabel: "Fuel & Maintenance",
+      dateRange: "Oct 01 - Oct 20, 2026",
+      summaryMetric: "18,420 Liters",
+      secondaryMetric: "3.42 km/L Average Fleet Efficiency",
+      author: "Saraza Depot Maintenance Hub",
+      status: "Audited",
+      statusClass: "audited",
+      fileFormat: "PDF + Excel",
+      fileSize: "3.6 MB",
+      corridor: "malolos",
+      corridorLabel: "Malolos - NLEX Trunk",
+      details: {
+        totalFuelCost: "₱1,259,928.00",
+        distanceTraveled: "63,010 km",
+        costPerKm: "₱19.99/km",
+        coachesUnderMaintenance: 4,
+        auditorNote: "Malolos depot bulk fuel dispenser pump calibration certified on Oct 12."
+      }
+    },
+    {
+      id: "REP-2026-1044",
+      title: "Peak Hour Passenger Surge & Dwell Time Analysis",
+      category: "otp",
+      categoryLabel: "Fleet & Headway",
+      dateRange: "Oct 16 - Oct 19, 2026",
+      summaryMetric: "28,450 Commuters",
+      secondaryMetric: "Avg Platform Dwell: 1m 45s",
+      author: "Predictive Analytics Engine",
+      status: "Audited",
+      statusClass: "audited",
+      fileFormat: "PDF",
+      fileSize: "1.8 MB",
+      corridor: "trinoma",
+      corridorLabel: "Trinoma Hub Platform",
+      details: {
+        peakWindow: "17:00 - 19:30 PHT",
+        maxLoadCorridor: "Trinoma Bay 1 Express (98% capacity)",
+        dwellExceedances: 8,
+        auditorNote: "Extra 3 standby coaches injected into Trinoma recovered passenger queues within 18 minutes."
+      }
+    },
+    {
+      id: "REP-2026-1043",
+      title: "Conductor Fare Collection & Cash Discrepancy Log",
+      category: "financial",
+      categoryLabel: "Revenue & Finance",
+      dateRange: "Oct 08 - Oct 14, 2026",
+      summaryMetric: "₱0.00 Discrepancy",
+      secondaryMetric: "100% Remittance Match",
+      author: "Saraza Treasury Office",
+      status: "Audited",
+      statusClass: "audited",
+      fileFormat: "Excel",
+      fileSize: "920 KB",
+      corridor: "all",
+      corridorLabel: "All Corridors",
+      details: {
+        conductorsAudited: 48,
+        inspectedPOSReceipts: 34200,
+        unsettledDiscrepancies: "None",
+        auditorNote: "All conductor handheld POS validator logs reconciled with Treasury vault deposits."
+      }
+    }
+  ];
+
+  const adminCorridorDistributionData = [
+    {
+      name: "Trinoma Express Hub",
+      revenue: "₱482,400.00",
+      pct: 38.6,
+      passengers: "54,200 Pax",
+      otp: "94.2% OTP",
+      barClass: "mint"
+    },
+    {
+      name: "EDSA Carousel Loop",
+      revenue: "₱412,650.00",
+      pct: 33.0,
+      passengers: "48,100 Pax",
+      otp: "91.8% OTP",
+      barClass: "cyan"
+    },
+    {
+      name: "Malolos Central Loop",
+      revenue: "₱218,200.00",
+      pct: 17.5,
+      passengers: "24,600 Pax",
+      otp: "95.1% OTP",
+      barClass: "gold"
+    },
+    {
+      name: "C-5 & Quezon Feeder",
+      revenue: "₱135,400.00",
+      pct: 10.9,
+      passengers: "15,980 Pax",
+      otp: "93.5% OTP",
+      barClass: "purple"
+    }
+  ];
+
+  const adminScheduledReportsData = [
+    {
+      id: "SCHED-01",
+      title: "Daily Midnight Cash & Fare Reconciliation",
+      frequency: "Daily @ 00:00 PHT",
+      recipient: "saraza.treasury@usad.ph",
+      format: "PDF + CSV",
+      lastRun: "Today, 00:00 PHT"
+    },
+    {
+      id: "SCHED-02",
+      title: "Weekly Fleet OTP & Headway Audit",
+      frequency: "Mondays @ 06:00 PHT",
+      recipient: "dispatch.ops@usad.ph",
+      format: "PDF",
+      lastRun: "Oct 20, 06:00 PHT"
+    },
+    {
+      id: "SCHED-03",
+      title: "Monthly DOTr Fuel & Mileage Statement",
+      frequency: "1st of Month @ 08:00 PHT",
+      recipient: "compliance@dotr.gov.ph",
+      format: "Excel",
+      lastRun: "Oct 01, 08:00 PHT"
+    }
+  ];
+
+  const renderReportsTableRows = () => {
+    let list = adminReportsData;
+    if (activeReportsCategoryFilter !== "all") {
+      list = list.filter((r) => r.category === activeReportsCategoryFilter);
+    }
+    if (activeReportsCorridor !== "all") {
+      list = list.filter((r) => r.corridor === "all" || r.corridor === activeReportsCorridor);
+    }
+    if (reportsSearchQuery.trim()) {
+      const q = reportsSearchQuery.toLowerCase().trim();
+      list = list.filter((r) => r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q) || r.categoryLabel.toLowerCase().includes(q) || r.author.toLowerCase().includes(q));
+    }
+
+    if (list.length === 0) {
+      return `<tr><td colspan="7" style="text-align: center; padding: 28px; color: #64748b;">No operational reports found matching the selected filters.</td></tr>`;
+    }
+
+    return list.map((rep) => `
+      <tr class="reports-table-row">
+        <td>
+          <div class="reports-id-cell">
+            <span class="reports-id-code">${rep.id}</span>
+            <span class="reports-format-tag">${rep.fileFormat}</span>
+          </div>
+        </td>
+        <td>
+          <div class="reports-title-cell">
+            <strong class="reports-item-title">${escapeHtml(rep.title)}</strong>
+            <span class="reports-item-corridor">${rep.corridorLabel}</span>
+          </div>
+        </td>
+        <td>
+          <span class="reports-cat-tag ${rep.category}">${rep.categoryLabel}</span>
+        </td>
+        <td>
+          <span class="reports-period-text">${rep.dateRange}</span>
+        </td>
+        <td>
+          <div class="reports-metric-cell">
+            <span class="reports-metric-primary">${rep.summaryMetric}</span>
+            <span class="reports-metric-secondary">${rep.secondaryMetric}</span>
+          </div>
+        </td>
+        <td>
+          <span class="reports-status-pill ${rep.statusClass}">${rep.status}</span>
+        </td>
+        <td>
+          <div class="reports-row-actions">
+            <button class="reports-btn-view" type="button" data-report-action="view" data-report-id="${rep.id}" title="Inspect full audit ledger">View</button>
+            <button class="reports-btn-download" type="button" data-report-action="download" data-report-id="${rep.id}" title="Download report file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  };
+
+  const renderReportsCorridorDistribution = () => {
+    return adminCorridorDistributionData.map((cor) => `
+      <div class="corridor-dist-row">
+        <div class="corridor-dist-header">
+          <div class="corridor-dist-title-wrap">
+            <span class="corridor-dist-dot ${cor.barClass}"></span>
+            <span class="corridor-dist-name">${cor.name}</span>
+          </div>
+          <div class="corridor-dist-figures">
+            <strong class="corridor-dist-rev">${cor.revenue}</strong>
+            <span class="corridor-dist-pct">(${cor.pct}%)</span>
+          </div>
+        </div>
+        <div class="corridor-dist-bar-track">
+          <div class="corridor-dist-bar-fill ${cor.barClass}" style="width: ${cor.pct}%;"></div>
+        </div>
+        <div class="corridor-dist-footer">
+          <span>${cor.passengers}</span>
+          <span>${cor.otp}</span>
+        </div>
+      </div>
+    `).join("");
+  };
+
+  const renderReportsScheduledAutomations = () => {
+    return adminScheduledReportsData.map((sched) => `
+      <div class="sched-report-item">
+        <div class="sched-report-info">
+          <strong class="sched-report-title">${sched.title}</strong>
+          <div class="sched-report-meta">
+            <span>Frequency: <strong>${sched.frequency}</strong></span>
+            <span>·</span>
+            <span>Target: <strong>${sched.recipient}</strong></span>
+          </div>
+        </div>
+        <div class="sched-report-actions">
+          <span class="reports-format-tag">${sched.format}</span>
+          <button class="sched-run-btn" type="button" data-report-action="run-scheduled" data-sched-id="${sched.id}" title="Trigger instant generation &amp; dispatch">Run Now</button>
+        </div>
+      </div>
+    `).join("");
+  };
+
+  const adminReportsView = () => `
+    <!-- Top Title & Action Header -->
+    <header class="admin-header-row">
+      <div class="admin-header-title-box">
+        <h1 class="admin-header-title">Operational Reports &amp; Audits</h1>
+      </div>
+
+      <div class="admin-header-actions">
+        <!-- Date Range Filter -->
+        <select class="admin-select-corridor" data-report-date-range aria-label="Select Report Period">
+          <option value="month"${activeReportsDateRange === "month" ? " selected" : ""}>Month to Date (Oct 2026)</option>
+          <option value="today"${activeReportsDateRange === "today" ? " selected" : ""}>Today (Oct 21, 2026)</option>
+          <option value="week"${activeReportsDateRange === "week" ? " selected" : ""}>This Week (Oct 15 - 21)</option>
+          <option value="last-month"${activeReportsDateRange === "last-month" ? " selected" : ""}>Last Month (September 2026)</option>
+          <option value="q3"${activeReportsDateRange === "q3" ? " selected" : ""}>Q3 2026 Financial Audit</option>
+        </select>
+
+        <!-- Corridor Filter -->
+        <select class="admin-select-corridor" data-report-corridor aria-label="Select Operational Corridor">
+          <option value="all"${activeReportsCorridor === "all" ? " selected" : ""}>All Corridors (4)</option>
+          <option value="trinoma"${activeReportsCorridor === "trinoma" ? " selected" : ""}>Trinoma Hub Express</option>
+          <option value="edsa"${activeReportsCorridor === "edsa" ? " selected" : ""}>EDSA Carousel Loop</option>
+          <option value="malolos"${activeReportsCorridor === "malolos" ? " selected" : ""}>Malolos Central Loop</option>
+          <option value="c5"${activeReportsCorridor === "c5" ? " selected" : ""}>C-5 &amp; Quezon Feeder</option>
+        </select>
+
+        <!-- Generate Custom Report Button -->
+        <button class="staff-btn-add-member" type="button" data-report-action="generate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px;">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Generate Report</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 4 KPI Summary Cards -->
+    <section class="reports-kpi-grid" aria-label="Executive Operational Totals">
+      <!-- 1. Total Fare Revenue -->
+      <article class="reports-kpi-card">
+        <div class="reports-kpi-header">
+          <span class="reports-kpi-label">TOTAL FARE REVENUE (MTD)</span>
+          <span class="reports-growth-badge positive">+6.8% vs last mo</span>
+        </div>
+        <div class="reports-kpi-figure">₱1,248,650.00</div>
+        <div class="reports-kpi-sub">Cash: <strong>₱784,400</strong> · U-Pouch RFID: <strong>₱464,250</strong></div>
+      </article>
+
+      <!-- 2. Passenger Volume -->
+      <article class="reports-kpi-card">
+        <div class="reports-kpi-header">
+          <span class="reports-kpi-label">TOTAL PASSENGERS (MTD)</span>
+          <span class="reports-growth-badge positive">92.4% Load</span>
+        </div>
+        <div class="reports-kpi-figure">142,880 Pax</div>
+        <div class="reports-kpi-sub">Avg 4,760 pax/day · <strong>31,420</strong> Concession/Student Fares</div>
+      </article>
+
+      <!-- 3. Fleet On-Time Performance -->
+      <article class="reports-kpi-card">
+        <div class="reports-kpi-header">
+          <span class="reports-kpi-label">FLEET ON-TIME RATE</span>
+          <span class="reports-growth-badge target">Target: 90.0%</span>
+        </div>
+        <div class="reports-kpi-figure accent">92.8% OTP</div>
+        <div class="reports-kpi-sub">2,184 Trips Dispatched · Avg delay: <strong>+2.1m</strong></div>
+      </article>
+
+      <!-- 4. Fuel & Operating Mileage -->
+      <article class="reports-kpi-card">
+        <div class="reports-kpi-header">
+          <span class="reports-kpi-label">FUEL &amp; OPERATING MILEAGE</span>
+          <span class="reports-growth-badge neutral">18,420 L Diesel</span>
+        </div>
+        <div class="reports-kpi-figure">63,010 km</div>
+        <div class="reports-kpi-sub">3.42 km/L Fleet Efficiency · Cost: <strong>₱19.99/km</strong></div>
+      </article>
+    </section>
+
+    <!-- Main Reports Hub & Table Card -->
+    <section class="reports-table-card">
+      <div class="reports-table-toolbar">
+        <!-- Category Filter Tabs -->
+        <div class="reports-filter-tabs" role="tablist" aria-label="Filter reports by domain">
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "all" ? " is-active" : ""}" type="button" data-report-category="all">All Reports (6)</button>
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "financial" ? " is-active" : ""}" type="button" data-report-category="financial">Revenue &amp; Finance (2)</button>
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Fleet &amp; Headway (2)</button>
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Crew &amp; Personnel (1)</button>
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "fuel" ? " is-active" : ""}" type="button" data-report-category="fuel">Fuel &amp; Maintenance (1)</button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="staff-header-search-wrap" style="width: 260px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" class="staff-header-search-input" placeholder="Search reports, audit IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports directory">
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div class="reports-table-wrap">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>REPORT ID &amp; FORMAT</th>
+              <th>REPORT TITLE &amp; CORRIDOR</th>
+              <th>CATEGORY</th>
+              <th>AUDIT PERIOD</th>
+              <th>PRIMARY METRICS</th>
+              <th>STATUS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="reports-table-tbody">
+            ${renderReportsTableRows()}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Lower 2-Column Split: Corridor Performance & Automated Runs -->
+    <div class="reports-bottom-split">
+      <!-- Left: Corridor Distribution Breakdown -->
+      <section class="reports-subcard">
+        <div class="reports-subcard-header">
+          <div class="reports-subcard-title-group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #2fd9a8;"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            <h2 class="reports-subcard-title">Corridor Revenue &amp; Ridership Share</h2>
+          </div>
+          <span style="font-size: 11px; color: #64748b;">Month to Date (Oct 2026)</span>
+        </div>
+
+        <div class="corridor-dist-list">
+          ${renderReportsCorridorDistribution()}
+        </div>
+      </section>
+
+      <!-- Right: Scheduled Automated Audits & Deliveries -->
+      <section class="reports-subcard">
+        <div class="reports-subcard-header">
+          <div class="reports-subcard-title-group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #2fd9a8;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <h2 class="reports-subcard-title">Scheduled Audit Dispatches</h2>
+          </div>
+          <span style="font-size: 11px; color: #64748b;">3 Standing Automated Runs</span>
+        </div>
+
+        <div class="sched-reports-list">
+          ${renderReportsScheduledAutomations()}
+        </div>
+      </section>
+    </div>
+  `;
+
   const adminDashboardScreen = () => `
     <div class="admin-dashboard-layout" data-admin-screen="dashboard">
       <!-- Left Sidebar -->
@@ -2238,7 +2699,9 @@
               ? adminStaffResourcesView()
               : activeAdminSidebarTab === "sensor-camera"
                 ? adminSensorCameraView()
-                : adminLiveOperationsView()}
+                : activeAdminSidebarTab === "reports"
+                  ? adminReportsView()
+                  : adminLiveOperationsView()}
       </main>
     </div>`;
 
@@ -2570,6 +3033,118 @@
           </div>
         </form>
       `;
+      isInfoOnly = true;
+    } else if (type === "generate-report") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`;
+      title = "Generate Operational Report";
+      desc = "Compile audited ridership revenue, headway compliance, or vehicle maintenance records.";
+      customHtml = `
+        <form class="admin-login-form" data-admin-generate-report-form style="margin-top: 14px; text-align: left;">
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Report Title</label>
+            <input class="admin-input" id="rep-gen-title" placeholder="e.g. Peak Surge &amp; RFID Revenue Audit" value="Mid-Month Fleet &amp; Fare Reconciliation" required style="height: 38px;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Audit Category</label>
+              <select class="admin-input" id="rep-gen-category" style="height: 38px;">
+                <option value="financial">Revenue &amp; Finance</option>
+                <option value="otp">Fleet &amp; Headway</option>
+                <option value="crew">Crew &amp; Personnel</option>
+                <option value="fuel">Fuel &amp; Maintenance</option>
+              </select>
+            </div>
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Scope</label>
+              <select class="admin-input" id="rep-gen-corridor" style="height: 38px;">
+                <option value="All Corridors">All Corridors (4)</option>
+                <option value="Trinoma Express">Trinoma Hub Express</option>
+                <option value="EDSA Carousel">EDSA Carousel Loop</option>
+                <option value="Malolos Central">Malolos Central Loop</option>
+                <option value="C-5 &amp; Quezon">C-5 &amp; Quezon Feeder</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Timeframe</label>
+              <select class="admin-input" id="rep-gen-period" style="height: 38px;">
+                <option value="Month to Date">Month to Date (Oct 2026)</option>
+                <option value="Past 7 Days">Past 7 Days</option>
+                <option value="Today">Today (Oct 21, 2026)</option>
+                <option value="Q3 2026">Q3 2026 Full Quarter</option>
+              </select>
+            </div>
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Export Format</label>
+              <select class="admin-input" id="rep-gen-format" style="height: 38px;">
+                <option value="PDF">PDF (Formal Signed Audit)</option>
+                <option value="CSV">CSV (Raw Telematics Ledger)</option>
+                <option value="XLSX">XLSX (Financial Spreadsheet)</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 14px;">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="submit">Compile &amp; Archive</button>
+          </div>
+        </form>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("view-report-")) {
+      const repId = type.replace("view-report-", "");
+      const report = adminReportsData.find((r) => r.id === repId) || adminReportsData[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+      title = `${report.id}: ${report.title}`;
+      desc = `Official transit operational audit for <strong>${report.corridor}</strong>.`;
+      customHtml = `
+        <div style="background: #0b1017; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; margin: 16px 0; text-align: left; font-size: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+            <span style="color: #64748b;">Audit Period:</span>
+            <strong style="color: #ffffff;">${report.period}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+            <span style="color: #64748b;">Primary Metric:</span>
+            <strong style="color: #2fd9a8;">${report.primaryMetric}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+            <span style="color: #64748b;">Secondary Metric:</span>
+            <span style="color: #cbd5e1;">${report.secondaryMetric}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+            <span style="color: #64748b;">Format &amp; File Size:</span>
+            <strong style="color: #38bdf8;">${report.format} (${report.fileSize})</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+            <span style="color: #64748b;">Verified By:</span>
+            <span style="color: #e2e8f0;">${report.author}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #64748b;">Audit Status:</span>
+            <span style="color: ${report.status === "Finalized" ? "#2fd9a8" : report.status === "Pending Sign-off" ? "#fbbf24" : "#94a3b8"}; font-weight: 700;">${report.status}</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
+          <button class="admin-modal-button-primary" type="button" data-report-action="download" data-report-id="${report.id}">Download ${report.format}</button>
+        </div>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("download-report-")) {
+      const repId = type.replace("download-report-", "");
+      const report = adminReportsData.find((r) => r.id === repId) || adminReportsData[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+      title = `Downloading ${report.id}.${report.format.toLowerCase()}`;
+      desc = `Exporting <strong>${report.title}</strong> (${report.fileSize}). Data signed by Saraza TRD Central Control.`;
+      primaryBtn = "Done";
+      isInfoOnly = true;
+    } else if (type.startsWith("run-scheduled-")) {
+      const schedId = type.replace("run-scheduled-", "");
+      const sched = adminScheduledReportsData.find((s) => s.id === schedId) || adminScheduledReportsData[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      title = "Audit Job Dispatched";
+      desc = `Instant extraction queued for <strong>${sched.title}</strong>.<br><br>The generated ${sched.format} audit has been packaged and transmitted to <strong>${sched.recipient}</strong>.`;
+      primaryBtn = "Dismiss";
       isInfoOnly = true;
     }
 
@@ -4137,9 +4712,45 @@
       if (grid) grid.innerHTML = renderCameraFeedsGrid();
       return;
     }
+
+    if (event.target.matches("[data-admin-generate-report-form]")) {
+      event.preventDefault();
+      const title = screen.querySelector("#rep-gen-title")?.value?.trim() || "Operational Audit Report";
+      const category = screen.querySelector("#rep-gen-category")?.value || "financial";
+      const corridor = screen.querySelector("#rep-gen-corridor")?.value || "All Corridors";
+      const period = screen.querySelector("#rep-gen-period")?.value || "Month to Date";
+      const format = screen.querySelector("#rep-gen-format")?.value || "PDF";
+      const nextNum = 1048 + adminReportsData.length - 5;
+      const newRep = {
+        id: `REP-2026-${nextNum}`,
+        title,
+        corridor,
+        category,
+        categoryLabel: category === "financial" ? "Revenue & Finance" : category === "otp" ? "Fleet & Headway" : category === "crew" ? "Crew & Personnel" : "Fuel & Maintenance",
+        period: `${period} (Verified)`,
+        primaryMetric: category === "financial" ? "₱385,420 Fare Rev" : category === "otp" ? "93.4% On-Time" : category === "crew" ? "100% Shift Fill" : "3.48 km/L Fleet Avg",
+        secondaryMetric: "Automated Data Ingestion",
+        status: "Finalized",
+        statusClass: "completed",
+        format,
+        fileSize: format === "PDF" ? "1.8 MB" : format === "CSV" ? "240 KB" : "860 KB",
+        author: "Jocky Cabataña"
+      };
+      adminReportsData.unshift(newRep);
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const tbody = screen.querySelector("#reports-table-tbody");
+      if (tbody) tbody.innerHTML = renderReportsTableRows();
+      return;
+    }
   });
 
   screen.addEventListener("input", (event) => {
+    if (event.target.matches("[data-report-search]")) {
+      reportsSearchQuery = event.target.value;
+      const tbody = screen.querySelector("#reports-table-tbody");
+      if (tbody) tbody.innerHTML = renderReportsTableRows();
+    }
+
     if (event.target.matches("[data-cctv-search]")) {
       cameraSearchQuery = event.target.value;
       const grid = screen.querySelector("#cctv-grid-container");
@@ -4265,6 +4876,18 @@
       dispatchNoteInput = event.target.value;
     }
 
+    if (event.target.matches("[data-report-date-range]")) {
+      activeReportsDateRange = event.target.value;
+      const tbody = screen.querySelector("#reports-table-tbody");
+      if (tbody) tbody.innerHTML = renderReportsTableRows();
+    }
+
+    if (event.target.matches("[data-report-corridor]")) {
+      activeReportsCorridor = event.target.value;
+      const tbody = screen.querySelector("#reports-table-tbody");
+      if (tbody) tbody.innerHTML = renderReportsTableRows();
+    }
+
     if (event.target.matches("#terms-accepted") && event.target.checked) {
       event.target.removeAttribute("aria-invalid");
       const termsError = screen.querySelector("#terms-error");
@@ -4273,6 +4896,34 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const repCatBtn = event.target.closest("[data-report-category]");
+    if (repCatBtn) {
+      activeReportsCategoryFilter = repCatBtn.dataset.reportCategory;
+      screen.querySelectorAll("[data-report-category]").forEach((b) => {
+        b.classList.toggle("is-active", b === repCatBtn);
+      });
+      const tbody = screen.querySelector("#reports-table-tbody");
+      if (tbody) tbody.innerHTML = renderReportsTableRows();
+      return;
+    }
+
+    const repActionBtn = event.target.closest("[data-report-action]");
+    if (repActionBtn) {
+      const { reportAction } = repActionBtn.dataset;
+      const repId = repActionBtn.dataset.reportId;
+      const schedId = repActionBtn.dataset.schedId;
+      if (reportAction === "generate") {
+        openAdminModal("generate-report");
+      } else if (reportAction === "view") {
+        openAdminModal(`view-report-${repId}`);
+      } else if (reportAction === "download") {
+        openAdminModal(`download-report-${repId}`);
+      } else if (reportAction === "run-scheduled") {
+        openAdminModal(`run-scheduled-${schedId}`);
+      }
+      return;
+    }
+
     const adminActionBtn = event.target.closest("[data-admin-action]");
     if (adminActionBtn) {
       const { adminAction } = adminActionBtn.dataset;
