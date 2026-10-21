@@ -4886,4 +4886,793 @@ input:focus-visible,
   color: #ffffff;
 }
 
+/* ============================================================
+   FLEET MONITORING & DISPATCH VIEW STYLES
+   ============================================================ */
+
+/* Header Pills (Right side) */
+.admin-header-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #101824;
+  border: 1px solid #1e293b;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+  font-weight: 500;
+  user-select: none;
+}
+
+.admin-header-pill svg {
+  width: 13px;
+  height: 13px;
+  color: #94a3b8;
+}
+
+.admin-header-pill.badge-telemetry {
+  background: #092019;
+  border-color: rgba(47, 217, 168, 0.4);
+  color: #2fd9a8;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: 10.5px;
+}
+
+.pulse-dot-mint {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2fd9a8;
+  box-shadow: 0 0 8px #2fd9a8;
+  animation: mintPulse 1.8s infinite;
+}
+
+@keyframes mintPulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 4px #2fd9a8; }
+  50% { transform: scale(1.2); box-shadow: 0 0 10px #2fd9a8; }
+  100% { transform: scale(0.95); box-shadow: 0 0 4px #2fd9a8; }
+}
+
+/* Two-column layout grid */
+.fleet-dispatch-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1240px) {
+  .fleet-dispatch-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fleet-dispatch-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.fleet-dispatch-right-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* 1. Radar Map Card */
+.admin-radar-map-card {
+  background: #0f1622;
+  border: 1px solid #1a2333;
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.radar-map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.corridor-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.corridor-label {
+  font-size: 11.5px;
+  color: #72849a;
+  font-weight: 500;
+}
+
+.corridor-pill-btn {
+  background: #131c2a;
+  border: 1px solid #1f2a3a;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.corridor-pill-btn:hover {
+  background: #1a2536;
+  color: #ffffff;
+}
+
+.corridor-pill-btn.is-active {
+  background: #2fd9a8;
+  border-color: #2fd9a8;
+  color: #081a14;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(47, 217, 168, 0.35);
+}
+
+.map-viewport-tools {
+  display: flex;
+  align-items: center;
+  background: #131c2a;
+  border: 1px solid #1f2a3a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.map-tool-btn {
+  background: transparent;
+  border: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.map-tool-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.map-tool-btn:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.map-tool-divider {
+  width: 1px;
+  height: 14px;
+  background: #1f2a3a;
+}
+
+/* Radar SVG Viewport */
+.radar-map-viewport {
+  position: relative;
+  width: 100%;
+  height: 255px;
+  background: radial-gradient(circle at 60% 40%, #0d1624 0%, #080d15 100%);
+  border: 1px solid #182232;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.radar-map-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+}
+
+/* Tactical Map Markers & Radar Rings */
+.bus-map-marker {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bus-map-marker:hover {
+  transform: scale(1.1);
+}
+
+.radar-ping-ring {
+  transform-origin: center;
+  animation: radarSonar 2.2s infinite ease-out;
+}
+
+@keyframes radarSonar {
+  0% { r: 10; opacity: 0.9; stroke-width: 2; }
+  70% { r: 24; opacity: 0.2; stroke-width: 1.5; }
+  100% { r: 28; opacity: 0; stroke-width: 0.5; }
+}
+
+/* Map Legend */
+.radar-map-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-top: 4px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #8da2bb;
+  font-weight: 500;
+}
+
+.legend-dot-circle {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-dot-circle.mint {
+  background: #2fd9a8;
+  box-shadow: 0 0 6px #2fd9a8;
+}
+
+.legend-dot-circle.amber {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+}
+
+.legend-dot-circle.purple {
+  background: #a855f7;
+  box-shadow: 0 0 6px #a855f7;
+}
+
+/* 2. Active Fleet Telemetry Table Card */
+.admin-telemetry-table-card {
+  background: #0f1622;
+  border: 1px solid #1a2333;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.telemetry-table-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.telemetry-card-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.telemetry-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.telemetry-card-synced {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.telemetry-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.telemetry-tab-pill {
+  background: #131c2a;
+  border: 1px solid #1e2838;
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.telemetry-tab-pill:hover {
+  background: #1a2536;
+  color: #ffffff;
+}
+
+.telemetry-tab-pill.is-active {
+  background: #2fd9a8;
+  border-color: #2fd9a8;
+  color: #081a14;
+  font-weight: 700;
+}
+
+.telemetry-tab-pill.pill-amber {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.telemetry-tab-pill.pill-purple {
+  border-color: rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+}
+
+/* Telemetry Table Styles */
+.telemetry-table-wrap {
+  overflow-x: auto;
+  border-radius: 6px;
+}
+
+.fleet-telemetry-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.fleet-telemetry-table th {
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #1a2434;
+  white-space: nowrap;
+}
+
+.fleet-telemetry-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #141d2a;
+  vertical-align: middle;
+}
+
+.fleet-telemetry-row {
+  cursor: pointer;
+  transition: background-color 0.15s;
+  position: relative;
+}
+
+.fleet-telemetry-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.fleet-telemetry-row.is-selected {
+  background: rgba(47, 217, 168, 0.06);
+  box-shadow: inset 3px 0 0 0 #2fd9a8;
+}
+
+.bus-cell-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bus-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.bus-active-dot.mint {
+  background: #2fd9a8;
+}
+
+.bus-number-text {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.bus-badge-active-pill {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #2fd9a8;
+  background: rgba(47, 217, 168, 0.12);
+  border: 1px solid rgba(47, 217, 168, 0.35);
+  border-radius: 10px;
+  padding: 1px 6px;
+  letter-spacing: 0.02em;
+}
+
+.trip-dest-title {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.trip-dest-sub {
+  font-size: 10.5px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.status-pill-telemetry {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.status-pill-telemetry.delayed {
+  background: #271a08;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.status-pill-telemetry.on-time {
+  background: #092019;
+  border: 1px solid rgba(47, 217, 168, 0.45);
+  color: #2fd9a8;
+}
+
+.status-pill-telemetry.terminal {
+  background: #200f2e;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #c084fc;
+}
+
+.next-stop-name {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 11.5px;
+}
+
+.next-stop-eta {
+  color: #2fd9a8;
+  font-size: 10.5px;
+  margin-top: 1px;
+}
+
+.next-stop-eta.muted {
+  color: #8da2bb;
+}
+
+/* Occupancy Bar */
+.occupancy-cell-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 100px;
+}
+
+.occupancy-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+}
+
+.occupancy-pct {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.occupancy-seats {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.occupancy-progress-bg {
+  width: 100%;
+  height: 4px;
+  background: #182232;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.occupancy-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.occupancy-progress-fill.amber {
+  background: #f59e0b;
+}
+
+.occupancy-progress-fill.mint {
+  background: #2fd9a8;
+}
+
+.occupancy-progress-fill.purple {
+  background: #a855f7;
+}
+
+.driver-name-text {
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 11.5px;
+}
+
+.driver-id-sub {
+  font-size: 10.5px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+/* 3. Dispatch Control Panel (Right Column) */
+.dispatch-control-panel-card {
+  background: #0f1622;
+  border: 1px solid #1a2333;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dispatch-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dispatch-panel-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dispatch-panel-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.dispatch-panel-synced {
+  font-size: 11px;
+  color: #2fd9a8;
+  font-weight: 600;
+}
+
+.dispatch-unit-badge {
+  background: #131c2a;
+  border: 1px solid #1f2a3a;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+  letter-spacing: 0.04em;
+}
+
+/* Active Selection Box */
+.dispatch-active-selection-box {
+  background: #131c2a;
+  border: 1px solid #1a2536;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.selection-box-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.selection-box-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.selection-bus-heading {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.selection-clock-btn {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.selection-clock-btn:hover {
+  color: #cbd5e1;
+}
+
+.selection-alert-subtext {
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.alert-dot-amber {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+/* Key-Value Meta Rows */
+.dispatch-specs-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.dispatch-spec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #141c28;
+  font-size: 11.5px;
+}
+
+.dispatch-spec-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 4px;
+}
+
+.spec-key-label {
+  color: #72849a;
+  font-weight: 500;
+}
+
+.spec-val-content {
+  color: #ffffff;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* 2x2 Grid of Interventions */
+.dispatch-interventions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.interventions-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.interventions-grid-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.intervention-btn {
+  background: #131c2a;
+  border: 1px solid #1e2838;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+
+.intervention-btn svg {
+  width: 14px;
+  height: 14px;
+  color: var(--brand);
+}
+
+.intervention-btn:hover {
+  background: #1a2536;
+  border-color: #2b3a4e;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Notes & Action Button */
+.dispatch-note-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dispatch-note-label {
+  font-size: 11px;
+  color: #72849a;
+  font-weight: 500;
+}
+
+.dispatch-note-textarea {
+  background: #131c2a;
+  border: 1px solid #1e2838;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.dispatch-note-textarea:focus {
+  border-color: #2fd9a8;
+}
+
+.dispatch-note-textarea::placeholder {
+  color: #475569;
+}
+
+.btn-send-dispatch-order {
+  width: 100%;
+  height: 42px;
+  background: var(--brand);
+  color: #081a14;
+  border: 0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(47, 217, 168, 0.25);
+}
+
+.btn-send-dispatch-order:hover {
+  background: #39e8b6;
+  box-shadow: 0 6px 20px rgba(47, 217, 168, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-send-dispatch-order:active {
+  transform: translateY(0);
+}
+
+
 

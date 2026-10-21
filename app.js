@@ -194,7 +194,13 @@
   let activeFleetFilter = "all";
   let fleetSearchQuery = "";
   let activeCorridorFilter = "all";
-  let activeAdminSidebarTab = "predictive-analytics";
+  let activeAdminSidebarTab = "fleet-dispatch";
+  let selectedDispatchBusId = "bus-01";
+  let dispatchTelemetryFilter = "all";
+  let dispatchCorridorFilter = "edsa";
+  let dispatchMapZoom = 1;
+  let dispatchLayersActive = true;
+  let dispatchNoteInput = "";
   let predictiveSelectedHour = 17; // 5 PM
   let predictiveTransitLoadScale = 100;
   let predictiveOperatingProfile = "Intercity / Airport";
@@ -932,6 +938,480 @@
     </section>
   `;
 
+  const fleetDispatchTelemetryUnits = [
+    {
+      id: "bus-01",
+      unitCode: "UNIT #01",
+      busNo: "01",
+      badge: "ACTIVE",
+      category: "delayed",
+      tripName: "Northbound Express",
+      routeCorridor: "Trinoma / SM North Corridor",
+      statusText: "Delayed (+8m)",
+      statusType: "delayed",
+      headwayAlert: "Headway Deviation: +8 min behind schedule",
+      nextStop: "SM North Edsa",
+      etaText: "23 min ETA (15:08 PHT)",
+      occupancyPct: 78,
+      occupancySeats: "55/70 seats",
+      occupancyPassengers: "78% (55 / 70 Passengers)",
+      driverName: "Dela Cruz, J.",
+      driverId: "#DR-4819",
+      conductorName: "Santos, M.",
+      gpsLocation: "EDSA Guadalupe Overpass",
+      scheduledStop: "SM North Edsa (ETA 15:08 PHT)",
+      corridor: "edsa",
+      progressClass: "amber",
+      dotClass: "amber"
+    },
+    {
+      id: "bus-02",
+      unitCode: "UNIT #02",
+      busNo: "02",
+      badge: "",
+      category: "deployed",
+      tripName: "Northbound Local",
+      routeCorridor: "EDSA Carousel Loop",
+      statusText: "On Time",
+      statusType: "on-time",
+      headwayAlert: "Nominal Headway: On schedule (0 min deviation)",
+      nextStop: "Trinoma Hub",
+      etaText: "7 min ETA (14:55 PHT)",
+      occupancyPct: 78,
+      occupancySeats: "55/70 seats",
+      occupancyPassengers: "78% (55 / 70 Passengers)",
+      driverName: "Rogers, S.",
+      driverId: "#DR-9204",
+      conductorName: "Barton, C.",
+      gpsLocation: "EDSA Main Avenue",
+      scheduledStop: "Trinoma Hub (ETA 14:55 PHT)",
+      corridor: "edsa",
+      progressClass: "mint",
+      dotClass: "mint"
+    },
+    {
+      id: "bus-14",
+      unitCode: "UNIT #14",
+      busNo: "14",
+      badge: "",
+      category: "terminal",
+      tripName: "Southbound Trunk",
+      routeCorridor: "SM North to PITX Express",
+      statusText: "At Terminal",
+      statusType: "terminal",
+      headwayAlert: "Staged at Terminal Bay: Scheduled release in 19 min",
+      nextStop: "SM North Edsa Staging",
+      etaText: "Departing in 19 min",
+      occupancyPct: 78,
+      occupancySeats: "55/70 seats",
+      occupancyPassengers: "78% (55 / 70 Passengers)",
+      driverName: "Dela Cruz, J.",
+      driverId: "#DR-4819",
+      conductorName: "Reyes, K.",
+      gpsLocation: "SM North EDSA Terminal Bay 4",
+      scheduledStop: "PITX Intermodal (ETA 16:30 PHT)",
+      corridor: "c5",
+      progressClass: "purple",
+      dotClass: ""
+    },
+    {
+      id: "bus-08",
+      unitCode: "UNIT #08",
+      busNo: "08",
+      badge: "",
+      category: "deployed",
+      tripName: "East-West Connector",
+      routeCorridor: "Quezon Ave Rapid",
+      statusText: "On Time",
+      statusType: "on-time",
+      headwayAlert: "Nominal Headway: -1 min ahead of schedule",
+      nextStop: "Ayala Center Interchange",
+      etaText: "12 min ETA (15:00 PHT)",
+      occupancyPct: 42,
+      occupancySeats: "30/70 seats",
+      occupancyPassengers: "42% (30 / 70 Passengers)",
+      driverName: "Bautista, M.",
+      driverId: "#DR-7711",
+      conductorName: "Villanueva, E.",
+      gpsLocation: "Quezon Ave Underpass / EDSA",
+      scheduledStop: "Ayala Center Interchange (ETA 15:00 PHT)",
+      corridor: "quezon",
+      progressClass: "mint",
+      dotClass: "mint"
+    },
+    {
+      id: "bus-23",
+      unitCode: "UNIT #23",
+      busNo: "23",
+      badge: "",
+      category: "deployed",
+      tripName: "Airport Shuttle Trunk",
+      routeCorridor: "NAIA Loop Connector",
+      statusText: "On Time",
+      statusType: "on-time",
+      headwayAlert: "High Passenger Density: Nominal Headway +1m buffer",
+      nextStop: "Terminal 3 Hub",
+      etaText: "16 min ETA (15:04 PHT)",
+      occupancyPct: 92,
+      occupancySeats: "65/70 seats",
+      occupancyPassengers: "92% (65 / 70 Passengers)",
+      driverName: "Alcantara, R.",
+      driverId: "#DR-3108",
+      conductorName: "Morales, G.",
+      gpsLocation: "NAIA Expressway Nichols Ramp",
+      scheduledStop: "Terminal 3 Hub (ETA 15:04 PHT)",
+      corridor: "edsa",
+      progressClass: "amber",
+      dotClass: "mint"
+    }
+  ];
+
+  const renderFleetTelemetryRows = () => {
+    const list = fleetDispatchTelemetryUnits.filter((u) => {
+      if (dispatchTelemetryFilter === "deployed") return u.category === "deployed";
+      if (dispatchTelemetryFilter === "delayed") return u.category === "delayed";
+      if (dispatchTelemetryFilter === "terminal") return u.category === "terminal";
+      return true;
+    });
+
+    if (list.length === 0) {
+      return `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">No fleet vehicles in this category.</td></tr>`;
+    }
+
+    return list.map((bus) => {
+      const isSelected = bus.id === selectedDispatchBusId;
+      return `
+        <tr class="fleet-telemetry-row${isSelected ? " is-selected" : ""}" data-select-bus="${bus.id}">
+          <td>
+            <div class="bus-cell-badge-wrap">
+              <span class="bus-active-dot${bus.dotClass ? " " + bus.dotClass : ""}"></span>
+              <span class="bus-number-text">${bus.busNo}</span>
+              ${bus.badge ? `<span class="bus-badge-active-pill">${bus.badge}</span>` : ""}
+            </div>
+          </td>
+          <td>
+            <div class="trip-dest-title">${bus.tripName}</div>
+            <div class="trip-dest-sub">${bus.routeCorridor}</div>
+          </td>
+          <td>
+            <span class="status-pill-telemetry ${bus.statusType}">${bus.statusText}</span>
+          </td>
+          <td>
+            <div class="next-stop-name">${bus.nextStop}</div>
+            <div class="next-stop-eta${bus.statusType === "terminal" ? " muted" : ""}">${bus.etaText}</div>
+          </td>
+          <td>
+            <div class="occupancy-cell-wrap">
+              <div class="occupancy-top-row">
+                <span class="occupancy-pct">${bus.occupancyPct}%</span>
+                <span class="occupancy-seats">${bus.occupancySeats}</span>
+              </div>
+              <div class="occupancy-progress-bg">
+                <div class="occupancy-progress-fill ${bus.progressClass}" style="width: ${bus.occupancyPct}%;"></div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="driver-name-text">${bus.driverName}</div>
+            <div class="driver-id-sub">ID: ${bus.driverId}</div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  };
+
+  const renderDispatchControlPanel = () => {
+    const unit = fleetDispatchTelemetryUnits.find((u) => u.id === selectedDispatchBusId) || fleetDispatchTelemetryUnits[0];
+    return `
+      <section class="dispatch-control-panel-card">
+        <header class="dispatch-panel-header">
+          <div class="dispatch-panel-title-wrap">
+            <h2 class="dispatch-panel-title">Dispatch Control Panel</h2>
+            <span class="dispatch-panel-synced">Target Unit Synchronized</span>
+          </div>
+          <span class="dispatch-unit-badge">${unit.unitCode}</span>
+        </header>
+
+        <!-- Active Selection Box -->
+        <div class="dispatch-active-selection-box">
+          <span class="selection-box-label">ACTIVE SELECTION</span>
+          <div class="selection-box-title-row">
+            <h3 class="selection-bus-heading">Bus No. ${unit.busNo} — ${unit.tripName}</h3>
+            <button class="selection-clock-btn" type="button" title="View Schedule Headway">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </button>
+          </div>
+          <div class="selection-alert-subtext">
+            <span class="alert-dot-amber"></span>
+            <span>${unit.headwayAlert}</span>
+          </div>
+        </div>
+
+        <!-- Meta Specification Rows -->
+        <div class="dispatch-specs-list">
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Bus Number</span>
+            <span class="spec-val-content">${unit.busNo}</span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Trip / Route</span>
+            <span class="spec-val-content">${unit.routeCorridor.replace(" Corridor", "").replace(" Loop", "")}</span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Current Status</span>
+            <span class="spec-val-content">
+              <span class="status-pill-telemetry ${unit.statusType}" style="padding: 2px 7px; font-size: 10px;">${unit.statusText}</span>
+            </span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Live Occupancy</span>
+            <span class="spec-val-content">${unit.occupancyPassengers}</span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Assigned Driver</span>
+            <span class="spec-val-content">${unit.driverName} (Conductor: ${unit.conductorName})</span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Current GPS Location</span>
+            <span class="spec-val-content">${unit.gpsLocation}</span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Next Scheduled Stop</span>
+            <span class="spec-val-content" style="color: #2fd9a8;">${unit.scheduledStop}</span>
+          </div>
+        </div>
+
+        <!-- 2x2 Dispatcher Interventions -->
+        <div class="dispatch-interventions-section">
+          <span class="interventions-label">DISPATCHER INTERVENTIONS</span>
+          <div class="interventions-grid-2x2">
+            <button class="intervention-btn" type="button" data-dispatch-action="reroute">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              <span>Reroute</span>
+            </button>
+            <button class="intervention-btn" type="button" data-dispatch-action="hold">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="10" y1="4" x2="10" y2="20"/><line x1="14" y1="4" x2="14" y2="20"/></svg>
+              <span>Hold at Terminal</span>
+            </button>
+            <button class="intervention-btn" type="button" data-dispatch-action="recall">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span>Recall to Depot</span>
+            </button>
+            <button class="intervention-btn" type="button" data-dispatch-action="assign-driver">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+              <span>Assign Driver</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dispatch note input -->
+        <div class="dispatch-note-wrap">
+          <label class="dispatch-note-label">Dispatch note (optional)</label>
+          <textarea class="dispatch-note-textarea" placeholder="Add special detour, headway instructions, or maintenance alert..." data-dispatch-note>${escapeHtml(dispatchNoteInput)}</textarea>
+        </div>
+
+        <!-- Main Send Action Button -->
+        <button class="btn-send-dispatch-order" type="button" data-dispatch-action="send-order">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          <span>Send Dispatch Order</span>
+        </button>
+      </section>
+    `;
+  };
+
+  const renderRadarMapSvg = () => {
+    const isEdsa = dispatchCorridorFilter === "edsa";
+    const isC5 = dispatchCorridorFilter === "c5";
+    const isQuezon = dispatchCorridorFilter === "quezon";
+
+    return `
+      <svg class="radar-map-svg" viewBox="0 0 740 260" preserveAspectRatio="xMidYMid meet" style="transform: scale(${dispatchMapZoom}); transition: transform 0.25s ease;">
+        <defs>
+          <pattern id="tactical-grid-pat" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1"/>
+          </pattern>
+          <filter id="radar-glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- Grid Rect -->
+        <rect width="740" height="260" fill="url(#tactical-grid-pat)" />
+
+        <!-- Faint Coordinate / Radar Guides -->
+        <circle cx="450" cy="145" r="120" fill="none" stroke="rgba(255,255,255,0.025)" stroke-dasharray="3 3"/>
+        <line x1="0" y1="145" x2="740" y2="145" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+        <line x1="450" y1="0" x2="450" y2="260" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+
+        <!-- Route Path: EDSA Carousel (Mint Curve) -->
+        <path d="M 180 230 C 290 230, 360 170, 450 145 S 580 90, 660 75" fill="none" stroke="#2fd9a8" stroke-width="3.5" filter="url(#radar-glow-filter)" stroke-linecap="round" opacity="${isEdsa || (!isC5 && !isQuezon) ? '1' : '0.35'}"/>
+        <path d="M 180 230 C 290 230, 360 170, 450 145 S 580 90, 660 75" fill="none" stroke="#ffffff" stroke-width="1" stroke-dasharray="6 4" opacity="0.6"/>
+
+        <!-- Route Path: C-5 Hub (Purple Curve) -->
+        <path d="M 230 200 C 320 200, 390 175, 490 170 S 620 185, 680 185" fill="none" stroke="#a855f7" stroke-width="3" filter="url(#radar-glow-filter)" stroke-linecap="round" opacity="${isC5 || (!isEdsa && !isQuezon) ? '1' : '0.35'}"/>
+
+        <!-- Secondary Linking Dashed Arc (Quezon Ave) -->
+        <path d="M 360 85 Q 490 100, 660 75" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="4 4" opacity="${isQuezon || (!isEdsa && !isC5) ? '0.7' : '0.25'}"/>
+
+        <!-- Stations / Waypoints -->
+        <!-- Buendia / Ayala -->
+        <g opacity="0.9">
+          <circle cx="330" cy="192" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
+          <text x="330" y="209" fill="#72849a" font-size="9" font-weight="600" text-anchor="middle">Buendia / Ayala</text>
+        </g>
+
+        <!-- Trinoma Hub -->
+        <g opacity="0.9">
+          <circle cx="590" cy="82" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
+          <text x="590" y="72" fill="#8da2bb" font-size="9" font-weight="600" text-anchor="middle">Trinoma Hub</text>
+        </g>
+
+        <!-- SM North Edsa (Terminal) -->
+        <g opacity="1">
+          <circle cx="660" cy="75" r="5" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5"/>
+          <text x="670" y="65" fill="#fbbf24" font-size="9" font-weight="700">SM North Edsa (Terminal)</text>
+        </g>
+
+        <!-- BUS 08 Marker -->
+        <g class="bus-map-marker" data-map-bus="bus-08" style="cursor: pointer;">
+          <rect x="348" y="70" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
+          <text x="374" y="82.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 08</text>
+        </g>
+
+        <!-- BUS 02 Marker -->
+        <g class="bus-map-marker" data-map-bus="bus-02" style="cursor: pointer;">
+          <rect x="494" y="96" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
+          <text x="520" y="108.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 02</text>
+        </g>
+
+        <!-- BUS 01 (DELAYED) Marker with Sonar Pulse Ring -->
+        <g class="bus-map-marker" data-map-bus="bus-01" style="cursor: pointer;">
+          <circle cx="450" cy="145" r="14" class="radar-ping-ring" stroke="#f59e0b" fill="none" opacity="0.8"/>
+          <circle cx="450" cy="145" r="8" stroke="#f59e0b" stroke-width="1.5" fill="rgba(245, 158, 11, 0.25)"/>
+          <circle cx="450" cy="145" r="3" fill="#f59e0b"/>
+          <rect x="402" y="118" width="96" height="20" rx="10" fill="#241406" stroke="#f59e0b" stroke-width="1.4"/>
+          <text x="450" y="131.5" fill="#fbbf24" font-size="8.5" font-weight="700" text-anchor="middle">BUS 01 (DELAYED)</text>
+        </g>
+
+        <!-- BUS 14 Marker -->
+        <g class="bus-map-marker" data-map-bus="bus-14" style="cursor: pointer;">
+          <rect x="534" y="161" width="52" height="18" rx="9" fill="#1e102b" stroke="#a855f7" stroke-width="1.2"/>
+          <text x="560" y="173.5" fill="#c084fc" font-size="8.5" font-weight="700" text-anchor="middle">BUS 14</text>
+        </g>
+      </svg>
+    `;
+  };
+
+  const adminFleetDispatchView = () => `
+    <!-- Top Title & Action Header -->
+    <header class="admin-header-row">
+      <div class="admin-header-title-box">
+        <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
+        <p class="admin-header-subtitle">Live GPS fleet tracking, real-time telemetry, automated headway scheduling, and dispatcher control.</p>
+      </div>
+
+      <div class="admin-header-actions">
+        <div class="admin-header-pills-row">
+          <span class="admin-header-pill badge-telemetry">
+            <span class="pulse-dot-mint"></span>
+            <span>TELEMETRY LIVE</span>
+          </span>
+          <span class="admin-header-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span data-live-clock>14:48:22 PHT</span>
+          </span>
+          <span class="admin-header-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <span>31°C · EDSA Corridor: Moderate</span>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main 2-Column Operational Grid -->
+    <div class="fleet-dispatch-grid">
+      <!-- Left Column: Map + Table -->
+      <div class="fleet-dispatch-left-col">
+        <!-- 1. Radar Map Card -->
+        <section class="admin-radar-map-card">
+          <div class="radar-map-toolbar">
+            <div class="corridor-filter-group">
+              <span class="corridor-label">Corridor:</span>
+              <button class="corridor-pill-btn${dispatchCorridorFilter === "edsa" ? " is-active" : ""}" type="button" data-corridor-filter="edsa">EDSA Carousel</button>
+              <button class="corridor-pill-btn${dispatchCorridorFilter === "c5" ? " is-active" : ""}" type="button" data-corridor-filter="c5">C-5 Hub</button>
+              <button class="corridor-pill-btn${dispatchCorridorFilter === "quezon" ? " is-active" : ""}" type="button" data-corridor-filter="quezon">Quezon Ave</button>
+            </div>
+
+            <div class="map-viewport-tools">
+              <button class="map-tool-btn" type="button" data-map-zoom="in" title="Zoom In">+</button>
+              <div class="map-tool-divider"></div>
+              <button class="map-tool-btn" type="button" data-map-zoom="out" title="Zoom Out">-</button>
+              <div class="map-tool-divider"></div>
+              <button class="map-tool-btn" type="button" data-map-layers title="Toggle Layers">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                <span>Layers</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="radar-map-viewport" id="radar-viewport-container">
+            ${renderRadarMapSvg()}
+          </div>
+
+          <div class="radar-map-legend">
+            <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
+            <span class="legend-item"><span class="legend-dot-circle amber"></span> Delayed Headway (+8m)</span>
+            <span class="legend-item"><span class="legend-dot-circle purple"></span> At Terminal / Staging</span>
+          </div>
+        </section>
+
+        <!-- 2. Active Fleet Telemetry Table Card -->
+        <section class="admin-telemetry-table-card">
+          <div class="telemetry-table-header-row">
+            <div class="telemetry-card-title-wrap">
+              <h2 class="telemetry-card-title">Active Fleet Telemetry</h2>
+              <span class="telemetry-card-synced">(Synced to dispatch console)</span>
+            </div>
+
+            <div class="telemetry-filter-tabs">
+              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "all" ? " is-active" : ""}" type="button" data-telemetry-tab="all">All Units (46)</button>
+              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "deployed" ? " is-active" : ""}" type="button" data-telemetry-tab="deployed">Deployed (32)</button>
+              <button class="telemetry-tab-pill pill-amber${dispatchTelemetryFilter === "delayed" ? " is-active" : ""}" type="button" data-telemetry-tab="delayed">Delayed (1)</button>
+              <button class="telemetry-tab-pill pill-purple${dispatchTelemetryFilter === "terminal" ? " is-active" : ""}" type="button" data-telemetry-tab="terminal">At Terminal (4)</button>
+            </div>
+          </div>
+
+          <div class="telemetry-table-wrap">
+            <table class="fleet-telemetry-table">
+              <thead>
+                <tr>
+                  <th>BUS NO.</th>
+                  <th>TRIP DESTINATION</th>
+                  <th>STATUS</th>
+                  <th>NEXT STOP &amp; ETA</th>
+                  <th>OCCUPANCY</th>
+                  <th>DRIVER</th>
+                </tr>
+              </thead>
+              <tbody id="fleet-telemetry-tbody">
+                ${renderFleetTelemetryRows()}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right Column: Dispatch Control Panel -->
+      <div class="fleet-dispatch-right-col" id="dispatch-panel-container">
+        ${renderDispatchControlPanel()}
+      </div>
+    </div>
+  `;
+
   const adminDashboardScreen = () => `
     <div class="admin-dashboard-layout" data-admin-screen="dashboard">
       <!-- Left Sidebar -->
@@ -948,7 +1428,7 @@
           </div>
 
           <nav class="admin-nav" aria-label="Operations Navigation">
-            <button class="admin-nav-item${activeAdminSidebarTab === "live-operations" || activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="live-operations">
+            <button class="admin-nav-item${activeAdminSidebarTab === "live-operations" ? " is-active" : ""}" type="button" data-admin-nav="live-operations">
               <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
               <span>Live Operations</span>
             </button>
@@ -986,7 +1466,11 @@
 
       <!-- Main Operational Area -->
       <main class="admin-main-container">
-        ${activeAdminSidebarTab === "predictive-analytics" ? adminPredictiveAnalyticsView() : adminLiveOperationsView()}
+        ${activeAdminSidebarTab === "predictive-analytics"
+          ? adminPredictiveAnalyticsView()
+          : activeAdminSidebarTab === "fleet-dispatch"
+            ? adminFleetDispatchView()
+            : adminLiveOperationsView()}
       </main>
     </div>`;
 
@@ -1119,6 +1603,37 @@
       title = "Monte Carlo Surge Simulation";
       desc = "Model executed with 1,000 synthetic commuter agents.<br><br>Result: <strong>-42% Projected Queue Wait Time</strong> across Trinoma &amp; Cubao transit shelters with 98.4% system reliability.";
       primaryBtn = "Close Simulation";
+      isInfoOnly = true;
+    } else if (type.startsWith("dispatch-order-sent-")) {
+      const busId = type.replace("dispatch-order-sent-", "");
+      const bus = fleetDispatchTelemetryUnits.find((u) => u.id === busId) || fleetDispatchTelemetryUnits[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
+      title = `Dispatch Order Transmitted — Unit #${bus.busNo}`;
+      desc = `Telemetry order dispatched to <strong>Bus No. ${bus.busNo} (${bus.tripName})</strong>.<br><br>Assigned Driver: <strong>${bus.driverName}</strong><br>Conductor: <strong>${bus.conductorName}</strong><br>Corridor: <strong>${bus.routeCorridor}</strong><br><br>Status: <strong>Order acknowledged by onboard vehicle telematics unit via LTE-M handshake.</strong>`;
+      primaryBtn = "Acknowledge & Close";
+      isInfoOnly = true;
+    } else if (type.startsWith("assign-driver-unit-")) {
+      const busId = type.replace("assign-driver-unit-", "");
+      const bus = fleetDispatchTelemetryUnits.find((u) => u.id === busId) || fleetDispatchTelemetryUnits[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>`;
+      title = `Reassign Crew — Unit #${bus.busNo}`;
+      desc = `Update active duty crew assigned to <strong>${bus.tripName}</strong>.`;
+      customHtml = `
+        <form class="admin-login-form" data-admin-reassign-form style="margin-top: 14px; text-align: left;">
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Driver</label>
+            <input class="admin-input" id="reassign-driver-input" value="${escapeHtml(bus.driverName)}" style="height: 38px;">
+          </div>
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Conductor</label>
+            <input class="admin-input" id="reassign-conductor-input" value="${escapeHtml(bus.conductorName)}" style="height: 38px;">
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="button" data-admin-confirm-crew="${bus.id}">Update Assignment</button>
+          </div>
+        </form>
+      `;
       isInfoOnly = true;
     }
 
@@ -2720,6 +3235,10 @@
       predictiveOperatingProfile = event.target.value;
     }
 
+    if (event.target.matches("[data-dispatch-note]")) {
+      dispatchNoteInput = event.target.value;
+    }
+
     if (event.target.matches("#terms-accepted") && event.target.checked) {
       event.target.removeAttribute("aria-invalid");
       const termsError = screen.querySelector("#terms-error");
@@ -2813,6 +3332,124 @@
     const telemetryBtn = event.target.closest("[data-admin-telemetry]");
     if (telemetryBtn) {
       openAdminModal(`telemetry-${telemetryBtn.dataset.adminTelemetry}`);
+      return;
+    }
+
+    const telemetryTab = event.target.closest("[data-telemetry-tab]");
+    if (telemetryTab) {
+      dispatchTelemetryFilter = telemetryTab.dataset.telemetryTab;
+      screen.querySelectorAll("[data-telemetry-tab]").forEach((tab) => {
+        tab.classList.toggle("is-active", tab === telemetryTab);
+      });
+      const tbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      return;
+    }
+
+    const selectBusRow = event.target.closest("[data-select-bus]");
+    if (selectBusRow) {
+      selectedDispatchBusId = selectBusRow.dataset.selectBus;
+      screen.querySelectorAll("[data-select-bus]").forEach((r) => {
+        r.classList.toggle("is-selected", r === selectBusRow);
+      });
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = renderDispatchControlPanel();
+      const mapContainer = screen.querySelector("#radar-viewport-container");
+      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
+      return;
+    }
+
+    const mapBus = event.target.closest("[data-map-bus]");
+    if (mapBus) {
+      selectedDispatchBusId = mapBus.dataset.mapBus;
+      const tbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = renderDispatchControlPanel();
+      const mapContainer = screen.querySelector("#radar-viewport-container");
+      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
+      return;
+    }
+
+    const corridorFilterBtn = event.target.closest("[data-corridor-filter]");
+    if (corridorFilterBtn) {
+      dispatchCorridorFilter = corridorFilterBtn.dataset.corridorFilter;
+      screen.querySelectorAll("[data-corridor-filter]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn === corridorFilterBtn);
+      });
+      const mapContainer = screen.querySelector("#radar-viewport-container");
+      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
+      return;
+    }
+
+    const mapZoomBtn = event.target.closest("[data-map-zoom]");
+    if (mapZoomBtn) {
+      const zoom = mapZoomBtn.dataset.mapZoom;
+      if (zoom === "in") dispatchMapZoom = Math.min(1.8, Math.round((dispatchMapZoom + 0.15) * 100) / 100);
+      else if (zoom === "out") dispatchMapZoom = Math.max(0.7, Math.round((dispatchMapZoom - 0.15) * 100) / 100);
+      const mapContainer = screen.querySelector("#radar-viewport-container");
+      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
+      return;
+    }
+
+    if (event.target.closest("[data-map-layers]")) {
+      dispatchLayersActive = !dispatchLayersActive;
+      const mapContainer = screen.querySelector("#radar-viewport-container");
+      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
+      return;
+    }
+
+    const dispatchActionBtn = event.target.closest("[data-dispatch-action]");
+    if (dispatchActionBtn) {
+      const action = dispatchActionBtn.dataset.dispatchAction;
+      const unit = fleetDispatchTelemetryUnits.find((u) => u.id === selectedDispatchBusId) || fleetDispatchTelemetryUnits[0];
+      const textarea = screen.querySelector("[data-dispatch-note]");
+
+      if (action === "reroute") {
+        dispatchNoteInput = `[Detour Order] Route via Shaw Blvd / C-5 service bypass to recover +8m headway gap.`;
+        if (textarea) {
+          textarea.value = dispatchNoteInput;
+          textarea.focus();
+        }
+      } else if (action === "hold") {
+        dispatchNoteInput = `[Headway Hold] Hold at SM North Edsa Terminal Bay 2 for 4 min to normalize spacing with Bus 02.`;
+        if (textarea) {
+          textarea.value = dispatchNoteInput;
+          textarea.focus();
+        }
+      } else if (action === "recall") {
+        dispatchNoteInput = `[Depot Recall] Immediate return to Saraza Central Depot for telemetry diagnostic inspection.`;
+        if (textarea) {
+          textarea.value = dispatchNoteInput;
+          textarea.focus();
+        }
+      } else if (action === "assign-driver") {
+        openAdminModal(`assign-driver-unit-${unit.id}`);
+      } else if (action === "send-order") {
+        openAdminModal(`dispatch-order-sent-${unit.id}`);
+        dispatchNoteInput = "";
+        if (textarea) textarea.value = "";
+      }
+      return;
+    }
+
+    const confirmCrewBtn = event.target.closest("[data-admin-confirm-crew]");
+    if (confirmCrewBtn) {
+      const busId = confirmCrewBtn.dataset.adminConfirmCrew;
+      const unit = fleetDispatchTelemetryUnits.find((u) => u.id === busId);
+      const driverIn = screen.querySelector("#reassign-driver-input");
+      const conductorIn = screen.querySelector("#reassign-conductor-input");
+      if (unit && driverIn && driverIn.value.trim()) {
+        unit.driverName = driverIn.value.trim();
+      }
+      if (unit && conductorIn && conductorIn.value.trim()) {
+        unit.conductorName = conductorIn.value.trim();
+      }
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = renderDispatchControlPanel();
+      const tbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
       return;
     }
 
