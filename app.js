@@ -194,13 +194,19 @@
   let activeFleetFilter = "all";
   let fleetSearchQuery = "";
   let activeCorridorFilter = "all";
-  let activeAdminSidebarTab = "fleet-dispatch";
+  let activeAdminSidebarTab = "staff-resources";
   let selectedDispatchBusId = "bus-01";
   let dispatchTelemetryFilter = "all";
   let dispatchCorridorFilter = "edsa";
   let dispatchMapZoom = 1;
   let dispatchLayersActive = true;
   let dispatchNoteInput = "";
+  let activeStaffRoleFilter = "all";
+  let staffSearchQuery = "";
+  let staffDepotFilter = "all";
+  let staffCurrentPage = 1;
+  let staffPerPage = 8;
+  let staffSelectedRows = new Set();
   let predictiveSelectedHour = 17; // 5 PM
   let predictiveTransitLoadScale = 100;
   let predictiveOperatingProfile = "Intercity / Airport";
@@ -1408,6 +1414,337 @@
     </div>
   `;
 
+  const adminStaffMembersData = [
+    {
+      id: "staff-01",
+      name: "Juan Dela Cruz",
+      staffId: "A01DSGN193 • DRV",
+      initials: "JD",
+      avatarClass: "",
+      role: "Driver",
+      roleKey: "driver",
+      busNo: "01",
+      depot: "Trinoma Hub",
+      rate: "$4.50",
+      maxHours: "10 hrs",
+      status: "On Duty",
+      statusKey: "on-duty",
+      statusClass: "on-duty"
+    },
+    {
+      id: "staff-02",
+      name: "John Dela Cruz",
+      staffId: "A02DSGN196 • DSP",
+      initials: "JC",
+      avatarClass: "",
+      role: "Dispatcher",
+      roleKey: "dispatcher",
+      busNo: "-",
+      depot: "Malolos Hub",
+      rate: "$3.00",
+      maxHours: "5 hrs",
+      status: "On Duty",
+      statusKey: "on-duty",
+      statusClass: "on-duty"
+    },
+    {
+      id: "staff-03",
+      name: "Cyrhyl Naval",
+      staffId: "A05DEVP381 • DRV",
+      initials: "CN",
+      avatarClass: "amber",
+      role: "Driver",
+      roleKey: "driver",
+      busNo: "02",
+      depot: "Trinoma Hub",
+      rate: "$4.50",
+      maxHours: "5 hrs",
+      status: "On Break",
+      statusKey: "on-break",
+      statusClass: "on-break"
+    },
+    {
+      id: "staff-04",
+      name: "Eldrei Acero",
+      staffId: "A04DEVP312 • DRV",
+      initials: "EA",
+      avatarClass: "",
+      role: "Driver",
+      roleKey: "driver",
+      busNo: "03",
+      depot: "Trinoma Hub",
+      rate: "$4.50",
+      maxHours: "5 hrs",
+      status: "Off",
+      statusKey: "off",
+      statusClass: "off"
+    },
+    {
+      id: "staff-05",
+      name: "Royce Zaldivar",
+      staffId: "A03DEVP273 • DRV",
+      initials: "RZ",
+      avatarClass: "",
+      role: "Driver",
+      roleKey: "driver",
+      busNo: "04",
+      depot: "Trinoma Hub",
+      rate: "$4.50",
+      maxHours: "5 hrs",
+      status: "On Duty",
+      statusKey: "on-duty",
+      statusClass: "on-duty"
+    },
+    {
+      id: "staff-06",
+      name: "Jericho Rosales",
+      staffId: "A02MRKT028 • DRV",
+      initials: "JR",
+      avatarClass: "",
+      role: "Driver",
+      roleKey: "driver",
+      busNo: "05",
+      depot: "Trinoma Hub",
+      rate: "$4.50",
+      maxHours: "5 hrs",
+      status: "On Duty",
+      statusKey: "on-duty",
+      statusClass: "on-duty"
+    },
+    {
+      id: "staff-07",
+      name: "Judy Ann Santos",
+      staffId: "A01MNGR019 • DSP",
+      initials: "JS",
+      avatarClass: "",
+      role: "Dispatcher",
+      roleKey: "dispatcher",
+      busNo: "-",
+      depot: "Malolos Hub",
+      rate: "$3.00",
+      maxHours: "5 hrs",
+      status: "On Duty",
+      statusKey: "on-duty",
+      statusClass: "on-duty"
+    },
+    {
+      id: "staff-08",
+      name: "Joshua Garcia",
+      staffId: "A03DSGN083 • DRV",
+      initials: "JG",
+      avatarClass: "",
+      role: "Driver",
+      roleKey: "driver",
+      busNo: "06",
+      depot: "Malolos Hub",
+      rate: "$4.50",
+      maxHours: "5 hrs",
+      status: "On Duty",
+      statusKey: "on-duty",
+      statusClass: "on-duty"
+    }
+  ];
+
+  const renderStaffTableRows = () => {
+    const q = staffSearchQuery.toLowerCase().trim();
+    const filtered = adminStaffMembersData.filter((member) => {
+      if (activeStaffRoleFilter === "drivers" && member.roleKey !== "driver") return false;
+      if (activeStaffRoleFilter === "dispatchers" && member.roleKey !== "dispatcher") return false;
+      if (activeStaffRoleFilter === "maintenance" && member.roleKey !== "maintenance") return false;
+      if (staffDepotFilter !== "all" && !member.depot.toLowerCase().includes(staffDepotFilter.toLowerCase())) return false;
+      if (!q) return true;
+      return (
+        member.name.toLowerCase().includes(q) ||
+        member.staffId.toLowerCase().includes(q) ||
+        member.role.toLowerCase().includes(q) ||
+        member.depot.toLowerCase().includes(q) ||
+        member.busNo.toLowerCase().includes(q)
+      );
+    });
+
+    if (filtered.length === 0) {
+      return `<tr><td colspan="9" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
+    }
+
+    return filtered.map((staff) => {
+      const isChecked = staffSelectedRows.has(staff.id);
+      let statusDot = `<span class="status-dot-mint"></span>`;
+      if (staff.statusKey === "on-break") statusDot = `<span class="status-dot-amber"></span>`;
+      else if (staff.statusKey === "off") statusDot = `<span class="status-dot-gray"></span>`;
+
+      return `
+        <tr data-staff-row="${staff.id}">
+          <td>
+            <input type="checkbox" class="staff-checkbox" data-staff-checkbox="${staff.id}" ${isChecked ? "checked" : ""} aria-label="Select ${escapeHtml(staff.name)}">
+          </td>
+          <td>
+            <div class="staff-member-cell">
+              <div class="staff-avatar ${staff.avatarClass}">${staff.initials}</div>
+              <div class="staff-name-wrap">
+                <span class="staff-name-text">${escapeHtml(staff.name)}</span>
+                <span class="staff-id-text">${escapeHtml(staff.staffId)}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="staff-role-text">${staff.role}</span>
+          </td>
+          <td>
+            <span class="staff-bus-text">${staff.busNo}</span>
+          </td>
+          <td>
+            <span class="staff-depot-text">${staff.depot}</span>
+          </td>
+          <td>
+            <span class="staff-rate-text">${staff.rate}</span>
+          </td>
+          <td>
+            <span class="staff-max-hours-text">${staff.maxHours}</span>
+          </td>
+          <td>
+            <span class="staff-status-badge ${staff.statusClass}">
+              ${statusDot}
+              <span>${staff.status}</span>
+            </span>
+          </td>
+          <td>
+            <button class="staff-action-more-btn" type="button" data-staff-action="open-menu" data-staff-id="${staff.id}" title="Action options for ${escapeHtml(staff.name)}">•••</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  };
+
+  const adminStaffResourcesView = () => `
+    <!-- Top Title & Action Header -->
+    <header class="admin-header-row">
+      <div class="admin-header-title-box">
+        <div style="display: flex; align-items: center;">
+          <h1 class="admin-header-title">Staff and Resources</h1>
+          <span class="staff-header-roster-badge">Active Roster</span>
+        </div>
+        <p class="admin-header-subtitle">Personnel scheduling, roster telemetry, live route assignment &amp; operational readiness</p>
+      </div>
+
+      <div class="admin-header-actions">
+        <!-- Search Input -->
+        <div class="staff-header-search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" class="staff-header-search-input" placeholder="Search staff, ID, or route..." value="${escapeHtml(staffSearchQuery)}" data-staff-search aria-label="Search staff directory">
+        </div>
+
+        <!-- Export CSV Button -->
+        <button class="staff-btn-export-csv" type="button" data-staff-action="export-csv">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Export CSV</span>
+        </button>
+
+        <!-- Add Staff Button -->
+        <button class="staff-btn-add-member" type="button" data-staff-action="add-staff">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Add Staff</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Staff Directory Card -->
+    <section class="staff-directory-card">
+      <!-- Toolbar -->
+      <div class="staff-directory-toolbar">
+        <div class="staff-directory-title-tabs">
+          <h2 class="staff-directory-title">Staff Directory</h2>
+          <div class="staff-role-tabs" role="tablist">
+            <button class="staff-role-pill${activeStaffRoleFilter === "all" ? " is-active" : ""}" type="button" data-staff-role-filter="all">All Staff (148)</button>
+            <button class="staff-role-pill${activeStaffRoleFilter === "drivers" ? " is-active" : ""}" type="button" data-staff-role-filter="drivers">Drivers (96)</button>
+            <button class="staff-role-pill${activeStaffRoleFilter === "dispatchers" ? " is-active" : ""}" type="button" data-staff-role-filter="dispatchers">Dispatchers (24)</button>
+            <button class="staff-role-pill${activeStaffRoleFilter === "maintenance" ? " is-active" : ""}" type="button" data-staff-role-filter="maintenance">Maintenance (28)</button>
+          </div>
+        </div>
+
+        <div class="staff-directory-tools-right">
+          <span class="staff-count-summary">Showing <strong>8</strong> of 148 operational members</span>
+          <button class="staff-depot-filter-btn" type="button" data-staff-action="toggle-depot-filter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            <span>${staffDepotFilter === "all" ? "Filter by Depot" : escapeHtml(staffDepotFilter)}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="staff-table-wrap">
+        <table class="staff-data-table">
+          <thead>
+            <tr>
+              <th style="width: 32px;">
+                <input type="checkbox" class="staff-checkbox" data-staff-check-all aria-label="Select all staff">
+              </th>
+              <th>STAFF MEMBER</th>
+              <th>ROLE</th>
+              <th>BUS NO.</th>
+              <th>DESIGNATION / DEPOT</th>
+              <th>HOURLY RATE</th>
+              <th>MAX HOURS</th>
+              <th>STATUS</th>
+              <th>ACTION</th>
+            </tr>
+          </thead>
+          <tbody id="staff-table-tbody">
+            ${renderStaffTableRows()}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Row -->
+      <div class="staff-pagination-row">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span>Show</span>
+          <select class="staff-per-page-select" data-staff-per-page aria-label="Records per page">
+            <option value="8" selected>8 records</option>
+            <option value="16">16 records</option>
+            <option value="32">32 records</option>
+          </select>
+          <span>per page</span>
+        </div>
+
+        <div class="staff-pagination-nav">
+          <button class="staff-page-btn" type="button" data-staff-page="prev" aria-label="Previous page">&lt;</button>
+          <button class="staff-page-btn is-active" type="button" data-staff-page="1">1</button>
+          <button class="staff-page-btn" type="button" data-staff-page="2">2</button>
+          <button class="staff-page-btn" type="button" data-staff-page="3">3</button>
+          <span class="staff-page-ellipsis">...</span>
+          <button class="staff-page-btn" type="button" data-staff-page="19">19</button>
+          <button class="staff-page-btn" type="button" data-staff-page="next" aria-label="Next page">&gt;</button>
+        </div>
+
+        <span class="staff-pagination-count">Showing 1-8 of 148 staff</span>
+      </div>
+    </section>
+
+    <!-- Bottom Status Bar -->
+    <footer class="staff-bottom-status-bar">
+      <div class="staff-bottom-status-left">
+        <span class="staff-status-pulse-dot"></span>
+        <span class="staff-status-sync-text">Real-time Telemetry Sync Active</span>
+        <span class="staff-status-divider">•</span>
+        <span class="staff-handover-alert">Next Shift Handover window: <strong>16:00 PHT (Shift B deployment at Trinoma Hub)</strong></span>
+      </div>
+
+      <div class="staff-bottom-status-right">
+        <span>Server latency: <strong>18ms</strong></span>
+        <span>USAD v3.4.1 Fleet Edition</span>
+      </div>
+    </footer>
+  `;
+
   const adminDashboardScreen = () => `
     <div class="admin-dashboard-layout" data-admin-screen="dashboard">
       <!-- Left Sidebar -->
@@ -1466,7 +1803,9 @@
           ? adminPredictiveAnalyticsView()
           : activeAdminSidebarTab === "fleet-dispatch"
             ? adminFleetDispatchView()
-            : adminLiveOperationsView()}
+            : activeAdminSidebarTab === "staff-resources"
+              ? adminStaffResourcesView()
+              : adminLiveOperationsView()}
       </main>
     </div>`;
 
@@ -1629,6 +1968,72 @@
             <button class="admin-modal-button-primary" type="button" data-admin-confirm-crew="${bus.id}">Update Assignment</button>
           </div>
         </form>
+      `;
+      isInfoOnly = true;
+    } else if (type === "add-staff") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+      title = "Add Staff Member";
+      desc = "Enroll new operational personnel into Saraza TRD transit roster.";
+      customHtml = `
+        <form class="admin-login-form" data-admin-add-staff-form style="margin-top: 14px; text-align: left;">
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Full Name</label>
+            <input class="admin-input" id="new-staff-name" placeholder="e.g. Maria Santos" required style="height: 38px;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Role</label>
+              <select class="admin-input" id="new-staff-role" style="height: 38px;">
+                <option value="Driver">Driver</option>
+                <option value="Dispatcher">Dispatcher</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
+            </div>
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Depot</label>
+              <select class="admin-input" id="new-staff-depot" style="height: 38px;">
+                <option value="Trinoma Hub">Trinoma Hub</option>
+                <option value="Malolos Hub">Malolos Hub</option>
+                <option value="Balintawak Staging">Balintawak Staging</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Bus</label>
+              <input class="admin-input" id="new-staff-bus" placeholder="e.g. 07 or -" value="07" style="height: 38px;">
+            </div>
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Hourly Rate</label>
+              <input class="admin-input" id="new-staff-rate" placeholder="$4.50" value="$4.50" style="height: 38px;">
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="submit">Enroll Member</button>
+          </div>
+        </form>
+      `;
+      isInfoOnly = true;
+    } else if (type === "export-staff-csv") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+      title = "Staff Roster Exported";
+      desc = "Generated <strong>usad_staff_roster_2026.csv</strong> containing all 148 registered transport personnel, GPS telematic IDs, active duty hours, and depot assignments.";
+      primaryBtn = "Done";
+      isInfoOnly = true;
+    } else if (type.startsWith("staff-detail-")) {
+      const staffId = type.replace("staff-detail-", "");
+      const staff = adminStaffMembersData.find((s) => s.id === staffId) || adminStaffMembersData[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>`;
+      title = `${staff.name} (${staff.staffId})`;
+      desc = `Role: <strong>${staff.role}</strong><br>Depot: <strong>${staff.depot}</strong> · Bus Assigned: <strong>${staff.busNo}</strong><br>Rate: <strong>${staff.rate}/hr</strong> (Max: ${staff.maxHours})<br>Duty Status: <strong>${staff.status}</strong>`;
+      customHtml = `
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+          <button class="admin-modal-button-primary" type="button" data-staff-quick-status="${staff.id}">
+            Toggle Shift Status (${staff.status === "On Duty" ? "Set On Break" : "Set On Duty"})
+          </button>
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
+        </div>
       `;
       isInfoOnly = true;
     }
@@ -3131,9 +3536,60 @@
       bookingConfirmed = false;
       renderScreen("find-rides");
     }
+
+    if (event.target.matches("[data-admin-add-staff-form]")) {
+      event.preventDefault();
+      const nameIn = screen.querySelector("#new-staff-name");
+      const roleIn = screen.querySelector("#new-staff-role");
+      const depotIn = screen.querySelector("#new-staff-depot");
+      const busIn = screen.querySelector("#new-staff-bus");
+      const rateIn = screen.querySelector("#new-staff-rate");
+
+      const name = nameIn?.value.trim() || "New Staff Member";
+      const role = roleIn?.value || "Driver";
+      const depot = depotIn?.value || "Trinoma Hub";
+      const busNo = busIn?.value.trim() || "-";
+      const rate = rateIn?.value.trim() || "$4.50";
+      const initials = name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) || "ST";
+      const code = `A0${Math.floor(Math.random() * 8 + 1)}DSGN${Math.floor(Math.random() * 900 + 100)} • ${role === "Driver" ? "DRV" : role === "Dispatcher" ? "DSP" : "MNT"}`;
+
+      adminStaffMembersData.unshift({
+        id: `staff-${Date.now()}`,
+        name,
+        staffId: code,
+        initials,
+        avatarClass: "",
+        role,
+        roleKey: role.toLowerCase(),
+        busNo,
+        depot,
+        rate,
+        maxHours: "8 hrs",
+        status: "On Duty",
+        statusKey: "on-duty",
+        statusClass: "on-duty"
+      });
+
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const tbody = screen.querySelector("#staff-table-tbody");
+      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      return;
+    }
   });
 
   screen.addEventListener("input", (event) => {
+    if (event.target.matches("[data-staff-search]")) {
+      staffSearchQuery = event.target.value;
+      const tbody = screen.querySelector("#staff-table-tbody");
+      if (tbody) tbody.innerHTML = renderStaffTableRows();
+    }
+
+    if (event.target.matches("[data-staff-per-page]")) {
+      staffPerPage = Number(event.target.value);
+      const tbody = screen.querySelector("#staff-table-tbody");
+      if (tbody) tbody.innerHTML = renderStaffTableRows();
+    }
+
     if (event.target.matches("[data-faq-search]")) {
       updateFaqResults();
     }
@@ -3446,6 +3902,96 @@
       if (panel) panel.innerHTML = renderDispatchControlPanel();
       const tbody = screen.querySelector("#fleet-telemetry-tbody");
       if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      return;
+    }
+
+    const staffRoleFilter = event.target.closest("[data-staff-role-filter]");
+    if (staffRoleFilter) {
+      activeStaffRoleFilter = staffRoleFilter.dataset.staffRoleFilter;
+      screen.querySelectorAll("[data-staff-role-filter]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn === staffRoleFilter);
+      });
+      const tbody = screen.querySelector("#staff-table-tbody");
+      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      return;
+    }
+
+    const staffActionBtn = event.target.closest("[data-staff-action]");
+    if (staffActionBtn) {
+      const action = staffActionBtn.dataset.staffAction;
+      if (action === "export-csv") {
+        openAdminModal("export-staff-csv");
+      } else if (action === "add-staff") {
+        openAdminModal("add-staff");
+      } else if (action === "open-menu") {
+        const staffId = staffActionBtn.dataset.staffId;
+        openAdminModal(`staff-detail-${staffId}`);
+      } else if (action === "toggle-depot-filter") {
+        if (staffDepotFilter === "all") staffDepotFilter = "Trinoma";
+        else if (staffDepotFilter === "Trinoma") staffDepotFilter = "Malolos";
+        else staffDepotFilter = "all";
+        renderScreen("admin-dashboard");
+      }
+      return;
+    }
+
+    const staffCheckbox = event.target.closest("[data-staff-checkbox]");
+    if (staffCheckbox) {
+      const id = staffCheckbox.dataset.staffCheckbox;
+      if (staffCheckbox.checked) {
+        staffSelectedRows.add(id);
+      } else {
+        staffSelectedRows.delete(id);
+      }
+      return;
+    }
+
+    const staffCheckAll = event.target.closest("[data-staff-check-all]");
+    if (staffCheckAll) {
+      const isChecked = staffCheckAll.checked;
+      adminStaffMembersData.forEach((s) => {
+        if (isChecked) staffSelectedRows.add(s.id);
+        else staffSelectedRows.delete(s.id);
+      });
+      const tbody = screen.querySelector("#staff-table-tbody");
+      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      return;
+    }
+
+    const staffQuickStatus = event.target.closest("[data-staff-quick-status]");
+    if (staffQuickStatus) {
+      const sId = staffQuickStatus.dataset.staffQuickStatus;
+      const s = adminStaffMembersData.find((m) => m.id === sId);
+      if (s) {
+        if (s.status === "On Duty") {
+          s.status = "On Break";
+          s.statusKey = "on-break";
+          s.statusClass = "on-break";
+        } else {
+          s.status = "On Duty";
+          s.statusKey = "on-duty";
+          s.statusClass = "on-duty";
+        }
+      }
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const tbody = screen.querySelector("#staff-table-tbody");
+      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      return;
+    }
+
+    const staffPageBtn = event.target.closest("[data-staff-page]");
+    if (staffPageBtn) {
+      const pageVal = staffPageBtn.dataset.staffPage;
+      if (pageVal === "prev") staffCurrentPage = Math.max(1, staffCurrentPage - 1);
+      else if (pageVal === "next") staffCurrentPage = Math.min(19, staffCurrentPage + 1);
+      else staffCurrentPage = Number(pageVal) || 1;
+      screen.querySelectorAll("[data-staff-page]").forEach((btn) => {
+        if (btn.dataset.staffPage === String(staffCurrentPage)) {
+          btn.classList.add("is-active");
+        } else if (btn.dataset.staffPage !== "prev" && btn.dataset.staffPage !== "next") {
+          btn.classList.remove("is-active");
+        }
+      });
       return;
     }
 
