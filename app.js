@@ -207,6 +207,12 @@
   let staffCurrentPage = 1;
   let staffPerPage = 8;
   let staffSelectedRows = new Set();
+  let activeCameraCorridorFilter = "all";
+  let activeCameraLayout = "3x2"; // "3x2", "2x2", "focus"
+  let focusedCameraId = "cam-01";
+  let cameraAiDetectionEnabled = true;
+  let cameraWaveformTab = "monitor"; // "monitor", "ai", "debug"
+  let cameraSearchQuery = "";
   let predictiveSelectedHour = 17; // 5 PM
   let predictiveTransitLoadScale = 100;
   let predictiveOperatingProfile = "Intercity / Airport";
@@ -1739,6 +1745,443 @@
     </footer>
   `;
 
+  const adminCameraFeedsData = [
+    {
+      id: "cam-01",
+      code: "CAM 3.1/ws",
+      title: "Trinoma Platform Bay 1",
+      corridor: "trinoma",
+      corridorLabel: "Trinoma Hub",
+      image: "assets/cctv/cam1.jpg",
+      status: "LIVE",
+      resolution: "1080p60",
+      bitrate: "4.2 Mbps",
+      latency: "12ms",
+      uptime: "48h 12m",
+      fps: 60,
+      sensorHealth: "Optimal",
+      temp: "42°C",
+      aiDetections: [
+        { label: "PASSENGER: 98%", top: "62%", left: "68%", width: "9%", height: "24%", color: "mint" },
+        { label: "BUS #01: 99%", top: "24%", left: "37%", width: "16%", height: "18%", color: "cyan" },
+        { label: "QUEUE: 8 PAX", top: "33%", left: "61%", width: "11%", height: "14%", color: "amber" }
+      ]
+    },
+    {
+      id: "cam-02",
+      code: "CAM 4.1/ws",
+      title: "Bus 01 Interior Cabin",
+      corridor: "fleet",
+      corridorLabel: "Fleet Onboard",
+      image: "assets/cctv/cam2.jpg",
+      status: "LIVE",
+      resolution: "1080p60",
+      bitrate: "3.8 Mbps",
+      latency: "15ms",
+      uptime: "16h 04m",
+      fps: 60,
+      sensorHealth: "Optimal",
+      temp: "38°C",
+      aiDetections: [
+        { label: "OCCUPANCY: 18/45", top: "38%", left: "55%", width: "18%", height: "35%", color: "mint" },
+        { label: "AISLE: CLEAR", top: "50%", left: "35%", width: "16%", height: "30%", color: "cyan" }
+      ]
+    },
+    {
+      id: "cam-03",
+      code: "CAM 7.1/ws",
+      title: "EDSA Balintawak Corridor",
+      corridor: "edsa",
+      corridorLabel: "EDSA Corridor",
+      image: "assets/cctv/cam3.jpg",
+      status: "LIVE",
+      resolution: "1080p60",
+      bitrate: "5.1 Mbps",
+      latency: "9ms",
+      uptime: "96h 40m",
+      fps: 60,
+      sensorHealth: "Optimal",
+      temp: "44°C",
+      aiDetections: [
+        { label: "PLATE: B347-XZ2 • 52 km/h", top: "58%", left: "42%", width: "18%", height: "28%", color: "amber" },
+        { label: "SPD: 48 km/h", top: "66%", left: "27%", width: "12%", height: "20%", color: "mint" }
+      ]
+    },
+    {
+      id: "cam-04",
+      code: "CAM 5.1/ws",
+      title: "Malolos Maintenance Depot",
+      corridor: "depot",
+      corridorLabel: "Depot Bays",
+      image: "assets/cctv/cam4.jpg",
+      status: "LIVE",
+      resolution: "1080p60",
+      bitrate: "4.0 Mbps",
+      latency: "14ms",
+      uptime: "120h 18m",
+      fps: 60,
+      sensorHealth: "Optimal",
+      temp: "39°C",
+      aiDetections: [
+        { label: "BAY 6 LIFT: ACTIVE", top: "35%", left: "43%", width: "16%", height: "40%", color: "cyan" },
+        { label: "CREW: 1 TECH", top: "68%", left: "48%", width: "6%", height: "18%", color: "mint" }
+      ]
+    },
+    {
+      id: "cam-05",
+      code: "CAM 6.1/ws",
+      title: "Bus 04 Driver Telematics",
+      corridor: "fleet",
+      corridorLabel: "Fleet Onboard",
+      image: "assets/cctv/cam5.jpg",
+      status: "LIVE",
+      resolution: "1080p60",
+      bitrate: "3.6 Mbps",
+      latency: "18ms",
+      uptime: "14h 22m",
+      fps: 60,
+      sensorHealth: "Optimal",
+      temp: "37°C",
+      aiDetections: [
+        { label: "DRIVER: D741 • ALERT", top: "28%", left: "18%", width: "38%", height: "65%", color: "mint" },
+        { label: "TELEMETRY: ACTIVE", top: "60%", left: "72%", width: "16%", height: "24%", color: "cyan" }
+      ]
+    },
+    {
+      id: "cam-06",
+      code: "CAM 8.1/ws",
+      title: "Station Concourse Turnstiles",
+      corridor: "trinoma",
+      corridorLabel: "Trinoma Hub",
+      image: "assets/cctv/cam6.jpg",
+      status: "LIVE",
+      resolution: "1080p60",
+      bitrate: "4.6 Mbps",
+      latency: "11ms",
+      uptime: "72h 55m",
+      fps: 60,
+      sensorHealth: "Optimal",
+      temp: "41°C",
+      aiDetections: [
+        { label: "TURNSTILES: 84 PAX/MIN", top: "48%", left: "26%", width: "42%", height: "30%", color: "cyan" },
+        { label: "CROWD: MODERATE", top: "20%", left: "32%", width: "35%", height: "26%", color: "mint" }
+      ]
+    }
+  ];
+
+  const renderCameraFeedsGrid = () => {
+    let feeds = adminCameraFeedsData;
+    if (activeCameraCorridorFilter !== "all") {
+      feeds = feeds.filter((f) => f.corridor === activeCameraCorridorFilter);
+    }
+    if (cameraSearchQuery.trim()) {
+      const q = cameraSearchQuery.toLowerCase().trim();
+      feeds = feeds.filter((f) => f.title.toLowerCase().includes(q) || f.code.toLowerCase().includes(q) || f.corridorLabel.toLowerCase().includes(q));
+    }
+
+    if (feeds.length === 0) {
+      return `<div class="cctv-no-feeds">No camera feeds match the selected filter.</div>`;
+    }
+
+    if (activeCameraLayout === "focus") {
+      const focusedCam = feeds.find((f) => f.id === focusedCameraId) || feeds[0];
+      return `
+        <div class="cctv-focus-layout">
+          <div class="cctv-focus-main">
+            ${renderSingleCctvFeed(focusedCam, true)}
+          </div>
+          <div class="cctv-focus-thumbnails">
+            ${feeds.map((f) => `
+              <div class="cctv-thumb-card${f.id === focusedCam.id ? " is-active" : ""}" data-cctv-action="focus" data-cctv-id="${f.id}" title="Focus ${f.title}">
+                <img src="${f.image}" alt="${f.title}">
+                <div class="cctv-thumb-meta">
+                  <span class="cctv-thumb-code">${f.code}</span>
+                  <span class="cctv-thumb-name">${f.title}</span>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="cctv-grid-layout layout-${activeCameraLayout}">
+        ${feeds.map((cam) => renderSingleCctvFeed(cam, false)).join("")}
+      </div>
+    `;
+  };
+
+  const renderSingleCctvFeed = (cam, isLarge = false) => {
+    return `
+      <div class="cctv-feed-card${isLarge ? " is-large" : ""}" data-cctv-feed="${cam.id}">
+        <!-- Top OSD Bar -->
+        <div class="cctv-osd-top">
+          <div class="cctv-osd-title-group">
+            <span class="cctv-cam-code">${cam.code}</span>
+            <span class="cctv-cam-name">${cam.title}</span>
+          </div>
+          <div class="cctv-osd-status-group">
+            <span class="cctv-rec-pill">
+              <span class="cctv-rec-dot"></span>
+              <span>REC</span>
+            </span>
+            <span class="cctv-timestamp" data-live-clock>14:48:22 PHT</span>
+            <button class="cctv-btn-expand" type="button" data-cctv-action="focus" data-cctv-id="${cam.id}" title="Focus this camera feed" aria-label="Focus ${cam.code}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Video Viewport with Scanlines, Crosshairs & AI Detections -->
+        <div class="cctv-video-viewport" data-cctv-action="focus" data-cctv-id="${cam.id}">
+          <img src="${cam.image}" alt="${cam.title}" class="cctv-video-img" loading="lazy">
+          <div class="cctv-scanlines"></div>
+          <div class="cctv-crosshair"></div>
+          ${cameraAiDetectionEnabled ? cam.aiDetections.map((det) => `
+            <div class="cctv-ai-box ${det.color}" style="top: ${det.top}; left: ${det.left}; width: ${det.width}; height: ${det.height};">
+              <span class="cctv-ai-label">${det.label}</span>
+            </div>
+          `).join("") : ""}
+        </div>
+
+        <!-- Bottom OSD Bar -->
+        <div class="cctv-osd-bottom">
+          <div class="cctv-telemetry-tags">
+            <span class="cctv-tag">UPTIME <strong>${cam.uptime}</strong></span>
+            <span class="cctv-tag">${cam.resolution}</span>
+            <span class="cctv-tag">${cam.bitrate}</span>
+            <span class="cctv-tag">${cam.latency}</span>
+          </div>
+          <div class="cctv-feed-actions">
+            <button class="cctv-mini-btn" type="button" data-cctv-action="snapshot" data-cctv-id="${cam.id}" title="Capture Snapshot of ${cam.code}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+            <button class="cctv-mini-btn" type="button" data-cctv-action="ptz" data-cctv-id="${cam.id}" title="PTZ & Diagnostics for ${cam.code}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const renderSensorTelemetryWaveform = () => {
+    let strokeColor = "#2fd9a8";
+    let fillColor = "url(#cctv-wave-grad-mint)";
+    let pathD = "M 0 52 C 30 45, 60 70, 90 48 C 120 28, 150 64, 180 50 C 210 36, 240 68, 270 42 C 300 18, 330 62, 360 38 C 390 14, 420 54, 450 32 C 480 12, 510 46, 540 28 L 540 85 L 0 85 Z";
+    let lineD = "M 0 52 C 30 45, 60 70, 90 48 C 120 28, 150 64, 180 50 C 210 36, 240 68, 270 42 C 300 18, 330 62, 360 38 C 390 14, 420 54, 450 32 C 480 12, 510 46, 540 28";
+
+    if (cameraWaveformTab === "ai") {
+      strokeColor = "#38bdf8";
+      fillColor = "url(#cctv-wave-grad-blue)";
+      pathD = "M 0 65 C 40 60, 80 40, 120 42 C 160 45, 200 20, 240 22 C 280 25, 320 50, 360 48 C 400 45, 440 15, 480 20 C 510 25, 530 40, 540 38 L 540 85 L 0 85 Z";
+      lineD = "M 0 65 C 40 60, 80 40, 120 42 C 160 45, 200 20, 240 22 C 280 25, 320 50, 360 48 C 400 45, 440 15, 480 20 C 510 25, 530 40, 540 38";
+    } else if (cameraWaveformTab === "debug") {
+      strokeColor = "#f59e0b";
+      fillColor = "url(#cctv-wave-grad-amber)";
+      pathD = "M 0 70 C 45 68, 90 62, 135 60 C 180 58, 225 35, 270 36 C 315 38, 360 70, 405 66 C 450 62, 495 42, 540 45 L 540 85 L 0 85 Z";
+      lineD = "M 0 70 C 45 68, 90 62, 135 60 C 180 58, 225 35, 270 36 C 315 38, 360 70, 405 66 C 450 62, 495 42, 540 45";
+    }
+
+    return `
+      <div class="cctv-waveform-inner">
+        <svg viewBox="0 0 540 85" class="cctv-waveform-svg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="cctv-wave-grad-mint" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2fd9a8" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#2fd9a8" stop-opacity="0.0"/>
+            </linearGradient>
+            <linearGradient id="cctv-wave-grad-blue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0"/>
+            </linearGradient>
+            <linearGradient id="cctv-wave-grad-amber" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="20" x2="540" y2="20" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4 4"/>
+          <line x1="0" y1="45" x2="540" y2="45" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4 4"/>
+          <line x1="0" y1="70" x2="540" y2="70" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4 4"/>
+          <path d="${pathD}" fill="${fillColor}" />
+          <path d="${lineD}" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="cctv-wave-footer">
+          <span>Signal: <strong style="color: ${strokeColor};">100 Hz</strong></span>
+          <span>Buffer: <strong style="color: #cbd5e1;">1024 frames</strong></span>
+          <span>Drop: <strong style="color: #2fd9a8;">0.00%</strong></span>
+        </div>
+      </div>
+    `;
+  };
+
+  const adminSensorCameraView = () => `
+    <!-- Top Header -->
+    <header class="admin-header-row">
+      <div class="admin-header-title-box">
+        <h1 class="admin-header-title">Sensor &amp; Camera Management</h1>
+      </div>
+
+      <div class="admin-header-actions">
+        <!-- Search Feeds -->
+        <div class="staff-header-search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" class="staff-header-search-input" placeholder="Filter camera or ID..." value="${escapeHtml(cameraSearchQuery)}" data-cctv-search aria-label="Filter camera feeds">
+        </div>
+
+        <!-- Corridor Selector -->
+        <select class="admin-select-corridor" data-cctv-filter aria-label="Filter camera corridor">
+          <option value="all"${activeCameraCorridorFilter === "all" ? " selected" : ""}>All Corridors (6)</option>
+          <option value="trinoma"${activeCameraCorridorFilter === "trinoma" ? " selected" : ""}>Trinoma Hub (2)</option>
+          <option value="fleet"${activeCameraCorridorFilter === "fleet" ? " selected" : ""}>Fleet Onboard (2)</option>
+          <option value="edsa"${activeCameraCorridorFilter === "edsa" ? " selected" : ""}>EDSA Corridor (1)</option>
+          <option value="depot"${activeCameraCorridorFilter === "depot" ? " selected" : ""}>Depot Bays (1)</option>
+        </select>
+
+        <!-- Layout Controls -->
+        <div class="cctv-layout-switcher" role="group" aria-label="Camera grid layouts">
+          <button class="cctv-layout-btn${activeCameraLayout === "3x2" ? " is-active" : ""}" type="button" data-cctv-layout="3x2" title="3x2 Grid View">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="4.5" height="7" rx="1"/><rect x="9.75" y="3" width="4.5" height="7" rx="1"/><rect x="16.5" y="3" width="4.5" height="7" rx="1"/><rect x="3" y="14" width="4.5" height="7" rx="1"/><rect x="9.75" y="14" width="4.5" height="7" rx="1"/><rect x="16.5" y="14" width="4.5" height="7" rx="1"/></svg>
+            <span>3×2</span>
+          </button>
+          <button class="cctv-layout-btn${activeCameraLayout === "2x2" ? " is-active" : ""}" type="button" data-cctv-layout="2x2" title="2x2 Quad View">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="7.5" rx="1"/><rect x="13" y="3" width="8" height="7.5" rx="1"/><rect x="3" y="13.5" width="8" height="7.5" rx="1"/><rect x="13" y="13.5" width="8" height="7.5" rx="1"/></svg>
+            <span>2×2</span>
+          </button>
+          <button class="cctv-layout-btn${activeCameraLayout === "focus" ? " is-active" : ""}" type="button" data-cctv-layout="focus" title="Focus Single Camera View">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            <span>Focus</span>
+          </button>
+        </div>
+
+        <!-- AI HUD Toggle -->
+        <button class="cctv-btn-ai${cameraAiDetectionEnabled ? " is-active" : ""}" type="button" data-cctv-toggle-ai title="Toggle AI Object &amp; Passenger Bounding Boxes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <span>AI HUD: ${cameraAiDetectionEnabled ? "ON" : "OFF"}</span>
+        </button>
+
+        <!-- Register Camera Button -->
+        <button class="staff-btn-add-member" type="button" data-cctv-action="add-device">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>+ Add Feed</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Surveillance Camera Grid Container -->
+    <section class="cctv-surveillance-container" id="cctv-grid-container">
+      ${renderCameraFeedsGrid()}
+    </section>
+
+    <!-- Lower Settings & Telemetry Waveform Console (Matching Design Reference) -->
+    <section class="cctv-console-grid">
+      <!-- Left: Settings & Hardware Specifications -->
+      <div class="cctv-settings-card">
+        <div class="cctv-console-card-header">
+          <div class="cctv-console-title-group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span class="cctv-console-title">Settings</span>
+            <span class="cctv-code-tag">SES-008</span>
+          </div>
+          <span class="cctv-badge-secure">AES-256 ENCRYPTED</span>
+        </div>
+
+        <div class="cctv-settings-columns">
+          <!-- Col 1: General -->
+          <div class="cctv-setting-col">
+            <h4 class="cctv-col-heading">General</h4>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Input latency</span>
+              <span class="cctv-v accent">100ms</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Memory</span>
+              <span class="cctv-v">2048mb</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Uptime</span>
+              <span class="cctv-v">99.98%</span>
+            </div>
+          </div>
+
+          <!-- Col 2: Network -->
+          <div class="cctv-setting-col">
+            <h4 class="cctv-col-heading">Network</h4>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Workgroup</span>
+              <span class="cctv-v">SES-008</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Security</span>
+              <span class="cctv-v">256-bit encryption</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Firewall</span>
+              <span class="cctv-v green">enabled</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">IP status</span>
+              <span class="cctv-v">Static</span>
+            </div>
+          </div>
+
+          <!-- Col 3: Time and Date -->
+          <div class="cctv-setting-col">
+            <h4 class="cctv-col-heading">Time and Date</h4>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Time zone</span>
+              <span class="cctv-v">+8:00</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Date Format</span>
+              <span class="cctv-v">dd/mm/yy</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">24H</span>
+              <span class="cctv-v green">enabled</span>
+            </div>
+          </div>
+
+          <!-- Col 4: Monitoring Options -->
+          <div class="cctv-setting-col">
+            <h4 class="cctv-col-heading">Monitoring Options</h4>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Refresh Rate</span>
+              <span class="cctv-v">100</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">Sensors buffer</span>
+              <span class="cctv-v">1024</span>
+            </div>
+            <div class="cctv-kv-item">
+              <span class="cctv-k">View</span>
+              <span class="cctv-v">00:19</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Real-time Waveform Monitor -->
+      <div class="cctv-waveform-card">
+        <div class="cctv-console-card-header">
+          <div class="cctv-waveform-tabs">
+            <button class="cctv-tab-btn${cameraWaveformTab === "monitor" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="monitor">Monitor</button>
+            <button class="cctv-tab-btn${cameraWaveformTab === "ai" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="ai">Run AI</button>
+            <button class="cctv-tab-btn${cameraWaveformTab === "debug" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="debug">Debug</button>
+          </div>
+          <button class="cctv-btn-calibrate" type="button" data-cctv-action="calibrate" title="Calibrate optical &amp; telemetry sensors">
+            <span>Calibrate</span>
+          </button>
+        </div>
+
+        <div id="cctv-waveform-container">
+          ${renderSensorTelemetryWaveform()}
+        </div>
+      </div>
+    </section>
+  `;
+
   const adminDashboardScreen = () => `
     <div class="admin-dashboard-layout" data-admin-screen="dashboard">
       <!-- Left Sidebar -->
@@ -1799,7 +2242,9 @@
             ? adminFleetDispatchView()
             : activeAdminSidebarTab === "staff-resources"
               ? adminStaffResourcesView()
-              : adminLiveOperationsView()}
+              : activeAdminSidebarTab === "sensor-camera"
+                ? adminSensorCameraView()
+                : adminLiveOperationsView()}
       </main>
     </div>`;
 
@@ -2028,6 +2473,108 @@
           </button>
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
         </div>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("cctv-snapshot-")) {
+      const camId = type.replace("cctv-snapshot-", "");
+      const cam = adminCameraFeedsData.find((c) => c.id === camId) || adminCameraFeedsData[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+      title = `Snapshot Saved — ${cam.code}`;
+      desc = `Full-resolution 1080p frame captured with cryptographic timecode.<br>Feed: <strong>${cam.title}</strong> · Corridor: <strong>${cam.corridorLabel}</strong>`;
+      customHtml = `
+        <div style="margin: 14px 0; border-radius: 8px; overflow: hidden; border: 1px solid #1e2838; position: relative;">
+          <img src="${cam.image}" alt="${cam.title}" style="width: 100%; height: 180px; object-fit: cover; display: block;">
+          <div style="position: absolute; bottom: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; font-size: 10px; color: #cbd5e1; background: rgba(10,15,22,0.85); padding: 4px 8px; border-radius: 4px;">
+            <span>${cam.code} • 1920x1080 @ 60fps</span>
+            <span style="color: #2fd9a8;">SHA256: 8a4f...91c0</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
+          <button class="admin-modal-button-primary" type="button" data-admin-modal-close>Download High-Res (PNG)</button>
+        </div>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("cctv-ptz-")) {
+      const camId = type.replace("cctv-ptz-", "");
+      const cam = adminCameraFeedsData.find((c) => c.id === camId) || adminCameraFeedsData[0];
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>`;
+      title = `PTZ Diagnostics — ${cam.code}`;
+      desc = `Remote motorized optical control for <strong>${cam.title}</strong>.`;
+      customHtml = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; text-align: left;">
+          <div style="background: #0f1622; padding: 12px; border-radius: 8px; border: 1px solid #1e2838; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+            <span style="font-size: 10px; color: #64748b; font-weight: 700;">PAN / TILT MOTOR</span>
+            <div style="display: grid; grid-template-columns: repeat(3, 32px); gap: 4px; margin-top: 4px;">
+              <div></div>
+              <button class="cctv-ptz-pad-btn" type="button" data-cctv-ptz-dir="up" title="Tilt Up">▲</button>
+              <div></div>
+              <button class="cctv-ptz-pad-btn" type="button" data-cctv-ptz-dir="left" title="Pan Left">◀</button>
+              <div style="display:grid; place-items:center; font-size:9px; color:#2fd9a8;">PTZ</div>
+              <button class="cctv-ptz-pad-btn" type="button" data-cctv-ptz-dir="right" title="Pan Right">▶</button>
+              <div></div>
+              <button class="cctv-ptz-pad-btn" type="button" data-cctv-ptz-dir="down" title="Tilt Down">▼</button>
+              <div></div>
+            </div>
+          </div>
+
+          <div style="background: #0f1622; padding: 12px; border-radius: 8px; border: 1px solid #1e2838; font-size: 11px; display: flex; flex-direction: column; gap: 6px;">
+            <div><span style="color:#64748b;">Sensor Temp:</span> <strong style="color:#ffffff;">${cam.temp}</strong></div>
+            <div><span style="color:#64748b;">Bitrate:</span> <strong style="color:#2fd9a8;">${cam.bitrate}</strong></div>
+            <div><span style="color:#64748b;">Latency:</span> <strong style="color:#38bdf8;">${cam.latency}</strong></div>
+            <div><span style="color:#64748b;">Firmware:</span> <strong style="color:#cbd5e1;">v4.18.2-rtsp</strong></div>
+            <div><span style="color:#64748b;">IR Night Mode:</span> <strong style="color:#2fd9a8;">Auto-Sens</strong></div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close Diagnostics</button>
+          <button class="admin-modal-button-primary" type="button" data-admin-modal-close>Recalibrate Optics</button>
+        </div>
+      `;
+      isInfoOnly = true;
+    } else if (type === "cctv-calibrate") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`;
+      title = "Sensor Calibration Synchronized";
+      desc = "All 24 transit IoT optical, LiDAR, and telematics sensors successfully calibrated across 3 corridors.<br><br>• Optical clock jitter: <strong>0.02ms</strong><br>• Edge AI Inference Latency: <strong>8.4ms</strong><br>• Zero dropped frames across WebRTC streams.";
+      primaryBtn = "Done";
+      isInfoOnly = true;
+    } else if (type === "cctv-add-device") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+      title = "Register Surveillance Feed";
+      desc = "Enroll a new RTSP / WebRTC camera unit or telemetry sensor hub into USAD mesh.";
+      customHtml = `
+        <form class="admin-login-form" data-cctv-add-feed-form style="margin-top: 14px; text-align: left;">
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Camera Identifier / Name</label>
+            <input class="admin-input" id="new-cam-title" placeholder="e.g. CAM 9.1/ws — Balintawak South Gate" required style="height: 38px;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Zone</label>
+              <select class="admin-input" id="new-cam-corridor" style="height: 38px;">
+                <option value="trinoma">Trinoma Hub</option>
+                <option value="fleet">Fleet Onboard</option>
+                <option value="edsa">EDSA Corridor</option>
+                <option value="depot">Depot Bays</option>
+              </select>
+            </div>
+            <div class="admin-form-field">
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Stream Protocol</label>
+              <select class="admin-input" id="new-cam-protocol" style="height: 38px;">
+                <option value="webrtc">WebRTC (Ultra Low Latency)</option>
+                <option value="rtsp">RTSP over TLS</option>
+              </select>
+            </div>
+          </div>
+          <div class="admin-form-field">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">RTSP URL / Static IP</label>
+            <input class="admin-input" id="new-cam-ip" placeholder="rtsp://10.24.0.42:554/live/feed" value="rtsp://10.24.0.42:554/live/feed" style="height: 38px;">
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="submit">Connect &amp; Stream</button>
+          </div>
+        </form>
       `;
       isInfoOnly = true;
     }
@@ -3569,9 +4116,45 @@
       if (tbody) tbody.innerHTML = renderStaffTableRows();
       return;
     }
+
+    if (event.target.matches("[data-cctv-add-feed-form]")) {
+      event.preventDefault();
+      const title = screen.querySelector("#new-cam-title")?.value?.trim() || "New Camera Unit";
+      const corridor = screen.querySelector("#new-cam-corridor")?.value || "trinoma";
+      const nextNum = adminCameraFeedsData.length + 1;
+      adminCameraFeedsData.unshift({
+        id: `cam-${Date.now()}`,
+        code: `CAM ${nextNum}.1/ws`,
+        title,
+        corridor,
+        corridorLabel: corridor === "trinoma" ? "Trinoma Hub" : corridor === "fleet" ? "Fleet Onboard" : corridor === "edsa" ? "EDSA Corridor" : "Depot Bays",
+        image: "assets/cctv/cam1.jpg",
+        status: "LIVE",
+        resolution: "1080p60",
+        bitrate: "4.2 Mbps",
+        latency: "12ms",
+        uptime: "0h 01m",
+        fps: 60,
+        sensorHealth: "Optimal",
+        temp: "39°C",
+        aiDetections: [
+          { label: "STREAM ACTIVE", top: "45%", left: "40%", width: "20%", height: "20%", color: "mint" }
+        ]
+      });
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const grid = screen.querySelector("#cctv-grid-container");
+      if (grid) grid.innerHTML = renderCameraFeedsGrid();
+      return;
+    }
   });
 
   screen.addEventListener("input", (event) => {
+    if (event.target.matches("[data-cctv-search]")) {
+      cameraSearchQuery = event.target.value;
+      const grid = screen.querySelector("#cctv-grid-container");
+      if (grid) grid.innerHTML = renderCameraFeedsGrid();
+    }
+
     if (event.target.matches("[data-staff-search]")) {
       staffSearchQuery = event.target.value;
       const tbody = screen.querySelector("#staff-table-tbody");
@@ -3675,6 +4258,12 @@
 
     if (event.target.matches("[data-admin-corridor]")) {
       activeCorridorFilter = event.target.value;
+    }
+
+    if (event.target.matches("[data-cctv-filter]")) {
+      activeCameraCorridorFilter = event.target.value;
+      const grid = screen.querySelector("#cctv-grid-container");
+      if (grid) grid.innerHTML = renderCameraFeedsGrid();
     }
 
     if (event.target.matches("[data-analytics-profile]")) {
@@ -4010,6 +4599,74 @@
           btn.classList.remove("is-active");
         }
       });
+      return;
+    }
+
+    const cctvLayoutBtn = event.target.closest("[data-cctv-layout]");
+    if (cctvLayoutBtn) {
+      activeCameraLayout = cctvLayoutBtn.dataset.cctvLayout;
+      screen.querySelectorAll("[data-cctv-layout]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn === cctvLayoutBtn);
+      });
+      const grid = screen.querySelector("#cctv-grid-container");
+      if (grid) grid.innerHTML = renderCameraFeedsGrid();
+      return;
+    }
+
+    const cctvToggleAiBtn = event.target.closest("[data-cctv-toggle-ai]");
+    if (cctvToggleAiBtn) {
+      cameraAiDetectionEnabled = !cameraAiDetectionEnabled;
+      cctvToggleAiBtn.classList.toggle("is-active", cameraAiDetectionEnabled);
+      const span = cctvToggleAiBtn.querySelector("span");
+      if (span) span.textContent = `AI HUD: ${cameraAiDetectionEnabled ? "ON" : "OFF"}`;
+      const grid = screen.querySelector("#cctv-grid-container");
+      if (grid) grid.innerHTML = renderCameraFeedsGrid();
+      return;
+    }
+
+    const cctvWaveformTabBtn = event.target.closest("[data-cctv-waveform-tab]");
+    if (cctvWaveformTabBtn) {
+      cameraWaveformTab = cctvWaveformTabBtn.dataset.cctvWaveformTab;
+      screen.querySelectorAll("[data-cctv-waveform-tab]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn === cctvWaveformTabBtn);
+      });
+      const container = screen.querySelector("#cctv-waveform-container");
+      if (container) container.innerHTML = renderSensorTelemetryWaveform();
+      return;
+    }
+
+    const cctvActionBtn = event.target.closest("[data-cctv-action]");
+    if (cctvActionBtn) {
+      const action = cctvActionBtn.dataset.cctvAction;
+      const camId = cctvActionBtn.dataset.cctvId;
+      if (action === "focus") {
+        if (activeCameraLayout === "focus" && focusedCameraId === camId) {
+          activeCameraLayout = "3x2";
+        } else {
+          focusedCameraId = camId || "cam-01";
+          activeCameraLayout = "focus";
+        }
+        screen.querySelectorAll("[data-cctv-layout]").forEach((btn) => {
+          btn.classList.toggle("is-active", btn.dataset.cctvLayout === activeCameraLayout);
+        });
+        const grid = screen.querySelector("#cctv-grid-container");
+        if (grid) grid.innerHTML = renderCameraFeedsGrid();
+      } else if (action === "snapshot") {
+        openAdminModal(`cctv-snapshot-${camId}`);
+      } else if (action === "ptz") {
+        openAdminModal(`cctv-ptz-${camId}`);
+      } else if (action === "calibrate") {
+        openAdminModal("cctv-calibrate");
+      } else if (action === "add-device") {
+        openAdminModal("cctv-add-device");
+      }
+      return;
+    }
+
+    const ptzPadBtn = event.target.closest("[data-cctv-ptz-dir]");
+    if (ptzPadBtn) {
+      ptzPadBtn.style.transform = "scale(0.85)";
+      setTimeout(() => { if (ptzPadBtn) ptzPadBtn.style.transform = ""; }, 150);
       return;
     }
 
