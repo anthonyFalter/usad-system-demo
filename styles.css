@@ -4194,25 +4194,6 @@ input:focus-visible,
   color: var(--brand);
 }
 
-.admin-badge-sync {
-  font-size: 10px;
-  font-weight: 600;
-  color: #64748b;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 2px 7px;
-}
-
-.admin-badge-swaps {
-  font-size: 10px;
-  font-weight: 600;
-  color: #f87171;
-  background: #251014;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  border-radius: 10px;
-  padding: 2px 7px;
-}
-
 /* Comments List */
 .admin-comments-list {
   display: flex;
@@ -5162,8 +5143,7 @@ input:focus-visible,
 
 .telemetry-card-title-wrap {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
 }
 
 .telemetry-card-title {
@@ -5171,11 +5151,6 @@ input:focus-visible,
   font-size: 14px;
   font-weight: 700;
   color: #ffffff;
-}
-
-.telemetry-card-synced {
-  font-size: 11px;
-  color: #64748b;
 }
 
 .telemetry-filter-tabs {
@@ -5429,15 +5404,14 @@ input:focus-visible,
 
 .dispatch-panel-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
 
 .dispatch-panel-title-wrap {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
 }
 
 .dispatch-panel-title {
@@ -5445,12 +5419,6 @@ input:focus-visible,
   font-size: 15px;
   font-weight: 700;
   color: #ffffff;
-}
-
-.dispatch-panel-synced {
-  font-size: 11px;
-  color: #2fd9a8;
-  font-weight: 600;
 }
 
 .dispatch-unit-badge {
@@ -6150,55 +6118,6 @@ input:focus-visible,
 }
 
 /* Bottom Status Bar */
-.staff-bottom-status-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 14px;
-  font-size: 11px;
-  color: #72849a;
-  padding: 4px 0;
-}
-
-.staff-bottom-status-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.staff-status-pulse-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #2fd9a8;
-  box-shadow: 0 0 6px #2fd9a8;
-}
-
-.staff-status-sync-text {
-  color: #cbd5e1;
-  font-weight: 500;
-}
-
-.staff-status-divider {
-  color: #475569;
-}
-
-.staff-handover-alert strong {
-  color: #ffffff;
-}
-
-.staff-bottom-status-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 11px;
-  color: #64748b;
-}
-
-.staff-bottom-status-right strong {
-  color: #2fd9a8;
-}
-
 /* ==========================================================================
    USAD Sensor & Camera Management Styles
    ========================================================================== */
@@ -6358,34 +6277,6 @@ input:focus-visible,
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.cctv-rec-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  padding: 1px 6px;
-  border-radius: 4px;
-  letter-spacing: 0.04em;
-}
-
-.cctv-rec-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 6px #ef4444;
-  animation: cctv-blink 1.2s infinite ease-in-out;
-}
-
-@keyframes cctv-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
 }
 
 .cctv-timestamp {
@@ -6633,28 +6524,6 @@ input:focus-visible,
   width: 14px;
   height: 14px;
   color: #2fd9a8;
-}
-
-.cctv-code-tag {
-  font-family: monospace;
-  font-size: 10px;
-  font-weight: 700;
-  color: #38bdf8;
-  background: #0d2030;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-.cctv-badge-secure {
-  font-size: 9px;
-  font-weight: 700;
-  color: #2fd9a8;
-  background: #08211a;
-  border: 1px solid rgba(47, 217, 168, 0.3);
-  padding: 2px 7px;
-  border-radius: 10px;
-  letter-spacing: 0.04em;
 }
 
 .cctv-settings-columns {

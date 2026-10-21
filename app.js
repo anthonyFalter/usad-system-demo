@@ -655,7 +655,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span>RECENT MAINTENANCE &amp; DISPATCH COMMENTS</span>
           </div>
-          <span class="admin-badge-sync">Live Sync</span>
         </div>
         <div class="admin-comments-list">
           ${adminCommentsData.map((c) => `
@@ -680,7 +679,6 @@
           <div class="admin-card-header-left">
             <span>Upcoming Shift</span>
           </div>
-          <span class="admin-badge-swaps">2 Swaps</span>
         </div>
         <div class="admin-shifts-list">
           ${adminShiftsData.map((shift) => `
@@ -792,9 +790,6 @@
           <span class="legend-item"><span class="legend-dot blue"></span><span style="color: #93c5fd;">Normal</span></span>
           <span class="legend-item"><span class="legend-dot green"></span><span style="color: #6ee7b7;">Low</span></span>
         </div>
-        <div class="analytics-confidence">
-          Model Confidence: <strong style="color: #2fd9a8;">96.4%</strong> <span style="color: #64748b;">(Updated 4 mins ago)</span>
-        </div>
       </div>
 
       <!-- Chart Wrap -->
@@ -870,12 +865,8 @@
             <div class="card-icon-badge gold">
               <span style="font-size: 13px; font-weight: 700;">₱</span>
             </div>
-            <div>
-              <div style="font-size: 13px; font-weight: 700; color: #fff;">Economic Conditions</div>
-              <div style="font-size: 10.5px; color: #72849a;">Fuel Elasticity &amp; Shift</div>
-            </div>
+            <div style="font-size: 13px; font-weight: 700; color: #fff;">Economic Conditions</div>
           </div>
-          <span class="analytics-pill-badge badge-gold">Shift: +18%</span>
         </div>
 
         <div class="analytics-subbox">
@@ -899,12 +890,8 @@
             <div class="card-icon-badge cyan">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
             </div>
-            <div>
-              <div style="font-size: 13px; font-weight: 700; color: #fff;">Weather &amp; Monsoon Impact</div>
-              <div style="font-size: 10.5px; color: #72849a;">SW Habagat Doppler Feed</div>
-            </div>
+            <div style="font-size: 13px; font-weight: 700; color: #fff;">Weather &amp; Monsoon Impact</div>
           </div>
-          <span class="analytics-pill-badge badge-cyan">Heavy Rain</span>
         </div>
 
         <div class="analytics-subbox">
@@ -928,12 +915,8 @@
             <div class="card-icon-badge mint">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <div>
-              <div style="font-size: 13px; font-weight: 700; color: #fff;">AI Dispatch Recommendation</div>
-              <div style="font-size: 10.5px; color: #72849a;">Auto-Optimization Ready</div>
-            </div>
+            <div style="font-size: 13px; font-weight: 700; color: #fff;">AI Dispatch Recommendation</div>
           </div>
-          <span class="analytics-pill-badge badge-mint">High Priority</span>
         </div>
 
         <div class="analytics-subbox" style="padding: 10px 12px;">
@@ -957,7 +940,6 @@
       id: "bus-01",
       unitCode: "UNIT #01",
       busNo: "01",
-      badge: "ACTIVE",
       category: "delayed",
       tripName: "Northbound Express",
       routeCorridor: "Trinoma / SM North Corridor",
@@ -982,7 +964,6 @@
       id: "bus-02",
       unitCode: "UNIT #02",
       busNo: "02",
-      badge: "",
       category: "deployed",
       tripName: "Northbound Local",
       routeCorridor: "EDSA Carousel Loop",
@@ -1007,7 +988,6 @@
       id: "bus-14",
       unitCode: "UNIT #14",
       busNo: "14",
-      badge: "",
       category: "terminal",
       tripName: "Southbound Trunk",
       routeCorridor: "SM North to PITX Express",
@@ -1032,7 +1012,6 @@
       id: "bus-08",
       unitCode: "UNIT #08",
       busNo: "08",
-      badge: "",
       category: "deployed",
       tripName: "East-West Connector",
       routeCorridor: "Quezon Ave Rapid",
@@ -1100,7 +1079,6 @@
             <div class="bus-cell-badge-wrap">
               <span class="bus-active-dot${bus.dotClass ? " " + bus.dotClass : ""}"></span>
               <span class="bus-number-text">${bus.busNo}</span>
-              ${bus.badge ? `<span class="bus-badge-active-pill">${bus.badge}</span>` : ""}
             </div>
           </td>
           <td>
@@ -1141,14 +1119,13 @@
         <header class="dispatch-panel-header">
           <div class="dispatch-panel-title-wrap">
             <h2 class="dispatch-panel-title">Dispatch Control Panel</h2>
-            <span class="dispatch-panel-synced">Target Unit Synchronized</span>
           </div>
           <span class="dispatch-unit-badge">${unit.unitCode}</span>
         </header>
 
         <!-- Active Selection Box -->
         <div class="dispatch-active-selection-box">
-          <span class="selection-box-label">ACTIVE SELECTION</span>
+          <span class="selection-box-label">Selected Bus</span>
           <div class="selection-box-title-row">
             <h3 class="selection-bus-heading">Bus No. ${unit.busNo} — ${unit.tripName}</h3>
             <button class="selection-clock-btn" type="button" title="View Schedule Headway">
@@ -1328,16 +1305,10 @@
       </div>
 
       <div class="admin-header-actions">
-        <div class="admin-header-pills-row">
-          <span class="admin-header-pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span data-live-clock>14:48:22 PHT</span>
-          </span>
-          <span class="admin-header-pill">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            <span>31°C · EDSA Corridor: Moderate</span>
-          </span>
-        </div>
+        <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>+ Assign Dispatch</span>
+        </button>
       </div>
     </header>
 
@@ -1383,7 +1354,6 @@
           <div class="telemetry-table-header-row">
             <div class="telemetry-card-title-wrap">
               <h2 class="telemetry-card-title">Active Fleet Telemetry</h2>
-              <span class="telemetry-card-synced">(Synced to dispatch console)</span>
             </div>
 
             <div class="telemetry-filter-tabs">
@@ -1731,21 +1701,6 @@
         <span class="staff-pagination-count">Showing 1-8 of 148 staff</span>
       </div>
     </section>
-
-    <!-- Bottom Status Bar -->
-    <footer class="staff-bottom-status-bar">
-      <div class="staff-bottom-status-left">
-        <span class="staff-status-pulse-dot"></span>
-        <span class="staff-status-sync-text">Real-time Telemetry Sync Active</span>
-        <span class="staff-status-divider">•</span>
-        <span class="staff-handover-alert">Next Shift Handover window: <strong>16:00 PHT (Shift B deployment at Trinoma Hub)</strong></span>
-      </div>
-
-      <div class="staff-bottom-status-right">
-        <span>Server latency: <strong>18ms</strong></span>
-        <span>USAD v3.4.1 Fleet Edition</span>
-      </div>
-    </footer>
   `;
 
   const adminCameraFeedsData = [
@@ -1826,7 +1781,7 @@
       sensorHealth: "Optimal",
       temp: "39°C",
       aiDetections: [
-        { label: "BAY 6 LIFT: ACTIVE", top: "35%", left: "43%", width: "16%", height: "40%", color: "cyan" },
+        { label: "BAY 6 HYDRAULIC LIFT", top: "35%", left: "43%", width: "16%", height: "40%", color: "cyan" },
         { label: "CREW: 1 TECH", top: "68%", left: "48%", width: "6%", height: "18%", color: "mint" }
       ]
     },
@@ -1847,7 +1802,7 @@
       temp: "37°C",
       aiDetections: [
         { label: "DRIVER: D741 • ALERT", top: "28%", left: "18%", width: "38%", height: "65%", color: "mint" },
-        { label: "TELEMETRY: ACTIVE", top: "60%", left: "72%", width: "16%", height: "24%", color: "cyan" }
+        { label: "DASHBOARD CLUSTER", top: "60%", left: "72%", width: "16%", height: "24%", color: "cyan" }
       ]
     },
     {
@@ -1925,10 +1880,6 @@
             <span class="cctv-cam-name">${cam.title}</span>
           </div>
           <div class="cctv-osd-status-group">
-            <span class="cctv-rec-pill">
-              <span class="cctv-rec-dot"></span>
-              <span>REC</span>
-            </span>
             <span class="cctv-timestamp" data-live-clock>14:48:22 PHT</span>
             <button class="cctv-btn-expand" type="button" data-cctv-action="focus" data-cctv-id="${cam.id}" title="Focus this camera feed" aria-label="Focus ${cam.code}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
@@ -2135,9 +2086,7 @@
           <div class="cctv-console-title-group">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             <span class="cctv-console-title">Settings</span>
-            <span class="cctv-code-tag">SES-008</span>
           </div>
-          <span class="cctv-badge-secure">AES-256 ENCRYPTED</span>
         </div>
 
         <div class="cctv-settings-columns">
@@ -2162,20 +2111,12 @@
           <div class="cctv-setting-col">
             <h4 class="cctv-col-heading">Network</h4>
             <div class="cctv-kv-item">
-              <span class="cctv-k">Workgroup</span>
-              <span class="cctv-v">SES-008</span>
-            </div>
-            <div class="cctv-kv-item">
-              <span class="cctv-k">Security</span>
-              <span class="cctv-v">256-bit encryption</span>
+              <span class="cctv-k">IP status</span>
+              <span class="cctv-v">Static</span>
             </div>
             <div class="cctv-kv-item">
               <span class="cctv-k">Firewall</span>
               <span class="cctv-v green">enabled</span>
-            </div>
-            <div class="cctv-kv-item">
-              <span class="cctv-k">IP status</span>
-              <span class="cctv-v">Static</span>
             </div>
           </div>
 
@@ -2587,8 +2528,8 @@
       isInfoOnly = true;
     } else if (type === "cctv-calibrate") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`;
-      title = "Sensor Calibration Synchronized";
-      desc = "All 24 transit IoT optical, LiDAR, and telematics sensors successfully calibrated across 3 corridors.<br><br>• Optical clock jitter: <strong>0.02ms</strong><br>• Edge AI Inference Latency: <strong>8.4ms</strong><br>• Zero dropped frames across WebRTC streams.";
+      title = "Sensor Calibration";
+      desc = "Optical alignment and telematics diagnostics completed for all active camera feeds.";
       primaryBtn = "Done";
       isInfoOnly = true;
     } else if (type === "cctv-add-device") {
@@ -3021,7 +2962,6 @@
           <div class="seat-capacity-sticky">
             <header class="seat-capacity-header">
               <div class="seat-capacity-title-wrap">
-                <span class="seat-live-badge"><i></i> Live</span>
                 <h2>Find Available Seats</h2>
               </div>
               <button class="seat-capacity-back" type="button" data-screen="live-map" aria-label="Back to live map">‹</button>
@@ -4190,9 +4130,7 @@
         fps: 60,
         sensorHealth: "Optimal",
         temp: "39°C",
-        aiDetections: [
-          { label: "STREAM ACTIVE", top: "45%", left: "40%", width: "20%", height: "20%", color: "mint" }
-        ]
+        aiDetections: []
       });
       screen.querySelector(".admin-modal-backdrop")?.remove();
       const grid = screen.querySelector("#cctv-grid-container");
