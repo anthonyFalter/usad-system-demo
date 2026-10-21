@@ -492,7 +492,6 @@
     <header class="admin-header-row">
       <div class="admin-header-title-box">
         <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
-        <p class="admin-header-subtitle">Real-time urban transit status, active vehicle telemetry, driver shifts, and maintenance records.</p>
       </div>
 
       <div class="admin-header-actions">
@@ -1317,7 +1316,6 @@
     <header class="admin-header-row">
       <div class="admin-header-title-box">
         <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
-        <p class="admin-header-subtitle">Live GPS fleet tracking, real-time telemetry, automated headway scheduling, and dispatcher control.</p>
       </div>
 
       <div class="admin-header-actions">
@@ -1619,11 +1617,7 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <div style="display: flex; align-items: center;">
-          <h1 class="admin-header-title">Staff and Resources</h1>
-          <span class="staff-header-roster-badge">Active Roster</span>
-        </div>
-        <p class="admin-header-subtitle">Personnel scheduling, roster telemetry, live route assignment &amp; operational readiness</p>
+        <h1 class="admin-header-title">Staff and Resources</h1>
       </div>
 
       <div class="admin-header-actions">
