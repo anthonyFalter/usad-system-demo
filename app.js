@@ -187,6 +187,7 @@
   let activeCorridorFilter = "all";
   let activeAdminSidebarTab = "live-operations";
   let selectedDispatchBusId = "bus-01";
+  let fleetDispatchTelemetryUnits = [];
   let dispatchTelemetryFilter = "all";
   let dispatchCorridorFilter = "edsa";
   let dispatchMapZoom = 1;
@@ -215,6 +216,14 @@
   let activeReportsCorridor = "all"; // "all", "trinoma", "edsa", "malolos", "c5"
   let reportsSearchQuery = "";
   let selectedReportDetailId = "REP-2026-1048";
+  function getDispatchSnapshot() {
+    const movingUnits = fleetDispatchTelemetryUnits.filter((unit) => unit.category === "deployed" || unit.category === "delayed");
+    const delayedUnits = movingUnits.filter((unit) => unit.category === "delayed");
+    const nearFullUnits = fleetDispatchTelemetryUnits.filter((unit) => unit.occupancyPct >= 90);
+    const terminalUnits = fleetDispatchTelemetryUnits.filter((unit) => unit.category === "terminal");
+    return { movingUnits, delayedUnits, nearFullUnits, terminalUnits };
+  }
+
   const reportingSummary = {
     revenueMonthToDate: 1248650,
     cashRevenueMonthToDate: 784400,
@@ -223,9 +232,6 @@
     passengersMonthToDate: 142880,
     passengersAveragePerDay: 4760,
     concessionPassengersMonthToDate: 31420,
-    onTimeRate: 92.8,
-    dispatchedTrips: 2184,
-    averageDelayMinutes: 2.1,
     dieselLiters: 18420,
     operatingKilometers: 63010,
     fleetEfficiency: 3.42,
@@ -347,7 +353,7 @@
     const metricsContainer = screen.querySelector("#analytics-metrics-container");
     if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
     const yAxis = screen.querySelector(".chart-y-axis");
-    if (yAxis) yAxis.innerHTML = `${renderPredictiveYAxis()}<span style="color: #64748b; font-size: 10px; margin-top: 4px;">Commuters / day</span>`;
+    if (yAxis) yAxis.innerHTML = `${renderPredictiveYAxis()}<span style="color: #64748b; font-size: 10px; margin-top: 4px;">Commuters / week</span>`;
   };
 
   const adminFleetData = [
@@ -551,7 +557,13 @@
     `).join("");
   };
 
-  const adminLiveOperationsView = () => `
+  const adminLiveOperationsView = () => {
+    const dispatchSnapshot = getDispatchSnapshot();
+    const onTimeUnits = dispatchSnapshot.movingUnits.filter((unit) => unit.statusType === "on-time");
+    const delayedUnitsSummary = dispatchSnapshot.delayedUnits.map((unit) => `Bus ${unit.busNo} · ${unit.statusText.replace("Delayed ", "")}`).join(", ") || "No delayed units in the sample";
+    const nearFullUnitsSummary = dispatchSnapshot.nearFullUnits.map((unit) => `Bus ${unit.busNo} · ${unit.occupancyPct}% full · ${unit.occupancySeats}`).join(", ") || "No near-full buses in the sample";
+    const rosterCount = (category) => adminFleetData.filter((bus) => bus.filterCategory === category).length;
+    return `
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
@@ -572,42 +584,42 @@
       </div>
     </header>
 
+    <p class="admin-kpi-context">Sample operational snapshot · Vehicle positions, occupancy and revenue are illustrative, not live.</p>
     <section class="admin-metrics-grid" aria-label="Live operations key performance indicators">
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">Average revenue per day</span>
-          <span class="admin-pill-badge badge-registered">Month to date</span>
+          <span class="admin-metric-label">Units on route</span>
+          <span class="admin-pill-badge badge-registered">${fleetDispatchTelemetryUnits.length} tracked</span>
         </div>
-        <div class="bento-metric-figure green">${formatPhp(dailyRevenue.total)}</div>
-        <span class="bento-metric-sublabel">${formatPhp(dailyRevenue.cash)} cash · ${formatPhp(dailyRevenue.pouch)} U-Pouch</span>
-        <span class="bento-metric-sublabel">${reportingSummary.revenueDaysElapsed} days · month-to-date fare revenue</span>
+        <div class="bento-metric-figure green">${dispatchSnapshot.movingUnits.length} / ${fleetDispatchTelemetryUnits.length}</div>
+        <span class="bento-metric-sublabel">${onTimeUnits.length} on time · ${dispatchSnapshot.delayedUnits.length} delayed · ${dispatchSnapshot.terminalUnits.length} at terminal</span>
       </article>
 
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">Passengers (month to date)</span>
-          <span class="admin-pill-badge badge-registered">92.4% load</span>
+          <span class="admin-metric-label">Delayed units</span>
+          <span class="admin-pill-badge badge-cost">Needs attention</span>
         </div>
-        <div class="bento-metric-figure">${reportingSummary.passengersMonthToDate.toLocaleString()} pax</div>
-        <span class="bento-metric-sublabel">Avg. ${reportingSummary.passengersAveragePerDay.toLocaleString()} pax/day · ${reportingSummary.concessionPassengersMonthToDate.toLocaleString()} concession fares</span>
+        <div class="bento-metric-figure${dispatchSnapshot.delayedUnits.length ? " red" : " green"}">${dispatchSnapshot.delayedUnits.length}</div>
+        <span class="bento-metric-sublabel">${delayedUnitsSummary}</span>
       </article>
 
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">Fleet on-time rate</span>
-          <span class="admin-pill-badge badge-total">Target: 90.0%</span>
+          <span class="admin-metric-label">Near-full buses</span>
+          <span class="admin-pill-badge badge-cost">≥90% occupancy</span>
         </div>
-        <div class="bento-metric-figure green">${reportingSummary.onTimeRate}% OTP</div>
-        <span class="bento-metric-sublabel">${reportingSummary.dispatchedTrips.toLocaleString()} trips dispatched · Avg. delay: +${reportingSummary.averageDelayMinutes}m</span>
+        <div class="bento-metric-figure${dispatchSnapshot.nearFullUnits.length ? " red" : " green"}">${dispatchSnapshot.nearFullUnits.length}</div>
+        <span class="bento-metric-sublabel">${nearFullUnitsSummary}</span>
       </article>
 
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">Fuel &amp; operating mileage</span>
-          <span class="admin-pill-badge badge-total">${reportingSummary.dieselLiters.toLocaleString()} L diesel</span>
+          <span class="admin-metric-label">Fare revenue run rate</span>
+          <span class="admin-pill-badge badge-total">MTD avg / day</span>
         </div>
-        <div class="bento-metric-figure">${reportingSummary.operatingKilometers.toLocaleString()} km</div>
-        <span class="bento-metric-sublabel">${reportingSummary.fleetEfficiency} km/L fleet efficiency · Cost: ₱${reportingSummary.operatingCostPerKilometer}/km</span>
+        <div class="bento-metric-figure">${formatPhp(dailyRevenue.total)}</div>
+        <span class="bento-metric-sublabel">From ${formatPhp(reportingSummary.revenueMonthToDate)} fare revenue over ${reportingSummary.revenueDaysElapsed} days</span>
       </article>
     </section>
 
@@ -616,10 +628,10 @@
       <div class="admin-directory-header">
         <h2 class="admin-directory-title">Active Fleet Vehicles &amp; Dispatch Directory</h2>
         <div class="admin-directory-tabs" role="tablist">
-          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Live (8)</button>
-          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Duty (6)</button>
-          <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (1)</button>
-          <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (1)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Units (${adminFleetData.length})</button>
+          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Duty (${rosterCount("on-duty")})</button>
+          <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (${rosterCount("on-break")})</button>
+          <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (${rosterCount("standby")})</button>
         </div>
         <div class="admin-table-search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -757,6 +769,7 @@
       </article>
     </section>
   `;
+  };
 
   const adminPredictiveAnalyticsView = () => `
     <!-- Top Title & Action Header -->
@@ -880,7 +893,7 @@
     </section>
   `;
 
-  const fleetDispatchTelemetryUnits = [
+  fleetDispatchTelemetryUnits = [
     {
       id: "bus-01",
       unitCode: "UNIT #01",
@@ -1003,7 +1016,6 @@
       dotClass: "mint"
     }
   ];
-
   const renderFleetTelemetryRows = () => {
     const list = fleetDispatchTelemetryUnits.filter((u) => {
       if (dispatchTelemetryFilter === "deployed") return u.category === "deployed";
@@ -2423,7 +2435,9 @@
     `).join("");
   };
 
-  const adminReportsView = () => `
+  const adminReportsView = () => {
+    const dispatchSnapshot = getDispatchSnapshot();
+    return `
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
@@ -2460,46 +2474,42 @@
       </div>
     </header>
 
-    <!-- 4 Bento KPI Cards -->
+    <p class="admin-kpi-context">Sample figures · Revenue, ridership and fuel metrics are month to date; active buses is an illustrative dispatch snapshot, not a connected live feed. The period filter applies to the report library.</p>
     <section class="reports-kpi-grid" aria-label="Executive Operational Totals">
-      <!-- 1. Total Fare Revenue -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">Average fare revenue per day (MTD)</span>
-          <span class="reports-growth-badge positive">+6.8% vs last mo</span>
+          <span class="reports-kpi-label">Fare revenue (MTD)</span>
+          <span class="reports-growth-badge neutral">Month to date</span>
         </div>
-        <div class="reports-kpi-figure">${formatPhp(dailyRevenue.total)}/day</div>
-        <div class="reports-kpi-sub">₱${reportingSummary.revenueMonthToDate.toLocaleString()} MTD ÷ ${reportingSummary.revenueDaysElapsed} days · Cash/day: <strong>${formatPhp(dailyRevenue.cash)}</strong> · U-Pouch/day: <strong>${formatPhp(dailyRevenue.pouch)}</strong></div>
+        <div class="reports-kpi-figure">${formatPhp(reportingSummary.revenueMonthToDate)}</div>
+        <div class="reports-kpi-sub">Average ${formatPhp(dailyRevenue.total)}/day · Cash: <strong>${formatPhp(reportingSummary.cashRevenueMonthToDate)}</strong> · U-Pouch: <strong>${formatPhp(reportingSummary.pouchRevenueMonthToDate)}</strong></div>
       </article>
 
-      <!-- 2. Passenger Volume -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">Total passengers (MTD)</span>
-          <span class="reports-growth-badge positive">92.4% Load</span>
+          <span class="reports-kpi-label">Passengers (MTD)</span>
+          <span class="reports-growth-badge neutral">Period total</span>
         </div>
         <div class="reports-kpi-figure">${reportingSummary.passengersMonthToDate.toLocaleString()} Pax</div>
-        <div class="reports-kpi-sub">Avg ${reportingSummary.passengersAveragePerDay.toLocaleString()} pax/day · <strong>${reportingSummary.concessionPassengersMonthToDate.toLocaleString()}</strong> Concession/Student Fares</div>
+        <div class="reports-kpi-sub">Average ${reportingSummary.passengersAveragePerDay.toLocaleString()} pax/day · <strong>${reportingSummary.concessionPassengersMonthToDate.toLocaleString()}</strong> concession/student fares</div>
       </article>
 
-      <!-- 3. Fleet On-Time Performance -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">Fleet on-time rate</span>
-          <span class="reports-growth-badge target">Target: 90.0%</span>
+          <span class="reports-kpi-label">Active buses (live)</span>
+          <span class="reports-growth-badge neutral">${fleetDispatchTelemetryUnits.length} tracked</span>
         </div>
-        <div class="reports-kpi-figure accent">${reportingSummary.onTimeRate}% OTP</div>
-        <div class="reports-kpi-sub">${reportingSummary.dispatchedTrips.toLocaleString()} Trips Dispatched · Avg delay: <strong>+${reportingSummary.averageDelayMinutes}m</strong></div>
+        <div class="reports-kpi-figure accent">${dispatchSnapshot.movingUnits.length} buses</div>
+        <div class="reports-kpi-sub">${dispatchSnapshot.movingUnits.filter((unit) => unit.statusType === "on-time").length} on time · <strong>${dispatchSnapshot.delayedUnits.length} delayed</strong> · ${dispatchSnapshot.terminalUnits.length} at terminal</div>
       </article>
 
-      <!-- 4. Fuel & Operating Mileage -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">Fuel &amp; operating mileage</span>
-          <span class="reports-growth-badge neutral">${reportingSummary.dieselLiters.toLocaleString()} L Diesel</span>
+          <span class="reports-kpi-label">Fuel efficiency (MTD)</span>
+          <span class="reports-growth-badge neutral">${reportingSummary.dieselLiters.toLocaleString()} L diesel</span>
         </div>
-        <div class="reports-kpi-figure">${reportingSummary.operatingKilometers.toLocaleString()} km</div>
-        <div class="reports-kpi-sub">${reportingSummary.fleetEfficiency} km/L Fleet Efficiency · Cost: <strong>₱${reportingSummary.operatingCostPerKilometer}/km</strong></div>
+        <div class="reports-kpi-figure">${reportingSummary.fleetEfficiency} km/L</div>
+        <div class="reports-kpi-sub">${reportingSummary.operatingKilometers.toLocaleString()} km operated · Cost: <strong>₱${reportingSummary.operatingCostPerKilometer}/km</strong></div>
       </article>
     </section>
 
@@ -2576,6 +2586,7 @@
       </section>
     </div>
   `;
+  };
 
   const adminDashboardScreen = () => `
     <div class="admin-dashboard-layout" data-admin-screen="dashboard">

@@ -3821,6 +3821,13 @@ input:focus-visible,
   gap: 16px;
 }
 
+.admin-kpi-context {
+  margin: -8px 0;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .admin-metric-card {
   background: #111827;
   border: 1px solid #1e293b;
@@ -7074,6 +7081,20 @@ input:focus-visible,
   margin-bottom: 24px;
 }
 
+@media (max-width: 1280px) {
+  .admin-metrics-grid,
+  .reports-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-metrics-grid,
+  .reports-kpi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .reports-kpi-card {
   background: #111827;
   border: 1px solid #1e293b;
@@ -7598,8 +7619,6 @@ input:focus-visible,
   background: #334155;
   color: #ffffff;
 }
-
-
 
 
 

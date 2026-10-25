@@ -34,7 +34,7 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 - Passenger-demand visibility is intended to inform route and schedule adjustments.
 - The initiative aims to support public utility vehicle modernization by improving the broader commuting experience as well as vehicle operations.
 - The user-side prototype includes login and email validation, registration and verification states, a commuter home dashboard, an illustrative live-map screen, booking/ticket flows, scrollable Account Information settings, and searchable/category-filtered FAQs.
-- The admin-side prototype introduces the dark-themed Admin login with provisioned-only account access (self-registration disabled), error alert states, biometric and RFID smart-card authentication, and the Saraza TRD Operations & Dispatch console.
+- The admin-side prototype introduces the dark-themed Admin login with provisioned-only account access (self-registration disabled), error alert states, biometric and RFID smart-card authentication, and the Saraza TRD Operations & Dispatch console. Live Operations prioritizes units on route, delays, near-full vehicles, and the month-to-date average daily fare revenue; Reports presents month-to-date revenue, ridership, on-time performance, and fuel-efficiency summaries alongside its report library.
 
 ## Brand Commitments
 
@@ -47,7 +47,7 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 
 - UI reference image is supplied in the request.
 - Existing image assets are in `assets/3d-images/`.
-- No live transit feed, authentication, booking service, payment processor, or operations dataset is provided for this UI-only prototype. The map, vehicles, availability, ETAs, registration/verification, booking, and tickets are illustrative interactions only; do not claim that services or data are live.
+- No live transit feed, authentication, booking service, payment processor, or operations dataset is provided for this UI-only prototype. The map, vehicles, availability, ETAs, registration/verification, booking, tickets, admin operational KPIs, and reports are illustrative interactions only; do not claim that services or data are live.
 
 ## Product Principles
 
