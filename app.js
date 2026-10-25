@@ -14,6 +14,15 @@
     throw new Error("USAD prototype could not initialize: required interface elements are missing.");
   }
 
+  const routes = window.USAD_ROUTES;
+  if (!Array.isArray(routes) || routes.length === 0) {
+    throw new Error("USAD prototype could not initialize: active route data is missing.");
+  }
+  const activeRoute = routes[0];
+  const renderRouteOptions = (selectedRouteId = activeRoute.id) => routes.map((route) => `
+    <option value="${route.id}"${selectedRouteId === route.id ? " selected" : ""}>${route.label}</option>
+  `).join("");
+
   let currentRole = "user";
   let adminShowError = false;
   let mobileLoginShowError = false;
@@ -52,8 +61,8 @@
     password: "DemoPassword123!",
   };
   const notifications = [
-    { id: "bus-arrival", type: "ride", title: "Your bus is approaching", body: "Malolos → North Avenue · Bus 01 is about 3 minutes away.", time: "2 min ago", unread: true },
-    { id: "booking-confirmed", type: "ticket", title: "Booking confirmed", body: "Your sample trip to Trinoma is ready to view in My Tickets.", time: "Yesterday", unread: true },
+    { id: "bus-arrival", type: "ride", title: "Your bus is approaching", body: `${activeRoute.name} · Bus 01 is about 3 minutes away.`, time: "2 min ago", unread: true },
+    { id: "booking-confirmed", type: "ticket", title: "Booking confirmed", body: `Your sample trip to ${activeRoute.destinationShort} is ready to view in My Tickets.`, time: "Yesterday", unread: true },
     { id: "service-update", type: "service", title: "Service update", body: "This is a sample service notice. Live service alerts are not connected.", time: "Oct 14", unread: false },
     { id: "fare-offer", type: "promo", title: "A little more in your U-Pouch", body: "Explore the sample offers shown in the app. No offer is active.", time: "Oct 12", unread: false },
   ];
@@ -70,22 +79,22 @@
   let discountVerificationStatus = "unverified";
   let discountVerificationMessage = "";
   let tripHistory = [
-    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Barangka, Malolos", destination: "Trinoma Landmark Bus Bay", destinationDetail: "Via North Luzon Expy (NLEX)", fare: 80, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true, receiptLabel: "E-Ticket & Receipt", showRateAction: true, rebookLabel: "Rebook" },
-    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: "Trinoma EDSA Terminal", originDetail: "North Avenue P2P Lounge", destination: "Robinsons Place Malolos", destinationDetail: "Express via Tabang Exit", fare: 80, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true, receiptLabel: "Receipt", rebookLabel: "Rebook Route" },
-    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: "Robinsons Place Malolos", originDetail: "Express Lane 2", destination: "SM North EDSA / Trinoma", destinationDetail: "North Station Drop-off", fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
-    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: "Trinoma Landmark Bus Bay", originDetail: "Trip cancelled by operator", destination: "Robinsons Place Malolos", destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
+    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: 80, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true, receiptLabel: "E-Ticket & Receipt", showRateAction: true, rebookLabel: "Rebook" },
+    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: activeRoute.destination, originDetail: activeRoute.destinationShort, destination: activeRoute.origin, destinationDetail: `Via ${activeRoute.via}`, fare: 80, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true, receiptLabel: "Receipt", rebookLabel: "Rebook Route" },
+    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
+    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: activeRoute.destination, originDetail: "Trip cancelled by operator", destination: activeRoute.origin, destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
   ];
   let tripData = {
-    origin: "Robinsons Place Malolos",
-    destination: "Trinoma",
+    origin: activeRoute.origin,
+    destination: activeRoute.destinationShort,
     passengers: 1,
     payment: "GCash",
     seat: "1A",
   };
   let bookingConfirmed = false;
   const liveBusDetails = [
-    { name: "Bus 01", fleetId: "MLS-042", route: "Malolos → Trinoma", eta: "3 min", seats: 8, fare: "₱80.00", status: "On time" },
-    { name: "Bus 02", fleetId: "MLS-018", route: "Malolos → Trinoma", eta: "Less than 1 min", seats: 1, fare: "₱80.00", status: "On time" },
+    { name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: "₱80.00", status: "On time" },
+    { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: "₱80.00", status: "On time" },
   ];
   let selectedLiveBus = 0;
   let selectedBusSeatId = "";
@@ -184,12 +193,14 @@
 
   let activeFleetFilter = "all";
   let fleetSearchQuery = "";
-  let activeCorridorFilter = "all";
+  let activeCorridorFilter = activeRoute.id;
   let activeAdminSidebarTab = "fleet-dispatch";
   let selectedDispatchBusId = "bus-01";
   let dispatchPanelOpen = false;
+  let selectedDispatchSeatBooking = null;
+  let dispatchAssignmentPanelOpen = false;
+  let nextWalkInBookingNumber = 1;
   let dispatchTelemetryFilter = "all";
-  let dispatchCorridorFilter = "edsa";
   let dispatchMapZoom = 1;
   let dispatchLayersActive = true;
   let dispatchNoteInput = "";
@@ -212,7 +223,7 @@
   let staffCurrentPage = 1;
   let staffPerPage = 8;
   let staffSelectedRows = new Set();
-  let activeCameraCorridorFilter = "all";
+  let activeCameraLocationFilter = "all";
   let activeCameraLayout = "3x2"; // "3x2", "2x2", "focus"
   let focusedCameraId = "cam-01";
   let cameraAiDetectionEnabled = true;
@@ -223,10 +234,10 @@
   let cameraSearchQuery = "";
   let predictiveSelectedHour = 17; // 5 PM
   let predictiveTransitLoadScale = 100;
-  let predictiveOperatingProfile = "Intercity / Airport";
+  let predictiveOperatingProfile = "Standard Service";
   let activeReportsCategoryFilter = "all"; // "all", "financial", "otp", "crew", "fuel"
   let activeReportsDateRange = "month"; // "month", "today", "week", "last-month", "q3"
-  let activeReportsCorridor = "all"; // "all", "trinoma", "edsa", "malolos", "c5"
+  let activeReportsCorridor = activeRoute.id;
   let reportsSearchQuery = "";
   let selectedReportDetailId = "REP-2026-1048";
 
@@ -313,7 +324,8 @@
       busNo: "Bus 01",
       driver: "Jocky King Garcia",
       dispatcher: "Klintroy Suerte Felipe",
-      route: "Trinoma Express",
+      routeId: activeRoute.id,
+      route: activeRoute.label,
       fuel: "86% Fuel",
       fuelType: "cyan",
       speed: "42 km/h",
@@ -329,7 +341,8 @@
       busNo: "Bus 02",
       driver: "Cyrhyl Naval",
       dispatcher: "Ross Anthony Jobs",
-      route: "Trinoma Feeder",
+      routeId: activeRoute.id,
+      route: activeRoute.label,
       fuel: "54% Fuel",
       fuelType: "yellow",
       speed: "0 km/h (Depot)",
@@ -345,7 +358,8 @@
       busNo: "Bus 03",
       driver: "Eldrei Acero",
       dispatcher: "—",
-      route: "Trinoma Reserve",
+      routeId: activeRoute.id,
+      route: activeRoute.label,
       fuel: "92% Fuel",
       fuelType: "cyan",
       speed: "Parked",
@@ -361,7 +375,8 @@
       busNo: "Bus 04",
       driver: "Royce Zaldivar",
       dispatcher: "John Dela Cruz",
-      route: "Trinoma Express",
+      routeId: activeRoute.id,
+      route: activeRoute.label,
       fuel: "71% Fuel",
       fuelType: "cyan",
       speed: "55 km/h",
@@ -377,7 +392,8 @@
       busNo: "Bus 05",
       driver: "Jericho Rosales",
       dispatcher: "Wanda Maximoff",
-      route: "Trinoma Loop",
+      routeId: activeRoute.id,
+      route: activeRoute.label,
       fuel: "62% Fuel",
       fuelType: "cyan",
       speed: "38 km/h",
@@ -386,14 +402,15 @@
       statusClass: "on-duty",
       dot: "green",
       filterCategory: "on-duty",
-      telemetry: { speed: "38 km/h", fuel: "62%", gps: "14.6540° N, 121.0330° E (North Avenue EDSA)", tire: "34 PSI", temp: "87°C", passengers: "16 / 24", oil: "Optimal" }
+      telemetry: { speed: "38 km/h", fuel: "62%",       gps: "14.6540° N, 121.0330° E (Trinoma)", tire: "34 PSI", temp: "87°C", passengers: "16 / 24", oil: "Optimal" }
     },
     {
       id: "bus-06",
       busNo: "Bus 06",
       driver: "Joshua Garcia",
       dispatcher: "Piolo Pascual",
-      route: "Malolos Central",
+      routeId: activeRoute.id,
+      route: activeRoute.label,
       fuel: "90% Fuel",
       fuelType: "cyan",
       speed: "48 km/h",
@@ -405,6 +422,174 @@
       telemetry: { speed: "48 km/h", fuel: "90%", gps: "14.8620° N, 120.8220° E (Malolos Crossing)", tire: "34 PSI", temp: "89°C", passengers: "14 / 24", oil: "Optimal" }
     }
   ];
+
+  const BUS_TOTAL_SEAT_CAPACITY = 15;
+  const EMPLOYEE_RESERVED_SEATS = [
+    { id: "1A", role: "Driver" },
+    { id: "1B", role: "Conductor" }
+  ];
+  const PASSENGER_SEAT_CAPACITY = BUS_TOTAL_SEAT_CAPACITY - EMPLOYEE_RESERVED_SEATS.length;
+
+  const getSeatCounts = (bus) => {
+    const match = /^(\d+)\s*\/\s*(\d+)\s*passenger seats$/i.exec(bus.occupancySeats);
+    if (!match) throw new Error(`USAD seat management could not read passenger capacity for ${bus.busNo}.`);
+    const passengerCapacity = Number(match[2]);
+    if (passengerCapacity !== PASSENGER_SEAT_CAPACITY) {
+      throw new Error(`USAD seat management received invalid occupancy data for ${bus.busNo}.`);
+    }
+    if (!Number.isInteger(bus.sampleOccupiedSeats)) bus.sampleOccupiedSeats = Number(match[1]);
+    if (!Array.isArray(bus.walkInBookings)) bus.walkInBookings = [];
+    if (!Array.isArray(bus.releasedSampleSeatIds)) bus.releasedSampleSeatIds = [];
+    const occupied = bus.sampleOccupiedSeats - bus.releasedSampleSeatIds.length + bus.walkInBookings.length;
+    if (occupied > passengerCapacity) {
+      throw new Error(`USAD seat management received invalid occupancy data for ${bus.busNo}.`);
+    }
+    return {
+      occupied,
+      passengerCapacity,
+      reserved: EMPLOYEE_RESERVED_SEATS.length,
+      totalCapacity: BUS_TOTAL_SEAT_CAPACITY,
+      available: passengerCapacity - occupied,
+      occupancy: Math.floor((occupied / passengerCapacity) * 100)
+    };
+  };
+
+  const getSampleSeatBooking = (bus, passengerSeatIndex) => {
+    const busCode = bus.busNo.replace(/\D/g, "").padStart(2, "0").slice(-2);
+    const bookingNumber = `${busCode}${String(passengerSeatIndex + 1).padStart(2, "0")}`;
+    const bookedAt = new Date(Date.UTC(2026, 9, 25, 6) + (Number(busCode) * 7 + passengerSeatIndex * 11) * 60 * 1000);
+    const formattedBookedAt = new Intl.DateTimeFormat("en-PH", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Manila"
+    }).format(bookedAt);
+
+    return {
+      reference: `BK-••••-${bookingNumber}`,
+      bookedAt: `${formattedBookedAt} PHT`
+    };
+  };
+
+  const getPassengerSeatIndex = (seatId) => {
+    const match = /^(\d+)([AB])$/.exec(seatId);
+    if (!match) return -1;
+    const seatIndex = (Number(match[1]) - 1) * 2 + (match[2] === "B" ? 1 : 0);
+    const passengerSeatIndex = seatIndex - EMPLOYEE_RESERVED_SEATS.length;
+    return passengerSeatIndex >= 0 && passengerSeatIndex < PASSENGER_SEAT_CAPACITY ? passengerSeatIndex : -1;
+  };
+
+  const getBookingForSeat = (bus, seatId) => {
+    const passengerSeatIndex = getPassengerSeatIndex(seatId);
+    if (passengerSeatIndex < 0) return null;
+    const walkInBooking = (bus.walkInBookings || []).find((booking) => booking.seatId === seatId);
+    if (walkInBooking) return walkInBooking;
+    if ((bus.releasedSampleSeatIds || []).includes(seatId)) return null;
+    return passengerSeatIndex < bus.sampleOccupiedSeats
+      ? { seatId, ...getSampleSeatBooking(bus, passengerSeatIndex), walkIn: false }
+      : null;
+  };
+
+  const createWalkInBooking = (bus, seatId) => {
+    const busCode = bus.busNo.replace(/\D/g, "").padStart(2, "0").slice(-2);
+    const timestamp = new Date();
+    const formattedBookedAt = new Intl.DateTimeFormat("en-PH", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Manila"
+    }).format(timestamp);
+
+    return {
+      seatId,
+      reference: `BK-••••-${busCode}${String(nextWalkInBookingNumber++).padStart(4, "0")}`,
+      bookedAt: `${formattedBookedAt} PHT`,
+      walkIn: true
+    };
+  };
+
+  const updateFleetOccupancyDisplay = (bus) => {
+    const { occupied, passengerCapacity, occupancy } = getSeatCounts(bus);
+    bus.occupancyPct = occupancy;
+    bus.occupancySeats = `${occupied}/${passengerCapacity} passenger seats`;
+    bus.occupancyPassengers = `${occupancy}% (${occupied} / ${passengerCapacity} passenger seats)`;
+  };
+
+  const renderDispatchSeatBookingDetails = (bus) => {
+    if (!selectedDispatchSeatBooking) {
+      return `<p>Select an available seat to book a walk-in customer, or an occupied seat to view its booking.</p>`;
+    }
+
+    if (selectedDispatchSeatBooking.type === "available") {
+      return `
+        <div class="dispatch-seat-booking-heading">
+          <span>Seat ${escapeHtml(selectedDispatchSeatBooking.seatId)} is available</span>
+        </div>
+        <p>No passenger details are required for this walk-in booking.</p>
+        <button class="dispatch-seat-book-button" type="button" data-book-walk-in-seat="${escapeHtml(selectedDispatchSeatBooking.seatId)}">
+          Book walk-in customer
+        </button>
+      `;
+    }
+
+    if (selectedDispatchSeatBooking.type === "released") {
+      return `<p class="dispatch-seat-release-success">Seat ${escapeHtml(selectedDispatchSeatBooking.seatId)} is available again. Customer departure recorded.</p>`;
+    }
+
+    if (selectedDispatchSeatBooking.busId !== bus.id) {
+      return `<p>Select an available seat to book a walk-in customer, or an occupied seat to view its booking.</p>`;
+    }
+
+    if (selectedDispatchSeatBooking.confirmingRelease) {
+      return `
+        <div class="dispatch-seat-release-confirmation" role="group" aria-label="Confirm customer departure">
+          <p>Confirm that the customer has reached their destination and left the bus before releasing this seat.</p>
+          <div>
+            <button class="dispatch-seat-release-confirm" type="button" data-confirm-seat-release="${escapeHtml(selectedDispatchSeatBooking.seatId)}">Confirm customer left</button>
+            <button class="dispatch-seat-release-cancel" type="button" data-cancel-seat-release>Keep seat booked</button>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="dispatch-seat-booking-heading">
+        <span>Seat ${escapeHtml(selectedDispatchSeatBooking.seatId)} booking${selectedDispatchSeatBooking.walkIn ? " · Walk-in" : ""}</span>
+      </div>
+      <dl>
+        <div><dt>Booking ID</dt><dd>${escapeHtml(selectedDispatchSeatBooking.reference)}</dd></div>
+        <div><dt>Date &amp; time booked</dt><dd>${escapeHtml(selectedDispatchSeatBooking.bookedAt)}</dd></div>
+      </dl>
+      <button class="dispatch-seat-release-button" type="button" data-start-seat-release="${escapeHtml(selectedDispatchSeatBooking.seatId)}">Customer left bus</button>
+    `;
+  };
+
+  const renderAdminSeatLayout = ({ occupied }, bookingLookupBus) => {
+    const seatLetters = ["A", "B"];
+    const rowCount = Math.ceil(BUS_TOTAL_SEAT_CAPACITY / seatLetters.length);
+    return Array.from({ length: rowCount }, (_, rowIndex) => {
+      const rowSeats = seatLetters.map((letter, seatIndex) => {
+        const seatIndexInBus = rowIndex * seatLetters.length + seatIndex;
+        if (seatIndexInBus >= BUS_TOTAL_SEAT_CAPACITY) return `<span aria-hidden="true"></span>`;
+        const seatId = `${rowIndex + 1}${letter}`;
+        const reservedSeat = EMPLOYEE_RESERVED_SEATS.find((seat) => seat.id === seatId);
+        if (reservedSeat) {
+          return `<span class="admin-seat is-reserved" title="Reserved for ${reservedSeat.role.toLowerCase()}" aria-label="Seat ${seatId}, reserved for ${reservedSeat.role.toLowerCase()}">${seatId} · ${reservedSeat.role}</span>`;
+        }
+        const existingBooking = bookingLookupBus ? getBookingForSeat(bookingLookupBus, seatId) : null;
+        const seatState = existingBooking ? "is-occupied" : "is-available";
+        if (seatState === "is-occupied" && bookingLookupBus) {
+          const booking = existingBooking;
+          const isBookingSelected = selectedDispatchSeatBooking?.seatId === seatId;
+          return `<button class="admin-seat ${seatState}${isBookingSelected ? " is-selected" : ""}" type="button" data-dispatch-booking-seat="${seatId}" aria-pressed="${isBookingSelected}" aria-label="Seat ${seatId}, occupied. View masked booking details">${seatId}</button>`;
+        }
+        if (bookingLookupBus) {
+          const isSeatSelected = selectedDispatchSeatBooking?.type === "available" && selectedDispatchSeatBooking.seatId === seatId;
+          return `<button class="admin-seat ${seatState}${isSeatSelected ? " is-selected" : ""}" type="button" data-dispatch-available-seat="${seatId}" aria-pressed="${isSeatSelected}" aria-label="Seat ${seatId}, available. Select to book a walk-in customer">${seatId}</button>`;
+        }
+        return `<span class="admin-seat ${seatState}" aria-label="Seat ${seatId}, ${seatState === "is-occupied" ? "occupied" : "available"}">${seatId}</span>`;
+      });
+      return `<div class="admin-seat-row">${rowSeats[0]}<span class="admin-seat-aisle" aria-hidden="true"></span>${rowSeats[1]}</div>`;
+    }).join("");
+  };
 
   const adminCommentsData = [
     {
@@ -433,14 +618,14 @@
       tag: "#160312",
       tagColor: "gold",
       time: "3 hours ago",
-      text: "Heavy congestion logged at Trinoma junction - rerouting Bus 04 via feeder."
+      text: `Heavy congestion near ${activeRoute.destinationShort} - rerouting Bus 04 within the active route.`
     },
     {
       author: "Robert Watkins",
       tag: "#160312",
       tagColor: "gold",
       time: "3 hours ago",
-      text: "Heavy congestion logged at Trinoma junction - rerouting Bus 04 via feeder."
+      text: `Heavy congestion near ${activeRoute.destinationShort} - rerouting Bus 04 within the active route.`
     }
   ];
 
@@ -468,6 +653,7 @@
   const renderAdminFleetRows = () => {
     const query = fleetSearchQuery.toLowerCase().trim();
     const rows = adminFleetData.filter((item) => {
+      if (item.routeId !== activeCorridorFilter) return false;
       if (activeFleetFilter === "on-duty" && item.filterCategory !== "on-duty") return false;
       if (activeFleetFilter === "on-break" && item.filterCategory !== "on-break") return false;
       if (activeFleetFilter === "standby" && item.filterCategory !== "standby") return false;
@@ -515,19 +701,16 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
+        <h1 class="admin-header-title">Dashboard</h1>
       </div>
 
       <div class="admin-header-actions">
-        <select class="admin-select-corridor" data-admin-corridor aria-label="Select Corridors">
-          <option value="all">All Corridors (Trinoma / Malolos / EDSA)</option>
-          <option value="trinoma">Trinoma Express Corridor</option>
-          <option value="malolos">Malolos Central Loop</option>
-          <option value="feeder">NLEX Feeder Route</option>
+        <select class="admin-select-corridor" data-admin-corridor aria-label="Select Route">
+          ${renderRouteOptions(activeCorridorFilter)}
         </select>
         <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Assign Dispatch</span>
+          <span>Assign a Bus</span>
         </button>
       </div>
     </header>
@@ -608,7 +791,7 @@
         <div class="admin-shift-rate-content">
           <div class="admin-shift-text-box">
             <div class="bento-metric-figure green">88%</div>
-            <span class="admin-shift-corridors">6 of 6 Critical Corridors Covered</span>
+            <span class="admin-shift-corridors">6 of 6 key routes covered</span>
           </div>
           <div class="admin-donut-wrap">
             <svg class="admin-donut-svg" viewBox="0 0 36 36">
@@ -624,10 +807,10 @@
     <!-- Active Fleet Vehicles & Dispatch Directory -->
     <section class="admin-directory-panel">
       <div class="admin-directory-header">
-        <h2 class="admin-directory-title">Active Fleet Vehicles &amp; Dispatch Directory</h2>
+        <h2 class="admin-directory-title">Buses &amp; Assignments</h2>
         <div class="admin-directory-tabs" role="tablist">
-          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Live (8)</button>
-          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Duty (6)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Buses (8)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Route (6)</button>
           <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (1)</button>
           <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (1)</button>
         </div>
@@ -715,7 +898,7 @@
 
       <!-- Card 3: Route Corridor Map -->
       <article class="admin-bottom-card" style="padding: 10px;">
-        <div class="admin-map-container" aria-label="Route Corridor Map from Malolos to Quezon City">
+        <div class="admin-map-container" aria-label="Illustrative route map from ${escapeHtml(activeRoute.origin)} to ${escapeHtml(activeRoute.destination)}">
           <svg class="admin-map-svg" viewBox="0 0 380 230" preserveAspectRatio="none">
             <!-- Background Map Layers -->
             <rect width="380" height="230" fill="#d9e3db"/>
@@ -735,31 +918,19 @@
             <path d="M 70 30 L 140 100 L 210 160 L 290 200" stroke="#e8d998" stroke-width="3" fill="none"/>
             <path d="M 130 90 L 270 160" stroke="#f8e79b" stroke-width="2" fill="none"/>
 
-            <!-- Transit Corridor Route (Blue Line from Malolos B to Quezon City A) -->
+            <!-- Active route -->
             <path d="M 125 78 Q 155 100, 185 130 T 260 178" stroke="#3b82f6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
             <path d="M 125 78 Q 155 100, 185 130 T 260 178" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 
-            <!-- Towns & Location Labels -->
-            <text x="35" y="32" font-size="9" fill="#526270" font-family="sans-serif">Apalit</text>
-            <text x="30" y="88" font-size="9" fill="#526270" font-family="sans-serif">Hagonoy</text>
-            <text x="138" y="68" font-size="10.5" font-weight="700" fill="#1e293b" font-family="sans-serif">Malolos</text>
-            <text x="135" y="105" font-size="8.5" fill="#526270" font-family="sans-serif">Guiguinto</text>
-            <text x="165" y="140" font-size="8.5" fill="#526270" font-family="sans-serif">Bocaue</text>
-            <text x="188" y="178" font-size="8.5" fill="#526270" font-family="sans-serif">Valenzuela</text>
-            <text x="215" y="45" font-size="8.5" fill="#526270" font-family="sans-serif">Plaridel</text>
-            <text x="250" y="65" font-size="8.5" fill="#526270" font-family="sans-serif">Pandi</text>
-            <text x="280" y="100" font-size="9.5" font-weight="600" fill="#334155" font-family="sans-serif">SJDM</text>
-            <text x="310" y="55" font-size="8.5" fill="#526270" font-family="sans-serif">Norzagaray</text>
-            <text x="330" y="130" font-size="8.5" fill="#526270" font-family="sans-serif">Rodriguez</text>
-            <text x="325" y="152" font-size="8.5" fill="#526270" font-family="sans-serif">San Mateo</text>
-            <text x="210" y="222" font-size="9" fill="#526270" font-family="sans-serif">Manila</text>
-            <text x="272" y="174" font-size="11" font-weight="700" fill="#0f172a" font-family="sans-serif">Quezon City</text>
+            <!-- Route endpoints -->
+            <text x="138" y="68" font-size="10.5" font-weight="700" fill="#1e293b" font-family="sans-serif">${escapeHtml(activeRoute.originShort)}</text>
+            <text x="272" y="174" font-size="11" font-weight="700" fill="#0f172a" font-family="sans-serif">${escapeHtml(activeRoute.destinationShort)}</text>
 
-            <!-- Marker B (Malolos) -->
+            <!-- Origin marker -->
             <circle cx="125" cy="74" r="9" fill="#dc2626"/>
             <text x="125" y="78" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
 
-            <!-- Marker A (Quezon City / Trinoma) -->
+            <!-- Destination marker -->
             <circle cx="260" cy="178" r="9" fill="#dc2626"/>
             <text x="260" y="182" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
           </svg>
@@ -772,19 +943,17 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Predictive Analytics</h1>
+        <h1 class="admin-header-title">Passenger Demand</h1>
       </div>
 
       <div class="admin-header-actions">
         <select class="admin-select-corridor" data-analytics-route aria-label="Select Route">
-          <option value="Route 1: Trinoma Express (High Priority)">Route 1: Trinoma Express (High Priority)</option>
-          <option value="Route 2: Malolos Central Loop">Route 2: Malolos Central Loop</option>
-          <option value="Route 3: EDSA Trunk Line">Route 3: EDSA Trunk Line</option>
+          ${renderRouteOptions(activeRoute.id)}
         </select>
         <select class="admin-select-corridor" data-analytics-range aria-label="Select Forecast Range">
           <option value="Today — 24hr Forecast">Today — 24hr Forecast</option>
           <option value="Tomorrow — 24hr Forecast">Tomorrow — 24hr Forecast</option>
-          <option value="Weekend Surge Projection">Weekend Surge Projection</option>
+          <option value="Weekend Surge Projection">Weekend Demand</option>
         </select>
         <button class="admin-btn-assign" type="button" data-admin-action="export-surge" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: 700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -792,7 +961,7 @@
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          <span>Export Surge Report</span>
+          <span>Export Demand Report</span>
         </button>
       </div>
     </header>
@@ -801,8 +970,8 @@
     <section class="admin-analytics-card">
       <div class="analytics-card-header">
         <div class="analytics-legend">
-          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Congestion states:</span>
-          <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">Peak / Surge</span></span>
+          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Demand levels:</span>
+          <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">High</span></span>
           <span class="legend-item"><span class="legend-dot blue"></span><span style="color: #93c5fd;">Normal</span></span>
           <span class="legend-item"><span class="legend-dot green"></span><span style="color: #6ee7b7;">Low</span></span>
         </div>
@@ -845,9 +1014,9 @@
         <div class="analytics-ctrl-col">
           <label class="ctrl-label">Operating profile</label>
           <select class="analytics-ctrl-select" data-analytics-profile>
-            <option value="Intercity / Airport" ${predictiveOperatingProfile === "Intercity / Airport" ? "selected" : ""}>Intercity / Airport</option>
-            <option value="Metropolitan Trunk" ${predictiveOperatingProfile === "Metropolitan Trunk" ? "selected" : ""}>Metropolitan Trunk</option>
-            <option value="Feeder Shuttle" ${predictiveOperatingProfile === "Feeder Shuttle" ? "selected" : ""}>Feeder Shuttle</option>
+            <option value="Standard Service" ${predictiveOperatingProfile === "Standard Service" ? "selected" : ""}>Standard Service</option>
+            <option value="Peak Service" ${predictiveOperatingProfile === "Peak Service" ? "selected" : ""}>Peak Service</option>
+            <option value="Reduced Service" ${predictiveOperatingProfile === "Reduced Service" ? "selected" : ""}>Reduced Service</option>
           </select>
         </div>
 
@@ -890,7 +1059,7 @@
             <span class="bento-stat-label">Diesel Spot Index</span>
             <strong class="bento-stat-val text-red">₱68.40/L (+4.2%)</strong>
           </div>
-          <p class="bento-stat-desc">Elevated fuel prices trigger modal switch from private motorbikes &amp; cars to Trinoma &amp; EDSA trunk buses.</p>
+          <p class="bento-stat-desc">Elevated fuel prices may increase demand for buses serving ${escapeHtml(activeRoute.destinationShort)}.</p>
         </div>
 
         <div class="bento-divider-line"></div>
@@ -917,7 +1086,7 @@
             <span class="bento-stat-label">Terminal Dwell Surge</span>
             <strong class="bento-stat-val text-amber">+35% Wait Time</strong>
           </div>
-          <p class="bento-stat-desc">Monsoon showers projected between 4:30 PM - 8 PM. Commuters stranded at Trinoma &amp; Cubao transit shelters.</p>
+          <p class="bento-stat-desc">Monsoon showers projected between 4:30 PM - 8 PM may affect commuters at ${escapeHtml(activeRoute.destinationShort)}.</p>
         </div>
 
         <div class="bento-divider-line"></div>
@@ -935,23 +1104,23 @@
             <div class="card-icon-badge mint">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Dispatch recommendation</div>
+            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Suggested Bus Changes</div>
           </div>
         </div>
 
         <div class="bento-denested-content">
           <ul class="recommendation-list">
-            <li>• Inject <strong>+3 standby buses</strong> into Route 1 (Trinoma)</li>
-            <li>• Compress evening headway from <strong>12m → 5m</strong></li>
-            <li>• Borrow <strong>2 standby coaches</strong> from Malolos Feeder</li>
+            <li>• Inject <strong>+3 standby buses</strong> on ${escapeHtml(activeRoute.label)}</li>
+            <li>• Reduce the time between evening buses from <strong>12m to 5m</strong></li>
+            <li>• Deploy <strong>2 available coaches</strong> from ${escapeHtml(activeRoute.origin)} depot</li>
           </ul>
         </div>
 
         <div class="bento-divider-line"></div>
 
         <div class="analytics-action-row">
-          <button class="btn-approve-fleet" type="button" data-admin-action="approve-redistribution">Approve Fleet Redistribution</button>
-          <button class="btn-simulate-surge" type="button" data-admin-action="simulate-surge">Simulate</button>
+          <button class="btn-approve-fleet" type="button" data-admin-action="approve-redistribution">Apply Bus Changes</button>
+          <button class="btn-simulate-surge" type="button" data-admin-action="simulate-surge">Preview Estimate</button>
         </div>
       </article>
     </section>
@@ -964,21 +1133,21 @@
       busNo: "01",
       category: "delayed",
       tripName: "Northbound Express",
-      routeCorridor: "Trinoma / SM North Corridor",
+      routeId: activeRoute.id,
+      routeCorridor: activeRoute.label,
       statusText: "Delayed (+8m)",
       statusType: "delayed",
-      headwayAlert: "Headway Deviation: +8 min behind schedule",
-      nextStop: "SM North Edsa",
+      headwayAlert: "8 minutes behind schedule",
+      nextStop: activeRoute.destination,
       etaText: "23 min ETA (15:08 PHT)",
-      occupancyPct: 78,
-      occupancySeats: "55/70 seats",
-      occupancyPassengers: "78% (55 / 70 Passengers)",
+      occupancyPct: 92,
+      occupancySeats: "12/13 passenger seats",
+      occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
       conductorName: "Santos, M.",
-      gpsLocation: "EDSA Guadalupe Overpass",
-      scheduledStop: "SM North Edsa (ETA 15:08 PHT)",
-      corridor: "edsa",
+      gpsLocation: `${activeRoute.via} Northbound`,
+      scheduledStop: `${activeRoute.destination} (ETA 15:08 PHT)`,
       progressClass: "amber",
       dotClass: "amber"
     },
@@ -987,22 +1156,22 @@
       unitCode: "UNIT #02",
       busNo: "02",
       category: "deployed",
-      tripName: "Northbound Local",
-      routeCorridor: "EDSA Carousel Loop",
+      tripName: "Northbound Bus",
+      routeId: activeRoute.id,
+      routeCorridor: activeRoute.label,
       statusText: "On Time",
       statusType: "on-time",
-      headwayAlert: "Nominal Headway: On schedule (0 min deviation)",
-      nextStop: "Trinoma Hub",
+      headwayAlert: "On schedule",
+      nextStop: activeRoute.destination,
       etaText: "7 min ETA (14:55 PHT)",
-      occupancyPct: 78,
-      occupancySeats: "55/70 seats",
-      occupancyPassengers: "78% (55 / 70 Passengers)",
+      occupancyPct: 92,
+      occupancySeats: "12/13 passenger seats",
+      occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Rogers, S.",
       driverId: "#DR-9204",
       conductorName: "Barton, C.",
-      gpsLocation: "EDSA Main Avenue",
-      scheduledStop: "Trinoma Hub (ETA 14:55 PHT)",
-      corridor: "edsa",
+      gpsLocation: activeRoute.via,
+      scheduledStop: `${activeRoute.destination} (ETA 14:55 PHT)`,
       progressClass: "mint",
       dotClass: "mint"
     },
@@ -1011,22 +1180,22 @@
       unitCode: "UNIT #14",
       busNo: "14",
       category: "terminal",
-      tripName: "Southbound Trunk",
-      routeCorridor: "SM North to PITX Express",
+      tripName: "Southbound Bus",
+      routeId: activeRoute.id,
+      routeCorridor: activeRoute.label,
       statusText: "At Terminal",
       statusType: "terminal",
-      headwayAlert: "Staged at Terminal Bay: Scheduled release in 19 min",
-      nextStop: "SM North Edsa Staging",
+      headwayAlert: "At the terminal. Leaves in 19 minutes.",
+      nextStop: activeRoute.origin,
       etaText: "Departing in 19 min",
-      occupancyPct: 78,
-      occupancySeats: "55/70 seats",
-      occupancyPassengers: "78% (55 / 70 Passengers)",
+      occupancyPct: 92,
+      occupancySeats: "12/13 passenger seats",
+      occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
       conductorName: "Reyes, K.",
-      gpsLocation: "SM North EDSA Terminal Bay 4",
-      scheduledStop: "PITX Intermodal (ETA 16:30 PHT)",
-      corridor: "c5",
+      gpsLocation: activeRoute.destination,
+      scheduledStop: `${activeRoute.origin} (ETA 16:30 PHT)`,
       progressClass: "purple",
       dotClass: ""
     },
@@ -1035,22 +1204,22 @@
       unitCode: "UNIT #08",
       busNo: "08",
       category: "deployed",
-      tripName: "East-West Connector",
-      routeCorridor: "Quezon Ave Rapid",
+      tripName: "Northbound Bus",
+      routeId: activeRoute.id,
+      routeCorridor: activeRoute.label,
       statusText: "On Time",
       statusType: "on-time",
-      headwayAlert: "Nominal Headway: -1 min ahead of schedule",
-      nextStop: "Ayala Center Interchange",
+      headwayAlert: "1 minute ahead of schedule",
+      nextStop: activeRoute.destination,
       etaText: "12 min ETA (15:00 PHT)",
-      occupancyPct: 42,
-      occupancySeats: "30/70 seats",
-      occupancyPassengers: "42% (30 / 70 Passengers)",
+      occupancyPct: 46,
+      occupancySeats: "6/13 passenger seats",
+      occupancyPassengers: "46% (6 / 13 passenger seats)",
       driverName: "Bautista, M.",
       driverId: "#DR-7711",
       conductorName: "Villanueva, E.",
-      gpsLocation: "Quezon Ave Underpass / EDSA",
-      scheduledStop: "Ayala Center Interchange (ETA 15:00 PHT)",
-      corridor: "quezon",
+      gpsLocation: activeRoute.via,
+      scheduledStop: `${activeRoute.destination} (ETA 15:00 PHT)`,
       progressClass: "mint",
       dotClass: "mint"
     },
@@ -1060,22 +1229,22 @@
       busNo: "23",
       badge: "",
       category: "deployed",
-      tripName: "Airport Shuttle Trunk",
-      routeCorridor: "NAIA Loop Connector",
+      tripName: "Northbound Bus",
+      routeId: activeRoute.id,
+      routeCorridor: activeRoute.label,
       statusText: "On Time",
       statusType: "on-time",
-      headwayAlert: "High Passenger Density: Nominal Headway +1m buffer",
-      nextStop: "Terminal 3 Hub",
+      headwayAlert: "Busy bus. Running on schedule.",
+      nextStop: activeRoute.destination,
       etaText: "16 min ETA (15:04 PHT)",
-      occupancyPct: 92,
-      occupancySeats: "65/70 seats",
-      occupancyPassengers: "92% (65 / 70 Passengers)",
+      occupancyPct: 100,
+      occupancySeats: "13/13 passenger seats",
+      occupancyPassengers: "100% (13 / 13 passenger seats)",
       driverName: "Alcantara, R.",
       driverId: "#DR-3108",
       conductorName: "Morales, G.",
-      gpsLocation: "NAIA Expressway Nichols Ramp",
-      scheduledStop: "Terminal 3 Hub (ETA 15:04 PHT)",
-      corridor: "edsa",
+      gpsLocation: activeRoute.via,
+      scheduledStop: `${activeRoute.destination} (ETA 15:04 PHT)`,
       progressClass: "amber",
       dotClass: "mint"
     }
@@ -1141,24 +1310,29 @@
 
   const renderDispatchControlPanel = () => {
     const unit = fleetDispatchTelemetryUnits.find((u) => u.id === selectedDispatchBusId) || fleetDispatchTelemetryUnits[0];
+    const seatCounts = getSeatCounts(unit);
     return `
-      <section class="dispatch-control-panel-card">
-        <header class="dispatch-panel-header">
+      <div class="dispatch-panel-shell">
+      <button class="dispatch-panel-close" type="button" data-close-dispatch-panel aria-label="Close trip management">×</button>
+      <details class="dispatch-control-panel-card dispatch-assignment-panel"${dispatchAssignmentPanelOpen ? " open" : ""}>
+        <summary class="dispatch-panel-header" aria-controls="dispatch-assignment-content">
           <div class="dispatch-panel-title-wrap">
-            <h2 class="dispatch-panel-title">Dispatch Control Panel</h2>
+            <h2 class="dispatch-panel-title">Bus Assignment</h2>
           </div>
-          <div class="dispatch-panel-header-actions">
+          <span class="dispatch-panel-summary-end">
             <span class="dispatch-unit-badge">${unit.unitCode}</span>
-            <button class="dispatch-panel-close" type="button" data-close-dispatch-panel aria-label="Close trip management">×</button>
-          </div>
-        </header>
+            <svg class="dispatch-panel-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+          </span>
+        </summary>
 
+        <div class="dispatch-assignment-panel-content" id="dispatch-assignment-content">
         <!-- Active Selection Box -->
+        <div class="dispatch-assignment-overview">
         <div class="dispatch-active-selection-box">
           <span class="selection-box-label">Selected Bus</span>
           <div class="selection-box-title-row">
             <h3 class="selection-bus-heading">Bus No. ${unit.busNo} — ${unit.tripName}</h3>
-            <button class="selection-clock-btn" type="button" title="View Schedule Headway">
+            <button class="selection-clock-btn" type="button" title="View Bus Schedule">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </button>
           </div>
@@ -1175,7 +1349,7 @@
             <span class="spec-val-content">${unit.busNo}</span>
           </div>
           <div class="dispatch-spec-row">
-            <span class="spec-key-label">Trip / Route</span>
+            <span class="spec-key-label">Route</span>
             <span class="spec-val-content">${unit.routeCorridor.replace(" Corridor", "").replace(" Loop", "")}</span>
           </div>
           <div class="dispatch-spec-row">
@@ -1184,27 +1358,49 @@
               <span class="status-pill-telemetry ${unit.statusType}"><span class="status-dot"></span>${unit.statusText}</span>
             </span>
           </div>
-          <div class="dispatch-spec-row">
-            <span class="spec-key-label">Live Occupancy</span>
-            <span class="spec-val-content">${unit.occupancyPassengers}</span>
-          </div>
+          <details class="dispatch-seat-dropdown dispatch-spec-row"${selectedDispatchSeatBooking?.busId === unit.id ? " open" : ""}>
+            <summary class="dispatch-seat-dropdown-trigger">
+              <span class="spec-key-label">Seats Filled</span>
+              <span class="dispatch-seat-trigger-value">
+                <span class="spec-val-content">${unit.occupancyPassengers}</span>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+              </span>
+            </summary>
+            <div class="dispatch-seat-dropdown-content">
+              <div class="admin-seat-map dispatch-seat-map" aria-label="Seat layout for Bus ${escapeHtml(unit.busNo)}">
+                <div class="admin-seat-driver">FRONT <span>Driver</span></div>
+                <div class="admin-seat-grid" role="group" aria-label="Seats on Bus ${escapeHtml(unit.busNo)}">
+                  ${renderAdminSeatLayout(seatCounts, unit)}
+                </div>
+              </div>
+              <div class="dispatch-seat-booking-details${selectedDispatchSeatBooking ? " has-selection" : ""}" data-dispatch-seat-booking-details aria-live="polite">
+                ${renderDispatchSeatBookingDetails(unit)}
+              </div>
+              <div class="dispatch-seat-dropdown-footer">
+                <span>${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available</span>
+                <span>1A driver · 1B conductor</span>
+              </div>
+            </div>
+          </details>
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Assigned Driver</span>
             <span class="spec-val-content">${unit.driverName} (Conductor: ${unit.conductorName})</span>
           </div>
           <div class="dispatch-spec-row">
-            <span class="spec-key-label">Current GPS Location</span>
+            <span class="spec-key-label">Current Location</span>
             <span class="spec-val-content">${unit.gpsLocation}</span>
           </div>
           <div class="dispatch-spec-row">
-            <span class="spec-key-label">Next Scheduled Stop</span>
+            <span class="spec-key-label">Next Stop</span>
             <span class="spec-val-content" style="color: #2fd9a8;">${unit.scheduledStop}</span>
           </div>
         </div>
+        </div>
 
         <!-- 2x2 Dispatcher Interventions -->
+        <div class="dispatch-assignment-actions">
         <div class="dispatch-interventions-section">
-          <span class="interventions-label">Dispatcher interventions</span>
+          <span class="interventions-label">Available Actions</span>
           <div class="interventions-grid-2x2">
             <button class="intervention-btn" type="button" data-dispatch-action="reroute">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
@@ -1227,27 +1423,26 @@
 
         <!-- Dispatch note input -->
         <div class="dispatch-note-wrap">
-          <label class="dispatch-note-label">Dispatch note (optional)</label>
-          <textarea class="dispatch-note-textarea" placeholder="Add special detour, headway instructions, or maintenance alert..." data-dispatch-note>${escapeHtml(dispatchNoteInput)}</textarea>
+          <label class="dispatch-note-label">Assignment note (optional)</label>
+          <textarea class="dispatch-note-textarea" placeholder="Add a route change, schedule note, or maintenance alert..." data-dispatch-note>${escapeHtml(dispatchNoteInput)}</textarea>
         </div>
 
         <!-- Main Send Action Button -->
         <button class="btn-send-dispatch-order" type="button" data-dispatch-action="send-order">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-          <span>Send Dispatch Order</span>
+          <span>Save Assignment</span>
         </button>
         ${unit.tripFinished
           ? '<div class="dispatch-finished-note" role="status">Trip completed. Remittance is recorded in the dashboard below.</div>'
           : `<button class="dispatch-finish-trip-button" type="button" data-dispatch-action="finish-trip">Mark trip finished</button>`}
-      </section>
+        </div>
+        </div>
+      </details>
+      </div>
     `;
   };
 
   const renderRadarMapSvg = () => {
-    const isEdsa = dispatchCorridorFilter === "edsa";
-    const isC5 = dispatchCorridorFilter === "c5";
-    const isQuezon = dispatchCorridorFilter === "quezon";
-
     return `
       <svg class="radar-map-svg" viewBox="0 0 740 260" preserveAspectRatio="xMidYMid meet" style="transform: scale(${dispatchMapZoom}); transition: transform 0.25s ease;">
         <defs>
@@ -1271,33 +1466,27 @@
         <line x1="0" y1="145" x2="740" y2="145" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
         <line x1="450" y1="0" x2="450" y2="260" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
 
-        <!-- Route Path: EDSA Carousel (Mint Curve) -->
-        <path d="M 180 230 C 290 230, 360 170, 450 145 S 580 90, 660 75" fill="none" stroke="#2fd9a8" stroke-width="3.5" filter="url(#radar-glow-filter)" stroke-linecap="round" opacity="${isEdsa || (!isC5 && !isQuezon) ? '1' : '0.35'}"/>
-        <path d="M 180 230 C 290 230, 360 170, 450 145 S 580 90, 660 75" fill="none" stroke="#ffffff" stroke-width="1" stroke-dasharray="6 4" opacity="0.6"/>
-
-        <!-- Route Path: C-5 Hub (Purple Curve) -->
-        <path d="M 230 200 C 320 200, 390 175, 490 170 S 620 185, 680 185" fill="none" stroke="#a855f7" stroke-width="3" filter="url(#radar-glow-filter)" stroke-linecap="round" opacity="${isC5 || (!isEdsa && !isQuezon) ? '1' : '0.35'}"/>
-
-        <!-- Secondary Linking Dashed Arc (Quezon Ave) -->
-        <path d="M 360 85 Q 490 100, 660 75" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="4 4" opacity="${isQuezon || (!isEdsa && !isC5) ? '0.7' : '0.25'}"/>
+        <!-- Illustrative path for the active route -->
+        <path d="M 150 215 C 240 205, 250 120, 360 145 S 500 205, 660 75" fill="none" stroke="#2fd9a8" stroke-width="3.5" filter="url(#radar-glow-filter)" stroke-linecap="round"/>
+        <path d="M 150 215 C 240 205, 250 120, 360 145 S 500 205, 660 75" fill="none" stroke="#ffffff" stroke-width="1" stroke-dasharray="6 4" opacity="0.6"/>
 
         <!-- Stations / Waypoints -->
-        <!-- Buendia / Ayala -->
+        <!-- Route origin -->
         <g opacity="0.9">
-          <circle cx="330" cy="192" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
-          <text x="330" y="209" fill="#72849a" font-size="9" font-weight="600" text-anchor="middle">Buendia / Ayala</text>
+          <circle cx="150" cy="215" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
+          <text x="150" y="233" fill="#72849a" font-size="9" font-weight="600" text-anchor="middle">${escapeHtml(activeRoute.origin)}</text>
         </g>
 
-        <!-- Trinoma Hub -->
+        <!-- Route destination -->
         <g opacity="0.9">
           <circle cx="590" cy="82" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
-          <text x="590" y="72" fill="#8da2bb" font-size="9" font-weight="600" text-anchor="middle">Trinoma Hub</text>
+          <text x="590" y="72" fill="#8da2bb" font-size="9" font-weight="600" text-anchor="middle">${escapeHtml(activeRoute.destinationShort)}</text>
         </g>
 
-        <!-- SM North Edsa (Terminal) -->
+        <!-- Route destination terminal -->
         <g opacity="1">
           <circle cx="660" cy="75" r="5" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5"/>
-          <text x="670" y="65" fill="#fbbf24" font-size="9" font-weight="700">SM North Edsa (Terminal)</text>
+          <text x="670" y="65" fill="#fbbf24" font-size="9" font-weight="700">${escapeHtml(activeRoute.destination)}</text>
         </g>
 
         <!-- BUS 08 Marker -->
@@ -1415,13 +1604,13 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
+        <h1 class="admin-header-title">Fleet Management</h1>
       </div>
 
       <div class="admin-header-actions">
         <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Assign Dispatch</span>
+          <span>Assign a Bus</span>
         </button>
       </div>
     </header>
@@ -1429,17 +1618,15 @@
     ${renderPeakDispatchReadiness()}
 
     <!-- Main 2-Column Operational Grid -->
-    <div class="fleet-dispatch-grid${dispatchPanelOpen ? "" : " is-panel-closed"}">
+  <div class="fleet-dispatch-grid${dispatchPanelOpen ? "" : " is-panel-closed"}${dispatchAssignmentPanelOpen ? " is-assignment-expanded" : ""}">
       <!-- Left Column: Map + Table -->
       <div class="fleet-dispatch-left-col">
         <!-- 1. Radar Map Card -->
         <section class="admin-radar-map-card">
           <div class="radar-map-toolbar">
             <div class="corridor-filter-group">
-              <span class="corridor-label">Corridor:</span>
-              <button class="corridor-pill-btn${dispatchCorridorFilter === "edsa" ? " is-active" : ""}" type="button" data-corridor-filter="edsa">EDSA Carousel</button>
-              <button class="corridor-pill-btn${dispatchCorridorFilter === "c5" ? " is-active" : ""}" type="button" data-corridor-filter="c5">C-5 Hub</button>
-              <button class="corridor-pill-btn${dispatchCorridorFilter === "quezon" ? " is-active" : ""}" type="button" data-corridor-filter="quezon">Quezon Ave</button>
+                <span class="corridor-label">Active Route:</span>
+                <strong>${activeRoute.label}</strong>
             </div>
 
             <div class="map-viewport-tools">
@@ -1460,8 +1647,8 @@
 
           <div class="radar-map-legend">
             <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
-            <span class="legend-item"><span class="legend-dot-circle amber"></span> Delayed Headway (+8m)</span>
-            <span class="legend-item"><span class="legend-dot-circle purple"></span> At Terminal / Staging</span>
+            <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
+            <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
           </div>
         </section>
 
@@ -1469,12 +1656,12 @@
         <section class="admin-telemetry-table-card">
           <div class="telemetry-table-header-row">
             <div class="telemetry-card-title-wrap">
-              <h2 class="telemetry-card-title">Active Fleet Telemetry</h2>
+              <h2 class="telemetry-card-title">Bus Status</h2>
             </div>
 
             <div class="telemetry-filter-tabs">
-              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "all" ? " is-active" : ""}" type="button" data-telemetry-tab="all">All Units (46)</button>
-              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "deployed" ? " is-active" : ""}" type="button" data-telemetry-tab="deployed">Deployed (32)</button>
+              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "all" ? " is-active" : ""}" type="button" data-telemetry-tab="all">All Buses (46)</button>
+              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "deployed" ? " is-active" : ""}" type="button" data-telemetry-tab="deployed">On Route (32)</button>
               <button class="telemetry-tab-pill pill-amber${dispatchTelemetryFilter === "delayed" ? " is-active" : ""}" type="button" data-telemetry-tab="delayed">Delayed (1)</button>
               <button class="telemetry-tab-pill pill-purple${dispatchTelemetryFilter === "terminal" ? " is-active" : ""}" type="button" data-telemetry-tab="terminal">At Terminal (4)</button>
             </div>
@@ -1714,7 +1901,7 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Staff and Resources</h1>
+        <h1 class="admin-header-title">Staff Management</h1>
       </div>
 
       <div class="admin-header-actions">
@@ -1826,8 +2013,8 @@
       id: "cam-01",
       code: "CAM 3.1/ws",
       title: "Trinoma Platform Bay 1",
-      corridor: "trinoma",
-      corridorLabel: "Trinoma Hub",
+      location: "trinoma",
+      locationLabel: "Trinoma",
       image: "assets/cctv/cam1.jpg",
       status: "LIVE",
       resolution: "1080p60",
@@ -1847,8 +2034,8 @@
       id: "cam-02",
       code: "CAM 4.1/ws",
       title: "Bus 01 Interior Cabin",
-      corridor: "fleet",
-      corridorLabel: "Fleet Onboard",
+      location: "fleet",
+      locationLabel: "On Buses",
       image: "assets/cctv/cam2.jpg",
       status: "LIVE",
       resolution: "1080p60",
@@ -1866,9 +2053,9 @@
     {
       id: "cam-03",
       code: "CAM 7.1/ws",
-      title: "EDSA Balintawak Corridor",
-      corridor: "edsa",
-      corridorLabel: "EDSA Corridor",
+      title: "NLEX Balintawak",
+      location: "nlex",
+      locationLabel: "Along NLEX",
       image: "assets/cctv/cam3.jpg",
       status: "LIVE",
       resolution: "1080p60",
@@ -1887,8 +2074,8 @@
       id: "cam-04",
       code: "CAM 5.1/ws",
       title: "Malolos Maintenance Depot",
-      corridor: "depot",
-      corridorLabel: "Depot Bays",
+      location: "depot",
+      locationLabel: "Malolos Depot",
       image: "assets/cctv/cam4.jpg",
       status: "LIVE",
       resolution: "1080p60",
@@ -1907,8 +2094,8 @@
       id: "cam-05",
       code: "CAM 6.1/ws",
       title: "Bus 04 Driver Telematics",
-      corridor: "fleet",
-      corridorLabel: "Fleet Onboard",
+      location: "fleet",
+      locationLabel: "On Buses",
       image: "assets/cctv/cam5.jpg",
       status: "LIVE",
       resolution: "1080p60",
@@ -1927,8 +2114,8 @@
       id: "cam-06",
       code: "CAM 8.1/ws",
       title: "Station Concourse Turnstiles",
-      corridor: "trinoma",
-      corridorLabel: "Trinoma Hub",
+      location: "trinoma",
+      locationLabel: "Trinoma",
       image: "assets/cctv/cam6.jpg",
       status: "LIVE",
       resolution: "1080p60",
@@ -1947,12 +2134,12 @@
 
   const renderCameraFeedsGrid = () => {
     let feeds = adminCameraFeedsData;
-    if (activeCameraCorridorFilter !== "all") {
-      feeds = feeds.filter((f) => f.corridor === activeCameraCorridorFilter);
+    if (activeCameraLocationFilter !== "all") {
+      feeds = feeds.filter((f) => f.location === activeCameraLocationFilter);
     }
     if (cameraSearchQuery.trim()) {
       const q = cameraSearchQuery.toLowerCase().trim();
-      feeds = feeds.filter((f) => f.title.toLowerCase().includes(q) || f.code.toLowerCase().includes(q) || f.corridorLabel.toLowerCase().includes(q));
+      feeds = feeds.filter((f) => f.title.toLowerCase().includes(q) || f.code.toLowerCase().includes(q) || f.locationLabel.toLowerCase().includes(q));
     }
 
     if (feeds.length === 0) {
@@ -1987,6 +2174,8 @@
       </div>
     `;
   };
+
+  const getCameraLocationCount = (location) => adminCameraFeedsData.filter((camera) => camera.location === location).length;
 
   const renderSingleCctvFeed = (cam, isLarge = false) => {
     return `
@@ -2093,23 +2282,23 @@
     <!-- Top Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Sensor &amp; Camera Management</h1>
+        <h1 class="admin-header-title">Cameras &amp; Devices</h1>
       </div>
 
       <div class="admin-header-actions">
         <!-- Search Feeds -->
         <div class="staff-header-search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="staff-header-search-input" placeholder="Filter camera or ID..." value="${escapeHtml(cameraSearchQuery)}" data-cctv-search aria-label="Filter camera feeds">
+          <input type="text" class="staff-header-search-input" placeholder="Search cameras or ID..." value="${escapeHtml(cameraSearchQuery)}" data-cctv-search aria-label="Search camera feeds">
         </div>
 
-        <!-- Corridor Selector -->
-        <select class="admin-select-corridor" data-cctv-filter aria-label="Filter camera corridor">
-          <option value="all"${activeCameraCorridorFilter === "all" ? " selected" : ""}>All Corridors (6)</option>
-          <option value="trinoma"${activeCameraCorridorFilter === "trinoma" ? " selected" : ""}>Trinoma Hub (2)</option>
-          <option value="fleet"${activeCameraCorridorFilter === "fleet" ? " selected" : ""}>Fleet Onboard (2)</option>
-          <option value="edsa"${activeCameraCorridorFilter === "edsa" ? " selected" : ""}>EDSA Corridor (1)</option>
-          <option value="depot"${activeCameraCorridorFilter === "depot" ? " selected" : ""}>Depot Bays (1)</option>
+        <!-- Camera Location Filter -->
+        <select class="admin-select-corridor" data-cctv-filter aria-label="Filter cameras by location">
+          <option value="all"${activeCameraLocationFilter === "all" ? " selected" : ""}>All Camera Locations (${adminCameraFeedsData.length})</option>
+          <option value="trinoma"${activeCameraLocationFilter === "trinoma" ? " selected" : ""}>Trinoma (${getCameraLocationCount("trinoma")})</option>
+          <option value="fleet"${activeCameraLocationFilter === "fleet" ? " selected" : ""}>On Buses (${getCameraLocationCount("fleet")})</option>
+          <option value="nlex"${activeCameraLocationFilter === "nlex" ? " selected" : ""}>Along NLEX (${getCameraLocationCount("nlex")})</option>
+          <option value="depot"${activeCameraLocationFilter === "depot" ? " selected" : ""}>Malolos Depot (${getCameraLocationCount("depot")})</option>
         </select>
 
         <!-- Layout Controls -->
@@ -2130,18 +2319,18 @@
 
         <!-- Feed Settings Popup Button & Dropdown -->
         <div class="cctv-settings-menu-wrap">
-          <button class="cctv-btn-settings${cctvSettingsPopupOpen ? " is-active" : ""}" type="button" data-cctv-action="toggle-settings-popup" title="Surveillance Display &amp; AI Settings" aria-expanded="${cctvSettingsPopupOpen}">
+          <button class="cctv-btn-settings${cctvSettingsPopupOpen ? " is-active" : ""}" type="button" data-cctv-action="toggle-settings-popup" title="Camera Settings" aria-expanded="${cctvSettingsPopupOpen}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
-            <span>Feed Settings</span>
+            <span>Camera Settings</span>
           </button>
 
           ${cctvSettingsPopupOpen ? `
-            <div class="cctv-settings-popup" id="cctv-settings-popup" role="dialog" aria-label="Surveillance Feed Options">
+            <div class="cctv-settings-popup" id="cctv-settings-popup" role="dialog" aria-label="Camera Options">
               <div class="cctv-popup-header">
-                <span class="cctv-popup-title">Feed Display Options</span>
+                <span class="cctv-popup-title">Camera Display Options</span>
                 <button class="cctv-popup-close-btn" type="button" data-cctv-action="close-settings-popup" aria-label="Close settings popup">✕</button>
               </div>
 
@@ -2149,8 +2338,8 @@
                 <!-- AI HUD Toggle Row -->
                 <div class="cctv-toggle-row">
                   <div class="cctv-toggle-info">
-                    <span class="cctv-toggle-label">AI Object &amp; Passenger HUD</span>
-                    <span class="cctv-toggle-desc">Overlay detection boxes &amp; passenger telemetry</span>
+                    <span class="cctv-toggle-label">Passenger Count Overlay</span>
+                    <span class="cctv-toggle-desc">Show sample passenger counts on the camera view</span>
                   </div>
                   <button class="admin-toggle-switch${cameraAiDetectionEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="ai" role="switch" aria-checked="${cameraAiDetectionEnabled}" aria-label="Toggle AI Detection HUD">
                     <span class="admin-toggle-thumb"></span>
@@ -2160,8 +2349,8 @@
                 <!-- CRT Scanlines Toggle Row -->
                 <div class="cctv-toggle-row">
                   <div class="cctv-toggle-info">
-                    <span class="cctv-toggle-label">CRT Scanline &amp; Reticle FX</span>
-                    <span class="cctv-toggle-desc">Simulate optical CCTV phosphor scanlines</span>
+                    <span class="cctv-toggle-label">Camera Guide Lines</span>
+                    <span class="cctv-toggle-desc">Show guide lines on the camera view</span>
                   </div>
                   <button class="admin-toggle-switch${cameraScanlinesEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="scanlines" role="switch" aria-checked="${cameraScanlinesEnabled}" aria-label="Toggle Scanlines">
                     <span class="admin-toggle-thumb"></span>
@@ -2171,10 +2360,10 @@
                 <!-- Live OSD Bar Toggle Row -->
                 <div class="cctv-toggle-row">
                   <div class="cctv-toggle-info">
-                    <span class="cctv-toggle-label">Live Telemetry OSD Bar</span>
-                    <span class="cctv-toggle-desc">Show bitrate, latency, and uptime tags</span>
+                    <span class="cctv-toggle-label">Camera Details</span>
+                    <span class="cctv-toggle-desc">Show image quality and connection details</span>
                   </div>
-                  <button class="admin-toggle-switch${cameraOsdEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="osd" role="switch" aria-checked="${cameraOsdEnabled}" aria-label="Toggle OSD Bar">
+                  <button class="admin-toggle-switch${cameraOsdEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="osd" role="switch" aria-checked="${cameraOsdEnabled}" aria-label="Toggle camera details">
                     <span class="admin-toggle-thumb"></span>
                   </button>
                 </div>
@@ -2186,7 +2375,7 @@
         <!-- Register Camera Button -->
         <button class="staff-btn-add-member" type="button" data-cctv-action="add-device">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Add Feed</span>
+          <span>Add Camera</span>
         </button>
       </div>
     </header>
@@ -2212,7 +2401,7 @@
           <div class="cctv-setting-col">
             <h4 class="cctv-col-heading">General</h4>
             <div class="cctv-kv-item">
-              <span class="cctv-k">Input latency</span>
+              <span class="cctv-k">Response time</span>
               <span class="cctv-v accent">100ms</span>
             </div>
             <div class="cctv-kv-item">
@@ -2229,8 +2418,8 @@
           <div class="cctv-setting-col">
             <h4 class="cctv-col-heading">Network</h4>
             <div class="cctv-kv-item">
-              <span class="cctv-k">IP status</span>
-              <span class="cctv-v">Static</span>
+              <span class="cctv-k">Connection</span>
+              <span class="cctv-v">Connected</span>
             </div>
             <div class="cctv-kv-item">
               <span class="cctv-k">Firewall</span>
@@ -2263,7 +2452,7 @@
               <span class="cctv-v">100</span>
             </div>
             <div class="cctv-kv-item">
-              <span class="cctv-k">Sensors buffer</span>
+              <span class="cctv-k">Sensor storage</span>
               <span class="cctv-v">1024</span>
             </div>
             <div class="cctv-kv-item">
@@ -2279,11 +2468,11 @@
         <div class="cctv-console-card-header">
           <div class="cctv-waveform-tabs">
             <button class="cctv-tab-btn${cameraWaveformTab === "monitor" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="monitor">Monitor</button>
-            <button class="cctv-tab-btn${cameraWaveformTab === "ai" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="ai">Run AI</button>
-            <button class="cctv-tab-btn${cameraWaveformTab === "debug" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="debug">Debug</button>
+            <button class="cctv-tab-btn${cameraWaveformTab === "ai" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="ai">Passenger Counts</button>
+            <button class="cctv-tab-btn${cameraWaveformTab === "debug" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="debug">Device Status</button>
           </div>
-          <button class="cctv-btn-calibrate" type="button" data-cctv-action="calibrate" title="Calibrate optical &amp; telemetry sensors">
-            <span>Calibrate</span>
+          <button class="cctv-btn-calibrate" type="button" data-cctv-action="calibrate" title="Check camera and sensor settings">
+            <span>Check Settings</span>
           </button>
         </div>
 
@@ -2308,8 +2497,8 @@
       statusClass: "audited",
       fileFormat: "PDF + CSV",
       fileSize: "1.4 MB",
-      corridor: "all",
-      corridorLabel: "All Corridors",
+      routeId: activeRoute.id,
+      corridorLabel: activeRoute.label,
       details: {
         cashFare: "₱92,400.00 (62.3%)",
         rfidFare: "₱55,820.00 (37.7%)",
@@ -2320,32 +2509,32 @@
     },
     {
       id: "REP-2026-1047",
-      title: "Fleet Headway Variance & On-Time Performance",
+      title: "Bus Schedule and On-Time Performance",
       category: "otp",
-      categoryLabel: "Fleet & Headway",
+      categoryLabel: "Bus Schedules",
       dateRange: "Oct 14 - Oct 20, 2026",
       summaryMetric: "93.4% OTP",
-      secondaryMetric: "Avg Headway Deviation: +2.1m",
+      secondaryMetric: "Average schedule gap: +2.1 min",
       author: "Dispatch Control (Shift A)",
       status: "Audited",
       statusClass: "audited",
       fileFormat: "PDF",
       fileSize: "2.1 MB",
-      corridor: "edsa",
-      corridorLabel: "EDSA Carousel Loop",
+      routeId: activeRoute.id,
+      corridorLabel: activeRoute.label,
       details: {
         tripsScheduled: 840,
         tripsCompleted: 836,
         tripsDelayed: 52,
         cancellations: 4,
-        auditorNote: "Peak afternoon rain on Oct 18 caused +8m deviation at Guadalupe choke point."
+        auditorNote: "Peak afternoon rain on Oct 18 caused an +8 minute delay near Balintawak on NLEX."
       }
     },
     {
       id: "REP-2026-1046",
       title: "Driver Shift Hours & Safety Compliance Audit",
       category: "crew",
-      categoryLabel: "Crew & Personnel",
+      categoryLabel: "Staff",
       dateRange: "Oct 01 - Oct 15, 2026",
       summaryMetric: "1,840 Hours Logged",
       secondaryMetric: "98.8% Rest Rule Compliance",
@@ -2354,8 +2543,8 @@
       statusClass: "pending",
       fileFormat: "CSV",
       fileSize: "840 KB",
-      corridor: "all",
-      corridorLabel: "All Corridors",
+      routeId: activeRoute.id,
+      corridorLabel: activeRoute.label,
       details: {
         activeDrivers: 96,
         overtimeShifts: 14,
@@ -2377,8 +2566,8 @@
       statusClass: "audited",
       fileFormat: "PDF + Excel",
       fileSize: "3.6 MB",
-      corridor: "malolos",
-      corridorLabel: "Malolos - NLEX Trunk",
+      routeId: activeRoute.id,
+      corridorLabel: activeRoute.label,
       details: {
         totalFuelCost: "₱1,259,928.00",
         distanceTraveled: "63,010 km",
@@ -2389,24 +2578,24 @@
     },
     {
       id: "REP-2026-1044",
-      title: "Peak Hour Passenger Surge & Dwell Time Analysis",
+      title: "Passenger Demand and Stop Times",
       category: "otp",
-      categoryLabel: "Fleet & Headway",
+      categoryLabel: "Bus Schedules",
       dateRange: "Oct 16 - Oct 19, 2026",
       summaryMetric: "28,450 Commuters",
       secondaryMetric: "Avg Platform Dwell: 1m 45s",
-      author: "Predictive Analytics Engine",
+      author: "Demand Estimate",
       status: "Audited",
       statusClass: "audited",
       fileFormat: "PDF",
       fileSize: "1.8 MB",
-      corridor: "trinoma",
-      corridorLabel: "Trinoma Hub Platform",
+      routeId: activeRoute.id,
+      corridorLabel: activeRoute.label,
       details: {
         peakWindow: "17:00 - 19:30 PHT",
-        maxLoadCorridor: "Trinoma Bay 1 Express (98% capacity)",
+        maxLoadCorridor: "Trinoma Landmark Bus Bay (98% capacity)",
         dwellExceedances: 8,
-        auditorNote: "Extra 3 standby coaches injected into Trinoma recovered passenger queues within 18 minutes."
+        auditorNote: "Three standby coaches on the active route recovered passenger queues within 18 minutes."
       }
     },
     {
@@ -2422,8 +2611,8 @@
       statusClass: "audited",
       fileFormat: "Excel",
       fileSize: "920 KB",
-      corridor: "all",
-      corridorLabel: "All Corridors",
+      routeId: activeRoute.id,
+      corridorLabel: activeRoute.label,
       details: {
         conductorsAudited: 48,
         inspectedPOSReceipts: 34200,
@@ -2435,36 +2624,12 @@
 
   const adminCorridorDistributionData = [
     {
-      name: "Trinoma Express Hub",
-      revenue: "₱482,400.00",
-      pct: 38.6,
-      passengers: "54,200 Pax",
-      otp: "94.2% OTP",
+      name: activeRoute.label,
+      revenue: "₱1,248,650.00",
+      pct: 100,
+      passengers: "142,880 passengers",
+      otp: "92.8% on time",
       barClass: "mint"
-    },
-    {
-      name: "EDSA Carousel Loop",
-      revenue: "₱412,650.00",
-      pct: 33.0,
-      passengers: "48,100 Pax",
-      otp: "91.8% OTP",
-      barClass: "cyan"
-    },
-    {
-      name: "Malolos Central Loop",
-      revenue: "₱218,200.00",
-      pct: 17.5,
-      passengers: "24,600 Pax",
-      otp: "95.1% OTP",
-      barClass: "gold"
-    },
-    {
-      name: "C-5 & Quezon Feeder",
-      revenue: "₱135,400.00",
-      pct: 10.9,
-      passengers: "15,980 Pax",
-      otp: "93.5% OTP",
-      barClass: "purple"
     }
   ];
 
@@ -2479,7 +2644,7 @@
     },
     {
       id: "SCHED-02",
-      title: "Weekly Fleet OTP & Headway Audit",
+      title: "Weekly Bus Schedule Review",
       frequency: "Mondays @ 06:00 PHT",
       recipient: "dispatch.ops@usad.ph",
       format: "PDF",
@@ -2500,9 +2665,7 @@
     if (activeReportsCategoryFilter !== "all") {
       list = list.filter((r) => r.category === activeReportsCategoryFilter);
     }
-    if (activeReportsCorridor !== "all") {
-      list = list.filter((r) => r.corridor === "all" || r.corridor === activeReportsCorridor);
-    }
+    list = list.filter((report) => report.routeId === activeReportsCorridor);
     if (reportsSearchQuery.trim()) {
       const q = reportsSearchQuery.toLowerCase().trim();
       list = list.filter((r) => r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q) || r.categoryLabel.toLowerCase().includes(q) || r.author.toLowerCase().includes(q));
@@ -2600,7 +2763,7 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Operational Reports &amp; Audits</h1>
+        <h1 class="admin-header-title">Reports</h1>
       </div>
 
       <div class="admin-header-actions">
@@ -2610,16 +2773,12 @@
           <option value="today"${activeReportsDateRange === "today" ? " selected" : ""}>Today (Oct 21, 2026)</option>
           <option value="week"${activeReportsDateRange === "week" ? " selected" : ""}>This Week (Oct 15 - 21)</option>
           <option value="last-month"${activeReportsDateRange === "last-month" ? " selected" : ""}>Last Month (September 2026)</option>
-          <option value="q3"${activeReportsDateRange === "q3" ? " selected" : ""}>Q3 2026 Financial Audit</option>
+          <option value="q3"${activeReportsDateRange === "q3" ? " selected" : ""}>Q3 2026 Finance</option>
         </select>
 
         <!-- Corridor Filter -->
-        <select class="admin-select-corridor" data-report-corridor aria-label="Select Operational Corridor">
-          <option value="all"${activeReportsCorridor === "all" ? " selected" : ""}>All Corridors (4)</option>
-          <option value="trinoma"${activeReportsCorridor === "trinoma" ? " selected" : ""}>Trinoma Hub Express</option>
-          <option value="edsa"${activeReportsCorridor === "edsa" ? " selected" : ""}>EDSA Carousel Loop</option>
-          <option value="malolos"${activeReportsCorridor === "malolos" ? " selected" : ""}>Malolos Central Loop</option>
-          <option value="c5"${activeReportsCorridor === "c5" ? " selected" : ""}>C-5 &amp; Quezon Feeder</option>
+        <select class="admin-select-corridor" data-report-corridor aria-label="Select Route">
+          ${renderRouteOptions(activeReportsCorridor)}
         </select>
 
         <!-- Generate Custom Report Button -->
@@ -2683,15 +2842,15 @@
         <div class="reports-filter-tabs" role="tablist" aria-label="Filter reports by domain">
           <button class="reports-tab-btn${activeReportsCategoryFilter === "all" ? " is-active" : ""}" type="button" data-report-category="all">All Reports (6)</button>
           <button class="reports-tab-btn${activeReportsCategoryFilter === "financial" ? " is-active" : ""}" type="button" data-report-category="financial">Revenue &amp; Finance (2)</button>
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Fleet &amp; Headway (2)</button>
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Crew &amp; Personnel (1)</button>
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Bus Schedules (2)</button>
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Staff (1)</button>
           <button class="reports-tab-btn${activeReportsCategoryFilter === "fuel" ? " is-active" : ""}" type="button" data-report-category="fuel">Fuel &amp; Maintenance (1)</button>
         </div>
 
         <!-- Search Bar -->
         <div class="staff-header-search-wrap" style="width: 260px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="staff-header-search-input" placeholder="Search reports, audit IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports directory">
+          <input type="text" class="staff-header-search-input" placeholder="Search reports or report IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports">
         </div>
       </div>
 
@@ -2703,7 +2862,7 @@
               <th>REPORT ID &amp; FORMAT</th>
               <th>REPORT TITLE &amp; CORRIDOR</th>
               <th>CATEGORY</th>
-              <th>AUDIT PERIOD</th>
+              <th>REPORT PERIOD</th>
               <th>PRIMARY METRICS</th>
               <th>STATUS</th>
               <th>ACTIONS</th>
@@ -2723,7 +2882,7 @@
         <div class="reports-subcard-header">
           <div class="reports-subcard-title-group">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #2fd9a8;"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-            <h2 class="reports-subcard-title">Corridor Revenue &amp; Ridership Share</h2>
+            <h2 class="reports-subcard-title">Revenue &amp; Passengers by Route</h2>
           </div>
           <span style="font-size: 11px; color: #64748b;">Month to Date (Oct 2026)</span>
         </div>
@@ -2738,7 +2897,7 @@
         <div class="reports-subcard-header">
           <div class="reports-subcard-title-group">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #2fd9a8;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <h2 class="reports-subcard-title">Scheduled Audit Dispatches</h2>
+            <h2 class="reports-subcard-title">Scheduled Reports</h2>
           </div>
           <span style="font-size: 11px; color: #64748b;">3 Standing Automated Runs</span>
         </div>
@@ -2765,28 +2924,28 @@
             <span class="admin-sidebar-brand-text">USAD</span>
           </div>
 
-          <nav class="admin-nav" aria-label="Operations Navigation">
-            <button class="admin-nav-item${activeAdminSidebarTab === "live-operations" ? " is-active" : ""}" type="button" data-admin-nav="live-operations">
+          <nav class="admin-nav" aria-label="Main Navigation">
+            <button class="admin-nav-item${activeAdminSidebarTab === "live-operations" ? " is-active" : ""}" type="button" data-admin-nav="live-operations" aria-current="${activeAdminSidebarTab === "live-operations" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
-              <span>Live Operations</span>
+              <span>Dashboard</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "predictive-analytics" ? " is-active" : ""}" type="button" data-admin-nav="predictive-analytics">
+            <button class="admin-nav-item${activeAdminSidebarTab === "predictive-analytics" ? " is-active" : ""}" type="button" data-admin-nav="predictive-analytics" aria-current="${activeAdminSidebarTab === "predictive-analytics" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
-              <span>Predictive Analytics</span>
+              <span>Passenger Demand</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="fleet-dispatch">
+            <button class="admin-nav-item${activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="fleet-dispatch" aria-current="${activeAdminSidebarTab === "fleet-dispatch" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>Fleet Monitoring and Dispatch</span>
+              <span>Fleet</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources">
+            <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources" aria-current="${activeAdminSidebarTab === "staff-resources" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              <span>Staff &amp; Resources</span>
+              <span>Staff Management</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "sensor-camera" ? " is-active" : ""}" type="button" data-admin-nav="sensor-camera">
+            <button class="admin-nav-item${activeAdminSidebarTab === "sensor-camera" ? " is-active" : ""}" type="button" data-admin-nav="sensor-camera" aria-current="${activeAdminSidebarTab === "sensor-camera" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-              <span>Sensor &amp; Camera Management</span>
+              <span>Cameras &amp; Devices</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "reports" ? " is-active" : ""}" type="button" data-admin-nav="reports">
+            <button class="admin-nav-item${activeAdminSidebarTab === "reports" ? " is-active" : ""}" type="button" data-admin-nav="reports" aria-current="${activeAdminSidebarTab === "reports" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               <span>Reports</span>
             </button>
@@ -2869,8 +3028,8 @@
             <span class="admin-profile-value">Saraza Central Operations Control</span>
           </div>
           <div class="admin-profile-row">
-            <span class="admin-profile-label">System Privileges</span>
-            <span class="admin-profile-value">Telemetry, Fleet Dispatch, Scheduling</span>
+            <span class="admin-profile-label">System Access</span>
+            <span class="admin-profile-value">Vehicle tracking, bus assignments, schedules</span>
           </div>
           <div class="admin-profile-row">
             <span class="admin-profile-label">Security Clearance</span>
@@ -2910,16 +3069,14 @@
             <input class="admin-input" id="assign-driver" value="Jocky King Garcia" placeholder="Enter driver name" style="height: 40px;">
           </div>
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Route</label>
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Route</label>
             <select class="admin-input" id="assign-route" style="height: 40px;">
-              <option value="Trinoma Express">Trinoma Express Corridor</option>
-              <option value="Trinoma Feeder">Trinoma Feeder Line</option>
-              <option value="Malolos Central">Malolos Central Loop</option>
+              ${renderRouteOptions(activeRoute.id)}
             </select>
           </div>
           <div style="display: flex; gap: 10px; margin-top: 8px;">
             <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
-            <button class="admin-modal-button-primary" type="submit">Confirm Dispatch</button>
+            <button class="admin-modal-button-primary" type="submit">Save Assignment</button>
           </div>
         </form>
       `;
@@ -2988,8 +3145,8 @@
       const busId = type.replace("telemetry-", "");
       const bus = adminFleetData.find((b) => b.id === busId) ?? adminFleetData[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
-      title = `Live Telemetry — ${bus.busNo}`;
-      desc = `Vehicle Telematics Active · Route: <strong>${bus.route}</strong><br>Driver: <strong>${bus.driver}</strong>`;
+      title = `Bus Details — ${bus.busNo}`;
+      desc = `Sample vehicle information · Route: <strong>${bus.route}</strong><br>Driver: <strong>${bus.driver}</strong>`;
       customHtml = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; text-align: left; font-size: 11.5px;">
           <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
@@ -3009,7 +3166,7 @@
             <strong style="color: #cbd5e1; font-size: 14px;">${bus.telemetry.temp}</strong>
           </div>
           <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838; grid-column: span 2;">
-            <span style="color: #64748b; display: block; font-size: 10px;">GPS TELEMATICS LOCATION</span>
+            <span style="color: #64748b; display: block; font-size: 10px;">CURRENT LOCATION</span>
             <span style="color: #ffffff; font-size: 12px;">${bus.telemetry.gps}</span>
           </div>
           <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838; grid-column: span 2;">
@@ -3017,34 +3174,34 @@
             <strong style="color: #2FD9A8; font-size: 13px;">${bus.telemetry.passengers} Seats Occupied</strong>
           </div>
         </div>
-        <button class="admin-modal-button-secondary" type="button" style="width: 100%;" data-admin-modal-close>Close Telemetry Feed</button>
+        <button class="admin-modal-button-secondary" type="button" style="width: 100%;" data-admin-modal-close>Close Details</button>
       `;
       isInfoOnly = true;
     } else if (type === "export-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
-      title = "Export Surge Report (PDF / CSV)";
-      desc = "Compiling 24-hour predictive transit surge analysis for <strong>Route 1: Trinoma Express</strong>.<br><br>Peak Volume: <strong>1,190 commuters/hr</strong><br>Monsoon Impact: <strong>+35% dwell surge</strong><br>Forecast Model Convergence: <strong>96.4%</strong>";
-      primaryBtn = "Download Operations Report";
+      title = "Export Demand Report (PDF / CSV)";
+      desc = `Preparing a sample 24-hour passenger demand report for <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Expected peak: <strong>1,190 passengers per hour</strong><br>Estimated rain impact: <strong>35% longer stops</strong>`;
+      primaryBtn = "Download Report";
       isInfoOnly = true;
     } else if (type === "approve-redistribution") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
-      title = "Fleet Redistribution Approved";
-      desc = "AI dispatch plan has been transmitted to operations control:<br><br>• <strong>+3 standby buses</strong> dispatched to Route 1 (Trinoma)<br>• Evening headway compressed from <strong>12m → 5m</strong><br>• <strong>2 standby coaches</strong> borrowed from Malolos Feeder";
-      primaryBtn = "Done";
+      title = "Bus Changes Applied";
+      desc = `Sample changes for ${escapeHtml(activeRoute.label)}:<br><br>• Add <strong>3 standby buses</strong><br>• Reduce the time between evening buses from <strong>12 to 5 minutes</strong><br>• Deploy <strong>2 available buses</strong> from ${escapeHtml(activeRoute.origin)} depot<br><br>This prototype does not update real bus assignments.`;
+      primaryBtn = "Close";
       isInfoOnly = true;
     } else if (type === "simulate-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>`;
-      title = "Monte Carlo Surge Simulation";
-      desc = "Model executed with 1,000 synthetic commuter agents.<br><br>Result: <strong>-42% Projected Queue Wait Time</strong> across Trinoma &amp; Cubao transit shelters with 98.4% system reliability.";
-      primaryBtn = "Close Simulation";
+      title = "Passenger Demand Estimate";
+      desc = `Sample estimate based on 1,000 simulated trips on ${escapeHtml(activeRoute.label)}.<br><br>Estimated queue wait time: <strong>42% shorter</strong> at ${escapeHtml(activeRoute.destinationShort)}.`;
+      primaryBtn = "Close Estimate";
       isInfoOnly = true;
     } else if (type.startsWith("dispatch-order-sent-")) {
       const busId = type.replace("dispatch-order-sent-", "");
       const bus = fleetDispatchTelemetryUnits.find((u) => u.id === busId) || fleetDispatchTelemetryUnits[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
-      title = `Dispatch Order Transmitted — Unit #${bus.busNo}`;
-      desc = `Telemetry order dispatched to <strong>Bus No. ${bus.busNo} (${bus.tripName})</strong>.<br><br>Assigned Driver: <strong>${bus.driverName}</strong><br>Conductor: <strong>${bus.conductorName}</strong><br>Corridor: <strong>${bus.routeCorridor}</strong><br><br>Status: <strong>Order acknowledged by onboard vehicle telematics unit via LTE-M handshake.</strong>`;
-      primaryBtn = "Acknowledge & Close";
+      title = `Assignment Saved — Bus ${bus.busNo}`;
+      desc = `Sample assignment for <strong>Bus ${bus.busNo} (${bus.tripName})</strong>.<br><br>Driver: <strong>${bus.driverName}</strong><br>Conductor: <strong>${bus.conductorName}</strong><br>Route: <strong>${bus.routeCorridor}</strong><br><br>This prototype does not send instructions to a real vehicle.`;
+      primaryBtn = "Close";
       isInfoOnly = true;
     } else if (type.startsWith("assign-driver-unit-")) {
       const busId = type.replace("assign-driver-unit-", "");
@@ -3140,7 +3297,7 @@
       const cam = adminCameraFeedsData.find((c) => c.id === camId) || adminCameraFeedsData[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
       title = `Snapshot Saved — ${cam.code}`;
-      desc = `Full-resolution 1080p frame captured with cryptographic timecode.<br>Feed: <strong>${cam.title}</strong> · Corridor: <strong>${cam.corridorLabel}</strong>`;
+      desc = `Sample camera image saved.<br>Camera: <strong>${cam.title}</strong> · Location: <strong>${cam.locationLabel}</strong>`;
       customHtml = `
         <div style="margin: 14px 0; border-radius: 8px; overflow: hidden; border: 1px solid #1e2838; position: relative;">
           <img src="${cam.image}" alt="${cam.title}" style="width: 100%; height: 180px; object-fit: cover; display: block;">
@@ -3159,8 +3316,8 @@
       const camId = type.replace("cctv-ptz-", "");
       const cam = adminCameraFeedsData.find((c) => c.id === camId) || adminCameraFeedsData[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>`;
-      title = `PTZ Diagnostics — ${cam.code}`;
-      desc = `Remote motorized optical control for <strong>${cam.title}</strong>.`;
+      title = `Camera View — ${cam.code}`;
+      desc = `Adjust the sample view for <strong>${cam.title}</strong>.`;
       customHtml = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; text-align: left;">
           <div style="background: #0f1622; padding: 12px; border-radius: 8px; border: 1px solid #1e2838; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
@@ -3194,32 +3351,32 @@
       isInfoOnly = true;
     } else if (type === "cctv-calibrate") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`;
-      title = "Sensor Calibration";
-      desc = "Optical alignment and telematics diagnostics completed for all active camera feeds.";
+      title = "Camera and Sensor Check";
+      desc = "Sample camera and sensor checks are complete.";
       primaryBtn = "Done";
       isInfoOnly = true;
     } else if (type === "cctv-add-device") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
-      title = "Register Surveillance Feed";
-      desc = "Enroll a new RTSP / WebRTC camera unit or telemetry sensor hub into USAD mesh.";
+      title = "Add Camera or Device";
+      desc = "Add a camera or sensor to this sample device list.";
       customHtml = `
         <form class="admin-login-form" data-cctv-add-feed-form style="margin-top: 14px; text-align: left;">
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Camera Identifier / Name</label>
-            <input class="admin-input" id="new-cam-title" placeholder="e.g. CAM 9.1/ws — Balintawak South Gate" required style="height: 38px;">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Camera Name</label>
+            <input class="admin-input" id="new-cam-title" placeholder="e.g. Balintawak South Gate" required style="height: 38px;">
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <div class="admin-form-field">
-              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Zone</label>
-              <select class="admin-input" id="new-cam-corridor" style="height: 38px;">
-                <option value="trinoma">Trinoma Hub</option>
-                <option value="fleet">Fleet Onboard</option>
-                <option value="edsa">EDSA Corridor</option>
-                <option value="depot">Depot Bays</option>
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Camera Location</label>
+              <select class="admin-input" id="new-cam-location" style="height: 38px;">
+                <option value="trinoma">Trinoma</option>
+                <option value="fleet">On Buses</option>
+                <option value="nlex">Along NLEX</option>
+                <option value="depot">Malolos Depot</option>
               </select>
             </div>
             <div class="admin-form-field">
-              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Stream Protocol</label>
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Connection Type</label>
               <select class="admin-input" id="new-cam-protocol" style="height: 38px;">
                 <option value="webrtc">WebRTC (Ultra Low Latency)</option>
                 <option value="rtsp">RTSP over TLS</option>
@@ -3252,19 +3409,15 @@
               <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Audit Category</label>
               <select class="admin-input" id="rep-gen-category" style="height: 38px;">
                 <option value="financial">Revenue &amp; Finance</option>
-                <option value="otp">Fleet &amp; Headway</option>
+                <option value="otp">Bus Schedules</option>
                 <option value="crew">Crew &amp; Personnel</option>
                 <option value="fuel">Fuel &amp; Maintenance</option>
               </select>
             </div>
             <div class="admin-form-field">
-              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Scope</label>
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Route</label>
               <select class="admin-input" id="rep-gen-corridor" style="height: 38px;">
-                <option value="All Corridors">All Corridors (4)</option>
-                <option value="Trinoma Express">Trinoma Hub Express</option>
-                <option value="EDSA Carousel">EDSA Carousel Loop</option>
-                <option value="Malolos Central">Malolos Central Loop</option>
-                <option value="C-5 &amp; Quezon">C-5 &amp; Quezon Feeder</option>
+                ${renderRouteOptions(activeRoute.id)}
               </select>
             </div>
           </div>
@@ -3299,7 +3452,7 @@
       const report = adminReportsData.find((r) => r.id === repId) || adminReportsData[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
       title = `${report.id}: ${report.title}`;
-      desc = `Official transit operational audit for <strong>${report.corridor}</strong>.`;
+      desc = `Official transit operational audit for <strong>${report.corridorLabel}</strong>.`;
       customHtml = `
         <div style="background: #0b1017; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; margin: 16px 0; text-align: left; font-size: 12px; display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
@@ -3498,7 +3651,7 @@
       <button class="nav-item${active === "live-map" ? " is-active" : ""}" type="button" data-screen="live-map" aria-current="${active === "live-map" ? "page" : "false"}">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg><span>Live Map</span>
       </button>
-      <button class="nav-book" type="button" data-action="quick-book" aria-label="Quick book"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="nav-book" type="button" data-action="quick-book" aria-label="Book a trip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Book</span></button>
       <button class="nav-item${active === "tickets" ? " is-active" : ""}" type="button" data-screen="tickets" aria-current="${active === "tickets" ? "page" : "false"}">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V6Z"/><path d="M13 8v2m0 2v2m0 2v1"/></svg><span>Tickets</span>
       </button>
@@ -3513,15 +3666,15 @@
       : '<path class="road-main" d="M-12 136 68 95 118 108 164 65 217 78 286 20 374 35"/><path class="road-secondary" d="M-15 48 68 95 95 166M118 108 152 180M164 65 147 0M217 78 231 158M286 20 312 0M286 20 332 114"/><path class="route-line" d="M48 119 110 104 160 70 220 77 296 35"/>';
     const viewBox = live ? "0 0 360 640" : "0 0 360 180";
     return `
-      <div class="map-art${compact ? " is-compact" : ""}${live ? " is-live" : ""}" role="${live ? "group" : "img"}" aria-label="Illustrative, not-to-scale route map from Robinsons Place Malolos to Trinoma via the North Luzon Expressway">
+      <div class="map-art${compact ? " is-compact" : ""}${live ? " is-live" : ""}" role="${live ? "group" : "img"}" aria-label="Illustrative, not-to-scale route map from ${escapeHtml(activeRoute.origin)} to ${escapeHtml(activeRoute.destination)} via ${escapeHtml(activeRoute.via)}">
         <div class="map-scene">
           <span class="map-block map-block-one"></span><span class="map-block map-block-two"></span>
           <span class="map-block map-block-three"></span><span class="map-block map-block-four"></span>
           ${live ? '<span class="map-park map-park-one"></span><span class="map-park map-park-two"></span><span class="map-district-label district-malolos">MALOLOS</span><span class="map-district-label district-bocaue">BOCAUE</span><span class="map-district-label district-marilao">MARILAO</span><span class="map-district-label district-balintawak">BALINTAWAK</span><span class="map-district-label district-trinoma">TRINOMA</span>' : ""}
           <svg class="map-roads" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${roads}</svg>
-          <span class="map-label map-label-one">${live ? "ROBINSONS MALOLOS" : "MALINTA"}</span><span class="map-label map-label-two">${live ? "NORTH LUZON EXPY" : "NORTH AVE"}</span>
+          <span class="map-label map-label-one">${live ? escapeHtml(activeRoute.origin) : "MALOLOS"}</span><span class="map-label map-label-two">${live ? escapeHtml(activeRoute.destinationShort) : "TRINOMA"}</span>
           <span class="map-marker map-marker-start" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-8.1 8-13a8 8 0 1 0-16 0c0 4.9 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
-          ${live ? '<span class="map-marker map-marker-bus" data-sim-bus="0" tabindex="0" role="img" aria-label="Simulated bus 1. Malolos to North Avenue. 3 minutes away, 8 seats available, on time." aria-describedby="bus-tooltip-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="bus-tooltip-1" role="tooltip"><strong>Bus 01</strong><span>Malolos → North Avenue</span><span>3 min · 8 seats</span><small>On time · Demo data</small></span></span><span class="map-marker map-marker-bus map-marker-bus-alt" data-sim-bus="1" tabindex="0" role="img" aria-label="Simulated bus 2. Malolos to North Avenue. Less than 1 minute away, 1 seat available, on time." aria-describedby="bus-tooltip-2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="bus-tooltip-2" role="tooltip"><strong>Bus 02</strong><span>Malolos → North Avenue</span><span>&lt;1 min · 1 seat</span><small>On time · Demo data</small></span></span>' : '<span class="map-marker map-marker-bus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg></span>'}
+          ${live ? `<span class="map-marker map-marker-bus" data-sim-bus="0" tabindex="0" role="img" aria-label="Simulated Bus 1 on ${escapeHtml(activeRoute.label)}. 3 minutes away, 8 seats available, on time." aria-describedby="bus-tooltip-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="bus-tooltip-1" role="tooltip"><strong>Bus 01</strong><span>${escapeHtml(activeRoute.name)}</span><span>3 min · 8 seats</span><small>On time · Demo data</small></span></span><span class="map-marker map-marker-bus map-marker-bus-alt" data-sim-bus="1" tabindex="0" role="img" aria-label="Simulated Bus 2 on ${escapeHtml(activeRoute.label)}. Less than 1 minute away, 1 seat available, on time." aria-describedby="bus-tooltip-2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="bus-tooltip-2" role="tooltip"><strong>Bus 02</strong><span>${escapeHtml(activeRoute.name)}</span><span>&lt;1 min · 1 seat</span><small>On time · Demo data</small></span></span>` : '<span class="map-marker map-marker-bus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg></span>'}
           <span class="map-marker map-marker-destination" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-8.1 8-13a8 8 0 1 0-16 0c0 4.9 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
           ${compact ? "" : '<span class="map-compass" aria-hidden="true">N</span>'}
         </div>
@@ -3531,7 +3684,7 @@
   const homeHeaderContent = ({ searchPlaceholder = "Where are you heading?", searchMode = "route", footerMarkup = null } = {}) => `
     <div class="home-header-content">
       <div class="home-greeting-row">
-        <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>Robinsons Place Malolos</h1></div>
+        <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>${escapeHtml(activeRoute.origin)}</h1></div>
         <button class="notification-button" type="button" aria-label="Notifications, ${unreadNotificationCount()} unread" data-screen="notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
       </div>
       <form class="destination-search" data-route-search>
@@ -3570,13 +3723,13 @@
         <section class="vehicle-section">
           <div class="section-heading"><h2>Vehicles near you</h2><span><i></i> 2 en route</span></div>
           <button class="vehicle-row" type="button" data-action="quick-book">
-            <span class="vehicle-logo">MLS<br><small>NAVE</small></span>
-            <span class="vehicle-info"><strong>Malolos – North Avenue Station</strong><small>via North Luzon Expressway · 8 seats available</small></span>
+            <span class="vehicle-logo">MLS<br><small>TRI</small></span>
+            <span class="vehicle-info"><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · 8 seats available</small></span>
             <span class="vehicle-eta">3 min<small>On time</small></span>
           </button>
           <button class="vehicle-row" type="button" data-action="quick-book">
-            <span class="vehicle-logo ochre">MLS<br><small>NAVE</small></span>
-            <span class="vehicle-info"><strong>Malolos – North Avenue Station</strong><small>via North Luzon Expressway · 1 seat available</small></span>
+            <span class="vehicle-logo ochre">MLS<br><small>TRI</small></span>
+            <span class="vehicle-info"><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · 1 seat available</small></span>
             <span class="vehicle-eta soon">&lt;1 min<small>On time</small></span>
           </button>
         </section>
@@ -3683,9 +3836,9 @@
       <div class="result-filter"><button class="filter-selected" type="button">Fastest</button><button type="button" data-info="Showing the fastest available seats.">More Seats</button></div>
       <div class="discount-note"><span>✓</span> Student Discount Applied</div>
       <section class="ride-list">
-        <article class="ride-card"><span class="ride-logo">MLS<small>NAVE</small></span><div class="ride-detail"><h2>Malolos – North Avenue Station</h2><p>via North Luzon Expressway</p><span>8 seats available · ₱80.00</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card"><span class="ride-logo">MLS<small>NAVE</small></span><div class="ride-detail"><h2>Malolos – North Avenue Station</h2><p>via North Luzon Expressway</p><span>8 seats available · ₱80.00</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>NAVE</small></span><div class="ride-detail"><h2>Malolos – North Avenue Station</h2><p>via North Luzon Expressway</p><span>0 seats · ₱80.00</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱80.00</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱80.00</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
+        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>0 seats · ₱80.00</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
       </section>
       <p class="prototype-stamp">Sample ride options · Not live availability</p>
     </div>`;
@@ -3697,7 +3850,7 @@
         <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
           <button class="modal-close" type="button" aria-label="Close confirmation" data-screen="find-rides">×</button>
           <h2 id="booking-dialog-title">Booking Confirmation</h2><p class="sheet-subtitle">Ride Details</p>
-          <div class="confirm-route"><span class="ride-logo">MLS<small>NAVE</small></span><div><strong>Malolos – North Avenue Station</strong><small>via North Luzon Expressway · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>8 seats available</span></div></div>
+          <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>8 seats available</span></div></div>
           <dl class="fare-breakdown"><div><dt>Regular Fare</dt><dd>₱${(100 * tripData.passengers).toFixed(2)}</dd></div><div><dt>Student Discount</dt><dd>-₱${(20 * tripData.passengers).toFixed(2)}</dd></div><div class="fare-total"><dt>Total Fare</dt><dd>₱${(80 * tripData.passengers).toFixed(2)}</dd></div></dl>
           <div class="dialog-actions"><button type="button" data-screen="find-rides">Cancel</button><button type="button" class="confirm-action" data-action="confirm-booking">Confirm</button></div>
         </section>
@@ -3726,7 +3879,7 @@
       <section class="ticket-panel">
         <div class="demo-qr" role="img" aria-label="Illustrative non-scannable ticket code"><i></i><i></i><i></i><b></b></div>
         <span class="ticket-caption">Ticket Reference</span><strong class="ticket-number">${escapeHtml(trip.receiptId || trip.id)}</strong>
-        <div class="ticket-route"><span class="ride-logo">MLS<small>NAVE</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)}</small></div></div>
+        <div class="ticket-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)}</small></div></div>
         <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Refunded" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Fare total</span><strong>₱${Number(trip.fare).toFixed(2)}</strong></div></div>
         ${trip.status === "upcoming" ? '<button type="button" class="track-ride" data-screen="live-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Track this ride</button>' : '<button type="button" class="track-ride" data-screen="tickets">Back to trip history <span>→</span></button>'}
       </section>
@@ -3959,7 +4112,7 @@
             <header><div class="trip-history-summary-title"><span aria-hidden="true"></span><h2>${monthlySummary.month} Spending</h2></div><button type="button" data-info="Tax invoice download is not connected in this prototype.">Download Tax Invoice</button></header>
             <div class="trip-history-stats"><div><span>Total Spent</span><strong>₱${monthlySummary.totalSpent.toFixed(2)}</strong></div><div><span>Rides Taken</span><strong>${monthlySummary.rides} Rides</strong></div><div><span>Saved CO₂</span><strong>${monthlySummary.co2Saved.toFixed(1)} kg</strong></div></div>
           </section>
-          <div class="trip-history-section-heading"><h2>Recent Activity</h2><span>Malolos ⇄ Trinoma / EDSA</span></div>
+          <div class="trip-history-section-heading"><h2>Recent Activity</h2><span>${escapeHtml(activeRoute.name)}</span></div>
           <section class="trip-history-list" data-trip-history-list aria-label="Recent trips">${cards}</section>
           <p class="trip-history-empty" data-trip-history-empty hidden>No trips match this search or filter.</p>
           <p class="trip-history-disclaimer">Sample trip history · Not connected to live booking records</p>
@@ -3971,7 +4124,7 @@
         <header class="live-map-header">
           <div class="live-map-header-content">
             <div class="live-map-topbar">
-              <div class="live-map-location"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Live View</span><strong>Live Operations Map</strong></div>
+              <div class="live-map-location"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Sample Map</span><strong>Bus Map</strong></div>
               <button class="notification-button compact" type="button" data-screen="notifications" aria-label="Notifications, ${unreadNotificationCount()} unread"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
             </div>
             <div class="live-map-search" role="search">
@@ -4093,14 +4246,14 @@
           <section class="bottom-sheet quick-book-sheet bus-capacity-popup" role="dialog" aria-modal="true" aria-labelledby="bus-popup-title" tabindex="-1">
             <span class="sheet-handle"></span>
             <h2 id="bus-popup-title" data-bus-name>Bus 01</h2>
-            <p class="sheet-subtitle" data-bus-route>Malolos → Trinoma</p>
+            <p class="sheet-subtitle" data-bus-route>${escapeHtml(activeRoute.origin)} → ${escapeHtml(activeRoute.destinationShort)}</p>
             <div class="bus-popup-scroll" aria-label="Bus details and seat plan">
             <details class="bus-route-overview">
-              <summary class="bus-route-overview-summary"><span><strong>Route Malolos ⇄ Trinoma</strong><small>42 mins · NLEX Express · Normal Flow</small></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></summary>
+              <summary class="bus-route-overview-summary"><span><strong>${escapeHtml(activeRoute.name)}</strong><small>42 mins · ${escapeHtml(activeRoute.via)} · Normal Flow</small></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></summary>
               <div class="bus-route-overview-content">
-                <div class="bus-route-overview-meta"><span>via Tabang Exit</span><span>Updated 1m ago</span></div>
+                <div class="bus-route-overview-meta"><span>via ${escapeHtml(activeRoute.via)}</span><span>Updated 1m ago</span></div>
                 <div class="bus-route-operations">
-                  <div><strong>Terminal Demand</strong><span>Tabang Bridge <b>118 pax</b></span><span>Malolos Hub <b>42 pax</b></span></div>
+                  <div><strong>Terminal Demand</strong><span>${escapeHtml(activeRoute.destinationShort)} <b>118 pax</b></span><span>${escapeHtml(activeRoute.origin)} <b>42 pax</b></span></div>
                   <div><strong>Fleet Deployment</strong><span>Active on Road <b>14 buses</b></span><span>Dispatched Next <b>~4 mins</b></span></div>
                 </div>
                 <div class="bus-next-departure"><strong data-bus-dispatch-title>Next Departure: MLS-042</strong><small data-bus-dispatch-meta>8 available seats · 3 min away</small></div>
@@ -4728,11 +4881,14 @@
       event.preventDefault();
       const busVal = screen.querySelector("#assign-bus")?.value ?? "Bus 01";
       const driverVal = screen.querySelector("#assign-driver")?.value?.trim() || "Assigned Driver";
-      const routeVal = screen.querySelector("#assign-route")?.value || "Trinoma Express";
+      const routeId = screen.querySelector("#assign-route")?.value || activeRoute.id;
+      const assignedRoute = routes.find((route) => route.id === routeId);
+      if (!assignedRoute) throw new Error(`USAD could not assign a bus: route "${routeId}" is not active.`);
       const targetBus = adminFleetData.find((b) => b.busNo.toLowerCase() === busVal.toLowerCase() || b.id.toLowerCase() === busVal.toLowerCase().replace(" ", "-"));
       if (targetBus) {
         targetBus.driver = driverVal;
-        targetBus.route = routeVal;
+        targetBus.routeId = assignedRoute.id;
+        targetBus.route = assignedRoute.label;
         targetBus.status = "On Duty";
         targetBus.statusClass = "on-duty";
         targetBus.dot = "green";
@@ -4920,14 +5076,14 @@
     if (event.target.matches("[data-cctv-add-feed-form]")) {
       event.preventDefault();
       const title = screen.querySelector("#new-cam-title")?.value?.trim() || "New Camera Unit";
-      const corridor = screen.querySelector("#new-cam-corridor")?.value || "trinoma";
+      const location = screen.querySelector("#new-cam-location")?.value || "trinoma";
       const nextNum = adminCameraFeedsData.length + 1;
       adminCameraFeedsData.unshift({
         id: `cam-${Date.now()}`,
         code: `CAM ${nextNum}.1/ws`,
         title,
-        corridor,
-        corridorLabel: corridor === "trinoma" ? "Trinoma Hub" : corridor === "fleet" ? "Fleet Onboard" : corridor === "edsa" ? "EDSA Corridor" : "Depot Bays",
+        location,
+        locationLabel: location === "trinoma" ? "Trinoma" : location === "fleet" ? "On Buses" : location === "nlex" ? "Along NLEX" : "Malolos Depot",
         image: "assets/cctv/cam1.jpg",
         status: "LIVE",
         resolution: "1080p60",
@@ -4949,21 +5105,27 @@
       event.preventDefault();
       const title = screen.querySelector("#rep-gen-title")?.value?.trim() || "Operational Audit Report";
       const category = screen.querySelector("#rep-gen-category")?.value || "financial";
-      const corridor = screen.querySelector("#rep-gen-corridor")?.value || "All Corridors";
+      const routeId = screen.querySelector("#rep-gen-corridor")?.value || activeRoute.id;
+      const reportRoute = routes.find((route) => route.id === routeId);
+      if (!reportRoute) throw new Error(`USAD could not generate the report: route "${routeId}" is not active.`);
       const period = screen.querySelector("#rep-gen-period")?.value || "Month to Date";
       const format = screen.querySelector("#rep-gen-format")?.value || "PDF";
       const nextNum = 1048 + adminReportsData.length - 5;
       const newRep = {
         id: `REP-2026-${nextNum}`,
         title,
-        corridor,
+        routeId: reportRoute.id,
+        corridorLabel: reportRoute.label,
         category,
-        categoryLabel: category === "financial" ? "Revenue & Finance" : category === "otp" ? "Fleet & Headway" : category === "crew" ? "Crew & Personnel" : "Fuel & Maintenance",
+        categoryLabel: category === "financial" ? "Revenue & Finance" : category === "otp" ? "Bus Schedules" : category === "crew" ? "Staff" : "Fuel & Maintenance",
+        dateRange: `${period} (Verified)`,
         period: `${period} (Verified)`,
+        summaryMetric: category === "financial" ? "₱385,420 Fare Rev" : category === "otp" ? "93.4% On-Time" : category === "crew" ? "100% Shift Fill" : "3.48 km/L Fleet Avg",
         primaryMetric: category === "financial" ? "₱385,420 Fare Rev" : category === "otp" ? "93.4% On-Time" : category === "crew" ? "100% Shift Fill" : "3.48 km/L Fleet Avg",
         secondaryMetric: "Automated Data Ingestion",
         status: "Finalized",
         statusClass: "completed",
+        fileFormat: format,
         format,
         fileSize: format === "PDF" ? "1.8 MB" : format === "CSV" ? "240 KB" : "860 KB",
         author: "Jocky Cabataña"
@@ -5095,10 +5257,12 @@
 
     if (event.target.matches("[data-admin-corridor]")) {
       activeCorridorFilter = event.target.value;
+      const tbody = screen.querySelector("#admin-fleet-tbody");
+      if (tbody) tbody.innerHTML = renderAdminFleetRows();
     }
 
     if (event.target.matches("[data-cctv-filter]")) {
-      activeCameraCorridorFilter = event.target.value;
+      activeCameraLocationFilter = event.target.value;
       const grid = screen.querySelector("#cctv-grid-container");
       if (grid) grid.innerHTML = renderCameraFeedsGrid();
     }
@@ -5129,6 +5293,14 @@
       if (termsError) termsError.hidden = true;
     }
   });
+
+  screen.addEventListener("toggle", (event) => {
+    const assignmentPanel = event.target;
+    if (assignmentPanel instanceof HTMLDetailsElement && assignmentPanel.matches(".dispatch-assignment-panel")) {
+      dispatchAssignmentPanelOpen = assignmentPanel.open;
+      assignmentPanel.closest(".fleet-dispatch-grid")?.classList.toggle("is-assignment-expanded", dispatchAssignmentPanelOpen);
+    }
+  }, true);
 
   screen.addEventListener("click", (event) => {
     const repCatBtn = event.target.closest("[data-report-category]");
@@ -5340,6 +5512,8 @@
     if (manageTripBtn) {
       selectedDispatchBusId = manageTripBtn.dataset.manageTrip;
       dispatchPanelOpen = true;
+      dispatchAssignmentPanelOpen = false;
+      selectedDispatchSeatBooking = null;
       screen.querySelectorAll("[data-select-bus]").forEach((row) => {
         row.classList.toggle("is-selected", row.dataset.selectBus === selectedDispatchBusId);
       });
@@ -5350,18 +5524,146 @@
       return;
     }
 
+    const dispatchBookingSeat = event.target.closest("[data-dispatch-booking-seat]");
+    if (dispatchBookingSeat) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for seat booking details.`);
+      const seatId = dispatchBookingSeat.dataset.dispatchBookingSeat;
+      const booking = getBookingForSeat(bus, seatId);
+      if (!booking) {
+        throw new Error(`USAD could not show booking details for non-occupied seat ${seatId} on Bus ${bus.busNo}.`);
+      }
+
+      selectedDispatchSeatBooking = { busId: bus.id, seatId, ...booking };
+      screen.querySelectorAll("[data-dispatch-booking-seat]").forEach((seat) => {
+        const isSelected = seat === dispatchBookingSeat;
+        seat.classList.toggle("is-selected", isSelected);
+        seat.setAttribute("aria-pressed", String(isSelected));
+      });
+      screen.querySelectorAll("[data-dispatch-available-seat]").forEach((seat) => {
+        seat.classList.remove("is-selected");
+        seat.setAttribute("aria-pressed", "false");
+      });
+      const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
+      if (bookingDetails) {
+        bookingDetails.classList.add("has-selection");
+        bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
+      }
+      return;
+    }
+
+    const startSeatRelease = event.target.closest("[data-start-seat-release]");
+    if (startSeatRelease) {
+      if (selectedDispatchSeatBooking?.seatId !== startSeatRelease.dataset.startSeatRelease) {
+        throw new Error(`USAD could not confirm the selected booking for seat ${startSeatRelease.dataset.startSeatRelease}.`);
+      }
+      selectedDispatchSeatBooking.confirmingRelease = true;
+      const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
+      if (bookingDetails) bookingDetails.innerHTML = renderDispatchSeatBookingDetails(fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId));
+      return;
+    }
+
+    const cancelSeatRelease = event.target.closest("[data-cancel-seat-release]");
+    if (cancelSeatRelease) {
+      if (!selectedDispatchSeatBooking?.confirmingRelease) return;
+      selectedDispatchSeatBooking.confirmingRelease = false;
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
+      if (bookingDetails && bus) bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
+      return;
+    }
+
+    const confirmSeatRelease = event.target.closest("[data-confirm-seat-release]");
+    if (confirmSeatRelease) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      const seatId = confirmSeatRelease.dataset.confirmSeatRelease;
+      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || !selectedDispatchSeatBooking.confirmingRelease) {
+        throw new Error(`USAD could not verify the customer departure confirmation for seat ${seatId}.`);
+      }
+
+      const bookingIndex = bus.walkInBookings.findIndex((booking) => booking.seatId === seatId);
+      if (bookingIndex >= 0) {
+        bus.walkInBookings.splice(bookingIndex, 1);
+      } else {
+        const passengerSeatIndex = getPassengerSeatIndex(seatId);
+        if (passengerSeatIndex < 0 || passengerSeatIndex >= bus.sampleOccupiedSeats || bus.releasedSampleSeatIds.includes(seatId)) {
+          throw new Error(`USAD could not release seat ${seatId} because its booking is no longer active.`);
+        }
+        bus.releasedSampleSeatIds.push(seatId);
+      }
+
+      updateFleetOccupancyDisplay(bus);
+      selectedDispatchSeatBooking = { busId: bus.id, seatId, type: "released" };
+      const tbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = renderDispatchControlPanel();
+      return;
+    }
+
     if (event.target.closest("[data-close-dispatch-panel]")) {
       dispatchPanelOpen = false;
+      dispatchAssignmentPanelOpen = false;
       const panel = screen.querySelector("#dispatch-panel-container");
       if (panel) panel.innerHTML = "";
       const grid = screen.querySelector(".fleet-dispatch-grid");
       if (grid) grid.classList.add("is-panel-closed");
+      grid?.classList.remove("is-assignment-expanded");
+      return;
+    }
+
+    const availableDispatchSeat = event.target.closest("[data-dispatch-available-seat]");
+    if (availableDispatchSeat) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for walk-in booking.`);
+      const seatId = availableDispatchSeat.dataset.dispatchAvailableSeat;
+      if (getBookingForSeat(bus, seatId)) {
+        throw new Error(`USAD cannot book seat ${seatId} on Bus ${bus.busNo} because it is already occupied.`);
+      }
+      selectedDispatchSeatBooking = { busId: bus.id, seatId, type: "available" };
+      screen.querySelectorAll("[data-dispatch-available-seat]").forEach((seat) => {
+        const isSelected = seat === availableDispatchSeat;
+        seat.classList.toggle("is-selected", isSelected);
+        seat.setAttribute("aria-pressed", String(isSelected));
+      });
+      screen.querySelectorAll("[data-dispatch-booking-seat]").forEach((seat) => {
+        seat.classList.remove("is-selected");
+        seat.setAttribute("aria-pressed", "false");
+      });
+      const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
+      if (bookingDetails) {
+        bookingDetails.classList.add("has-selection");
+        bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
+      }
+      return;
+    }
+
+    const bookWalkInButton = event.target.closest("[data-book-walk-in-seat]");
+    if (bookWalkInButton) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      const seatId = bookWalkInButton.dataset.bookWalkInSeat;
+      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || selectedDispatchSeatBooking.type !== "available") {
+        throw new Error(`USAD could not confirm the walk-in booking for seat ${seatId}. Select an available seat and try again.`);
+      }
+      if (getBookingForSeat(bus, seatId)) {
+        throw new Error(`USAD cannot book seat ${seatId} on Bus ${bus.busNo} because it is already occupied.`);
+      }
+
+      const booking = createWalkInBooking(bus, seatId);
+      bus.walkInBookings.push(booking);
+      updateFleetOccupancyDisplay(bus);
+      selectedDispatchSeatBooking = { busId: bus.id, ...booking };
+      const tbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = renderDispatchControlPanel();
       return;
     }
 
     const selectBusRow = event.target.closest("[data-select-bus]");
     if (selectBusRow) {
       selectedDispatchBusId = selectBusRow.dataset.selectBus;
+      selectedDispatchSeatBooking = null;
       screen.querySelectorAll("[data-select-bus]").forEach((r) => {
         r.classList.toggle("is-selected", r === selectBusRow);
       });
@@ -5375,21 +5677,11 @@
     const mapBus = event.target.closest("[data-map-bus]");
     if (mapBus) {
       selectedDispatchBusId = mapBus.dataset.mapBus;
+      selectedDispatchSeatBooking = null;
       const tbody = screen.querySelector("#fleet-telemetry-tbody");
       if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
       const panel = screen.querySelector("#dispatch-panel-container");
       if (dispatchPanelOpen && panel) panel.innerHTML = renderDispatchControlPanel();
-      const mapContainer = screen.querySelector("#radar-viewport-container");
-      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
-      return;
-    }
-
-    const corridorFilterBtn = event.target.closest("[data-corridor-filter]");
-    if (corridorFilterBtn) {
-      dispatchCorridorFilter = corridorFilterBtn.dataset.corridorFilter;
-      screen.querySelectorAll("[data-corridor-filter]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn === corridorFilterBtn);
-      });
       const mapContainer = screen.querySelector("#radar-viewport-container");
       if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
       return;
@@ -5438,19 +5730,19 @@
       const textarea = screen.querySelector("[data-dispatch-note]");
 
       if (action === "reroute") {
-        dispatchNoteInput = `[Detour Order] Route via Shaw Blvd / C-5 service bypass to recover +8m headway gap.`;
+        dispatchNoteInput = `Route update: Continue via ${activeRoute.via} to ${activeRoute.destination} and make up an 8-minute delay.`;
         if (textarea) {
           textarea.value = dispatchNoteInput;
           textarea.focus();
         }
       } else if (action === "hold") {
-        dispatchNoteInput = `[Headway Hold] Hold at SM North Edsa Terminal Bay 2 for 4 min to normalize spacing with Bus 02.`;
+        dispatchNoteInput = `Schedule adjustment: Wait at ${activeRoute.destination} for 4 minutes to keep buses evenly spaced.`;
         if (textarea) {
           textarea.value = dispatchNoteInput;
           textarea.focus();
         }
       } else if (action === "recall") {
-        dispatchNoteInput = `[Depot Recall] Immediate return to Saraza Central Depot for telemetry diagnostic inspection.`;
+        dispatchNoteInput = `Return to Saraza Central Depot for a vehicle check.`;
         if (textarea) {
           textarea.value = dispatchNoteInput;
           textarea.focus();
