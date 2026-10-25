@@ -7600,7 +7600,158 @@ input:focus-visible,
   color: #ffffff;
 }
 
+.seat-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
 
+.seat-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 18px 20px;
+  background: #111827;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+}
+
+.seat-summary-label {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.seat-summary-item strong {
+  color: #f8fafc;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.seat-summary-item small {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.seat-route-label,
+.seat-sample-badge {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.seat-sample-badge {
+  padding: 5px 9px;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid #334155;
+  border-radius: 999px;
+}
+
+.seat-tracking-card {
+  min-width: 0;
+}
+
+.seat-tracking-table {
+  min-width: 680px;
+}
+
+.seat-tracking-table th[scope="row"] {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.seat-bus-name,
+.seat-tracking-table th[scope="row"] small {
+  display: block;
+}
+
+.seat-tracking-table th[scope="row"] small {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.seat-bus-status {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #1e293b;
+  color: #cbd5e1;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.seat-bus-status.on-duty {
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+}
+
+.seat-bus-status.on-break {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fcd34d;
+}
+
+.seat-bus-status.off-duty {
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+}
+
+.seat-capacity-total {
+  color: #94a3b8;
+}
+
+.seat-occupancy-cell {
+  display: flex;
+  min-width: 150px;
+  align-items: center;
+  gap: 10px;
+}
+
+.seat-occupancy-cell strong {
+  min-width: 36px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.seat-occupancy-track {
+  flex: 1;
+  height: 7px;
+  overflow: hidden;
+  background: #1e293b;
+  border-radius: 999px;
+}
+
+.seat-occupancy-track span {
+  display: block;
+  height: 100%;
+  background: #10b981;
+  border-radius: inherit;
+}
+
+.seat-occupancy-track span.is-high {
+  background: #f59e0b;
+}
+
+.seat-tracking-note {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .seat-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .seat-summary-item {
+    padding: 15px 16px;
+  }
+}
 
 
 
