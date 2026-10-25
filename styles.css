@@ -5598,11 +5598,63 @@ input:focus-visible,
   gap: 16px;
 }
 
+.dispatch-assignment-panel {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
 .dispatch-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.dispatch-assignment-panel > .dispatch-panel-header {
+  min-height: 64px;
+  padding: 16px 24px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dispatch-assignment-panel > .dispatch-panel-header::-webkit-details-marker {
+  display: none;
+}
+
+.dispatch-assignment-panel > .dispatch-panel-header:focus-visible {
+  outline: 2px solid #2fd9a8;
+  outline-offset: -4px;
+}
+
+.dispatch-assignment-panel[open] > .dispatch-panel-header {
+  border-bottom: 1px solid #1e293b;
+}
+
+.dispatch-panel-summary-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dispatch-panel-chevron {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #94a3b8;
+  stroke-width: 1.6;
+  transition: transform 0.18s ease;
+}
+
+.dispatch-assignment-panel[open] .dispatch-panel-chevron {
+  transform: rotate(180deg);
+}
+
+.dispatch-assignment-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
 }
 
 .dispatch-panel-title-wrap {

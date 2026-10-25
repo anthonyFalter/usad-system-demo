@@ -197,6 +197,7 @@
   let activeAdminSidebarTab = "staff-resources";
   let selectedDispatchBusId = "bus-01";
   let selectedDispatchSeatBooking = null;
+  let dispatchAssignmentPanelOpen = false;
   let nextWalkInBookingNumber = 1;
   let dispatchTelemetryFilter = "all";
   let dispatchMapZoom = 1;
@@ -1289,14 +1290,18 @@
     const unit = fleetDispatchTelemetryUnits.find((u) => u.id === selectedDispatchBusId) || fleetDispatchTelemetryUnits[0];
     const seatCounts = getSeatCounts(unit);
     return `
-      <section class="dispatch-control-panel-card">
-        <header class="dispatch-panel-header">
+      <details class="dispatch-control-panel-card dispatch-assignment-panel"${dispatchAssignmentPanelOpen ? " open" : ""}>
+        <summary class="dispatch-panel-header" aria-controls="dispatch-assignment-content">
           <div class="dispatch-panel-title-wrap">
             <h2 class="dispatch-panel-title">Bus Assignment</h2>
           </div>
-          <span class="dispatch-unit-badge">${unit.unitCode}</span>
-        </header>
+          <span class="dispatch-panel-summary-end">
+            <span class="dispatch-unit-badge">${unit.unitCode}</span>
+            <svg class="dispatch-panel-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+          </span>
+        </summary>
 
+        <div class="dispatch-assignment-panel-content" id="dispatch-assignment-content">
         <!-- Active Selection Box -->
         <div class="dispatch-active-selection-box">
           <span class="selection-box-label">Selected Bus</span>
@@ -1400,7 +1405,8 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
           <span>Save Assignment</span>
         </button>
-      </section>
+        </div>
+      </details>
     `;
   };
 
@@ -5087,6 +5093,13 @@
       if (termsError) termsError.hidden = true;
     }
   });
+
+  screen.addEventListener("toggle", (event) => {
+    const assignmentPanel = event.target;
+    if (assignmentPanel instanceof HTMLDetailsElement && assignmentPanel.matches(".dispatch-assignment-panel")) {
+      dispatchAssignmentPanelOpen = assignmentPanel.open;
+    }
+  }, true);
 
   screen.addEventListener("click", (event) => {
     const repCatBtn = event.target.closest("[data-report-category]");
