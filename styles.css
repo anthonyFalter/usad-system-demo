@@ -1629,10 +1629,11 @@ input:focus-visible,
   bottom: 0;
   left: 0;
   display: flex;
-  height: 66px;
+  height: 74px;
   align-items: center;
-  justify-content: space-around;
-  padding: 5px 9px 4px;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 8px 5px;
   border-top: 1px solid #e4e8e6;
   border-radius: var(--home-radius-card) var(--home-radius-card) 0 0;
   background: #fff;
@@ -1640,23 +1641,26 @@ input:focus-visible,
 
 .nav-item {
   display: flex;
-  width: 58px;
-  height: 50px;
+  min-width: 0;
+  height: 56px;
+  flex: 1 1 0;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 3px;
-  padding: 0;
+  gap: 4px;
+  padding: 4px 2px;
   border: 0;
+  border-radius: 12px;
   background: transparent;
-  color: #929a96;
+  color: #737d78;
   cursor: pointer;
   font-size: 11px;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
 .nav-item svg {
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -1664,26 +1668,36 @@ input:focus-visible,
   stroke-linejoin: round;
 }
 
-.nav-item.is-active { color: #123f32; font-weight: 650; }
+.nav-item:hover { background: #f1f8f5; color: #123f32; }
+.nav-item:active { transform: scale(.96); }
+.nav-item.is-active { background: #e8f7f1; color: #123f32; font-weight: 650; }
 .nav-item.is-active svg { stroke-width: 2.2; }
 
 .nav-book {
-  display: grid;
-  width: 54px;
-  height: 54px;
-  flex: 0 0 54px;
-  place-items: center;
-  margin-top: -24px;
+  display: flex;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: -18px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 17px;
   background: #23bf92;
   box-shadow: 0 3px 8px rgba(13, 98, 72, .25);
   color: #fff;
   cursor: pointer;
+  font-size: 10px;
+  font-weight: 650;
+  transition: background-color 140ms ease, transform 140ms ease;
 }
 
-.nav-book svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
-.prototype-stamp { position: absolute; bottom: 68px; left: 0; width: 100%; margin: 0; color: #46534d; font-size: 11px; text-align: center; pointer-events: none; }
+.nav-book svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; }
+.nav-book:hover { background: #18a97f; }
+.nav-book:active { transform: scale(.96); }
+.prototype-stamp { position: absolute; bottom: 76px; left: 0; width: 100%; margin: 0; color: #46534d; font-size: 11px; text-align: center; pointer-events: none; }
 .home-scroll + .app-navigation + .prototype-stamp { background: rgba(255,255,255,.82); }
 
 .modal-scrim {
@@ -3586,25 +3600,26 @@ input:focus-visible,
 .admin-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
 }
 
 .admin-nav-item {
   display: flex;
+  min-height: 48px;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
   color: #94a3b8;
   font-size: 13.5px;
   font-weight: 500;
   background: transparent;
-  border: 0;
   width: 100%;
   text-align: left;
   cursor: pointer;
   position: relative;
-  transition: all 0.15s ease;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
 }
 
 .admin-nav-item svg {
@@ -3615,15 +3630,24 @@ input:focus-visible,
 
 .admin-nav-item:hover {
   color: #f8fafc;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #263244;
 }
 
 .admin-nav-item.is-active {
-  background: rgba(16, 185, 129, 0.10);
+  background: rgba(16, 185, 129, 0.14);
   color: #10b981;
   font-weight: 600;
-  border-left: 3px solid #10b981;
-  border-radius: 0 6px 6px 0;
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.admin-nav-item:active {
+  transform: scale(.98);
+}
+
+.admin-nav-item:focus-visible {
+  outline: 2px solid #2fd9a8;
+  outline-offset: 2px;
 }
 
 .admin-sidebar-user {
@@ -7575,7 +7599,6 @@ input:focus-visible,
   background: #334155;
   color: #ffffff;
 }
-
 
 
 

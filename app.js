@@ -2653,27 +2653,27 @@
           </div>
 
           <nav class="admin-nav" aria-label="Main Navigation">
-            <button class="admin-nav-item${activeAdminSidebarTab === "live-operations" ? " is-active" : ""}" type="button" data-admin-nav="live-operations">
+            <button class="admin-nav-item${activeAdminSidebarTab === "live-operations" ? " is-active" : ""}" type="button" data-admin-nav="live-operations" aria-current="${activeAdminSidebarTab === "live-operations" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
               <span>Dashboard</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "predictive-analytics" ? " is-active" : ""}" type="button" data-admin-nav="predictive-analytics">
+            <button class="admin-nav-item${activeAdminSidebarTab === "predictive-analytics" ? " is-active" : ""}" type="button" data-admin-nav="predictive-analytics" aria-current="${activeAdminSidebarTab === "predictive-analytics" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
               <span>Passenger Demand</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="fleet-dispatch">
+            <button class="admin-nav-item${activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="fleet-dispatch" aria-current="${activeAdminSidebarTab === "fleet-dispatch" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               <span>Fleet</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources">
+            <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources" aria-current="${activeAdminSidebarTab === "staff-resources" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               <span>Staff Management</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "sensor-camera" ? " is-active" : ""}" type="button" data-admin-nav="sensor-camera">
+            <button class="admin-nav-item${activeAdminSidebarTab === "sensor-camera" ? " is-active" : ""}" type="button" data-admin-nav="sensor-camera" aria-current="${activeAdminSidebarTab === "sensor-camera" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
               <span>Cameras &amp; Devices</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "reports" ? " is-active" : ""}" type="button" data-admin-nav="reports">
+            <button class="admin-nav-item${activeAdminSidebarTab === "reports" ? " is-active" : ""}" type="button" data-admin-nav="reports" aria-current="${activeAdminSidebarTab === "reports" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               <span>Reports</span>
             </button>
@@ -3325,7 +3325,7 @@
       <button class="nav-item${active === "live-map" ? " is-active" : ""}" type="button" data-screen="live-map" aria-current="${active === "live-map" ? "page" : "false"}">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg><span>Live Map</span>
       </button>
-      <button class="nav-book" type="button" data-action="quick-book" aria-label="Quick book"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="nav-book" type="button" data-action="quick-book" aria-label="Book a trip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Book</span></button>
       <button class="nav-item${active === "tickets" ? " is-active" : ""}" type="button" data-screen="tickets" aria-current="${active === "tickets" ? "page" : "false"}">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V6Z"/><path d="M13 8v2m0 2v2m0 2v1"/></svg><span>Tickets</span>
       </button>
