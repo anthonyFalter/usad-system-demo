@@ -1303,6 +1303,7 @@
 
         <div class="dispatch-assignment-panel-content" id="dispatch-assignment-content">
         <!-- Active Selection Box -->
+        <div class="dispatch-assignment-overview">
         <div class="dispatch-active-selection-box">
           <span class="selection-box-label">Selected Bus</span>
           <div class="selection-box-title-row">
@@ -1370,8 +1371,10 @@
             <span class="spec-val-content" style="color: #2fd9a8;">${unit.scheduledStop}</span>
           </div>
         </div>
+        </div>
 
         <!-- 2x2 Dispatcher Interventions -->
+        <div class="dispatch-assignment-actions">
         <div class="dispatch-interventions-section">
           <span class="interventions-label">Available Actions</span>
           <div class="interventions-grid-2x2">
@@ -1405,6 +1408,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
           <span>Save Assignment</span>
         </button>
+        </div>
         </div>
       </details>
     `;
@@ -1503,7 +1507,7 @@
     </header>
 
     <!-- Main 2-Column Operational Grid -->
-    <div class="fleet-dispatch-grid">
+    <div class="fleet-dispatch-grid${dispatchAssignmentPanelOpen ? " is-assignment-expanded" : ""}">
       <!-- Left Column: Map + Table -->
       <div class="fleet-dispatch-left-col">
         <!-- 1. Radar Map Card -->
@@ -5098,6 +5102,7 @@
     const assignmentPanel = event.target;
     if (assignmentPanel instanceof HTMLDetailsElement && assignmentPanel.matches(".dispatch-assignment-panel")) {
       dispatchAssignmentPanelOpen = assignmentPanel.open;
+      assignmentPanel.closest(".fleet-dispatch-grid")?.classList.toggle("is-assignment-expanded", dispatchAssignmentPanelOpen);
     }
   }, true);
 
