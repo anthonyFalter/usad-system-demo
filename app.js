@@ -3048,22 +3048,8 @@
         <div class="staff-header-search-wrap" style="width: 260px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" class="staff-header-search-input" placeholder="Search reports or report IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports">
-          </div>
-    <section class="reports-visualizations" aria-label="Operational decision visualizations">
-      <div class="reports-visual-toolbar">
-        <div>
-          <h2 class="reports-visual-title">Performance trends</h2>
-          <p class="reports-visual-caption">Compare revenue and passenger demand over time</p>
         </div>
-        <label class="reports-period-control">View
-          <select class="admin-select-corridor" data-revenue-period aria-label="Revenue chart period">
-            <option value="weekly"${activeRevenueChartPeriod === "weekly" ? " selected" : ""}>Weekly</option>
-            <option value="monthly"${activeRevenueChartPeriod === "monthly" ? " selected" : ""}>Monthly</option>
-            <option value="annual"${activeRevenueChartPeriod === "annual" ? " selected" : ""}>Annual</option>
-          </select>
-        </label>
       </div>
-  </section>
 
       <!-- Table Container -->
       <div class="reports-table-wrap">
@@ -3118,7 +3104,20 @@
         </div>
       </section>
     </div>
-  <section class="reports-visualizations" aria-label="Operational decision visualizations">
+    <section class="reports-visualizations" aria-label="Operational decision visualizations">
+      <div class="reports-visual-toolbar">
+        <div>
+          <h2 class="reports-visual-title">Performance trends</h2>
+          <p class="reports-visual-caption">Compare revenue and passenger demand over time</p>
+        </div>
+        <label class="reports-period-control">View
+          <select class="admin-select-corridor" data-revenue-period aria-label="Revenue chart period">
+            <option value="weekly"${activeRevenueChartPeriod === "weekly" ? " selected" : ""}>Weekly</option>
+            <option value="monthly"${activeRevenueChartPeriod === "monthly" ? " selected" : ""}>Monthly</option>
+            <option value="annual"${activeRevenueChartPeriod === "annual" ? " selected" : ""}>Annual</option>
+          </select>
+        </label>
+      </div>
       <div id="reports-decision-charts">${renderReportsDecisionCharts()}</div>
     </section>
   `;
