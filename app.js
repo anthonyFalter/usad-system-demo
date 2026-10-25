@@ -194,12 +194,13 @@
   let activeFleetFilter = "all";
   let fleetSearchQuery = "";
   let activeCorridorFilter = activeRoute.id;
-  let activeAdminSidebarTab = "fleet-dispatch";
+  let activeAdminSidebarTab = "live-operations";
   let selectedDispatchBusId = "bus-01";
   let dispatchPanelOpen = false;
   let selectedDispatchSeatBooking = null;
   let dispatchAssignmentPanelOpen = false;
   let nextWalkInBookingNumber = 1;
+  const adminFleetSize = 20;
   let dispatchTelemetryFilter = "all";
   let dispatchMapZoom = 1;
   let dispatchLayersActive = true;
@@ -232,14 +233,42 @@
   let cctvSettingsPopupOpen = false;
   let cameraWaveformTab = "monitor"; // "monitor", "ai", "debug"
   let cameraSearchQuery = "";
-  let predictiveSelectedHour = 17; // 5 PM
+  let predictiveSelectedWeek = "Week 8";
   let predictiveTransitLoadScale = 100;
   let predictiveOperatingProfile = "Standard Service";
   let activeReportsCategoryFilter = "all"; // "all", "financial", "otp", "crew", "fuel"
   let activeReportsDateRange = "month"; // "month", "today", "week", "last-month", "q3"
   let activeReportsCorridor = activeRoute.id;
+  let activeRevenueChartPeriod = "monthly";
   let reportsSearchQuery = "";
   let selectedReportDetailId = "REP-2026-1048";
+  function getDispatchSnapshot() {
+    const movingUnits = fleetDispatchTelemetryUnits.filter((unit) => unit.category === "deployed" || unit.category === "delayed");
+    const delayedUnits = movingUnits.filter((unit) => unit.category === "delayed");
+    const nearFullUnits = fleetDispatchTelemetryUnits.filter((unit) => unit.occupancyPct >= 90);
+    const terminalUnits = fleetDispatchTelemetryUnits.filter((unit) => unit.category === "terminal");
+    return { movingUnits, delayedUnits, nearFullUnits, terminalUnits };
+  }
+
+  const reportingSummary = {
+    revenueMonthToDate: 1248650,
+    cashRevenueMonthToDate: 784400,
+    pouchRevenueMonthToDate: 464250,
+    revenueDaysElapsed: 21,
+    passengersMonthToDate: 142880,
+    passengersAveragePerDay: 4760,
+    concessionPassengersMonthToDate: 31420,
+    dieselLiters: 18420,
+    operatingKilometers: 63010,
+    fleetEfficiency: 3.42,
+    operatingCostPerKilometer: 19.99
+  };
+  const dailyRevenue = {
+    total: reportingSummary.revenueMonthToDate / reportingSummary.revenueDaysElapsed,
+    cash: reportingSummary.cashRevenueMonthToDate / reportingSummary.revenueDaysElapsed,
+    pouch: reportingSummary.pouchRevenueMonthToDate / reportingSummary.revenueDaysElapsed
+  };
+  const formatPhp = (amount) => `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const predictiveForecastHours = [
     { hour: 0, label: "12 AM", val: 280, state: "low", heat: "green", showLabel: true },
@@ -268,54 +297,89 @@
     { hour: 23, label: "11 PM", val: 450, state: "low", heat: "green", showLabel: true }
   ];
 
+  const predictiveDailyBaseline = predictiveForecastHours.reduce((total, item) => total + item.val, 0);
+  const predictiveWeeklyBaseline = predictiveDailyBaseline * 7;
+  const predictiveWeeklyForecast = [
+    { week: "Week 1", label: "Wk 1", multiplier: 0.82 },
+    { week: "Week 2", label: "Wk 2", multiplier: 0.88 },
+    { week: "Week 3", label: "Wk 3", multiplier: 0.94 },
+    { week: "Week 4", label: "Wk 4", multiplier: 1 },
+    { week: "Week 5", label: "Wk 5", multiplier: 1.06 },
+    { week: "Week 6", label: "Wk 6", multiplier: 1.12 },
+    { week: "Week 7", label: "Wk 7", multiplier: 1.08 },
+    { week: "Week 8", label: "Wk 8", multiplier: 1.16 }
+  ].map((week) => ({
+    ...week,
+    val: Math.round(predictiveWeeklyBaseline * week.multiplier),
+    state: week.multiplier >= 1.1 ? "surge" : week.multiplier >= 0.9 ? "normal" : "low",
+    heat: week.multiplier >= 1.1 ? "red" : week.multiplier >= 0.9 ? "blue" : "green"
+  }));
+
+  const renderPredictiveYAxis = () => {
+    const peak = Math.max(...predictiveWeeklyForecast.map((item) => item.val)) * (predictiveTransitLoadScale / 100);
+    const axisMaximum = Math.ceil(peak / 4000) * 4000;
+    return [axisMaximum, axisMaximum * 0.75, axisMaximum * 0.5, axisMaximum * 0.25, 0]
+      .map((value) => `<span>${Math.round(value).toLocaleString()}</span>`)
+      .join("");
+  };
+
   const renderForecastBars = () => {
-    return predictiveForecastHours.map((item) => {
+    const peak = Math.max(...predictiveWeeklyForecast.map((item) => item.val)) * (predictiveTransitLoadScale / 100);
+    return predictiveWeeklyForecast.map((item) => {
       const scaledVal = Math.round(item.val * (predictiveTransitLoadScale / 100));
-      const heightPx = Math.min(156, Math.max(14, Math.round((scaledVal / 1400) * 148)));
-      const isSelected = item.hour === predictiveSelectedHour;
+      const heightPx = Math.min(156, Math.max(14, Math.round((scaledVal / peak) * 148)));
+      const isSelected = item.week === predictiveSelectedWeek;
       return `
-        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-hour="${item.hour}" title="${item.label}: ${scaledVal.toLocaleString()} commuters/hr">
+        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-week="${item.week}" role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${item.week}: ${scaledVal.toLocaleString()} projected commuters" title="${item.week}: ${scaledVal.toLocaleString()} projected commuters">
           ${isSelected ? `<div class="bar-selected-badge">${scaledVal.toLocaleString()}</div>` : ""}
           <div class="chart-bar-fill ${item.state}" style="height: ${heightPx}px;"></div>
           <div class="bar-heat-pill ${item.heat}"></div>
-          <span class="bar-time-label">${item.showLabel ? item.label : ""}</span>
+          <span class="bar-time-label">${item.label}</span>
         </div>
       `;
     }).join("");
   };
 
   const renderPredictiveStats = () => {
-    const selectedItem = predictiveForecastHours.find((h) => h.hour === predictiveSelectedHour) ?? predictiveForecastHours[17];
+    const selectedItem = predictiveWeeklyForecast.find((week) => week.week === predictiveSelectedWeek) ?? predictiveWeeklyForecast[7];
     const scaledVal = Math.round(selectedItem.val * (predictiveTransitLoadScale / 100));
-    const peakVolume = Math.round(1190 * (predictiveTransitLoadScale / 100));
-    const peakWindow = selectedItem.state === "surge" ? "4 hrs surge" : selectedItem.hour === 8 ? "3 hrs morning rush" : "Steady flow";
+    const peakWeek = predictiveWeeklyForecast.reduce((peak, week) => week.val > peak.val ? week : peak);
+    const peakVolume = Math.round(peakWeek.val * (predictiveTransitLoadScale / 100));
+    const demandLabel = selectedItem.state === "surge" ? "Peak surge" : selectedItem.state === "normal" ? "Normal" : "Low";
 
     let stateClass = "text-low";
-    let stateText = `${scaledVal.toLocaleString()} (Low)`;
+    let stateText = `${scaledVal.toLocaleString()} (${demandLabel})`;
     if (selectedItem.state === "surge") {
       stateClass = "text-surge";
-      stateText = `${scaledVal.toLocaleString()} (Peak surge)`;
     } else if (selectedItem.state === "normal") {
       stateClass = "text-normal";
-      stateText = `${scaledVal.toLocaleString()} (Normal)`;
     }
 
     return `
       <div class="analytics-metric-box">
-        <span class="metric-box-label">Peak window</span>
-        <strong class="metric-box-val">${peakWindow}</strong>
+        <span class="metric-box-label">Peak demand week</span>
+        <strong class="metric-box-val">${peakWeek.week}</strong>
       </div>
       <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
-        <span class="metric-box-label">Peak volume</span>
-        <strong class="metric-box-val">${peakVolume.toLocaleString()} /hr</strong>
+        <span class="metric-box-label">Peak projected ridership</span>
+        <strong class="metric-box-val">${peakVolume.toLocaleString()} / week</strong>
       </div>
       <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
-        <span class="metric-box-label">${selectedItem.label} demand</span>
+        <span class="metric-box-label">${selectedItem.week} projected ridership</span>
         <strong class="metric-box-val ${stateClass}">${stateText}</strong>
       </div>
     `;
+  };
+
+  const updatePredictiveView = () => {
+    const barsContainer = screen.querySelector("#analytics-bars-container");
+    if (barsContainer) barsContainer.innerHTML = renderForecastBars();
+    const metricsContainer = screen.querySelector("#analytics-metrics-container");
+    if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
+    const yAxis = screen.querySelector(".chart-y-axis");
+    if (yAxis) yAxis.innerHTML = `${renderPredictiveYAxis()}<span style="color: #64748b; font-size: 10px; margin-top: 4px;">Commuters / week</span>`;
   };
 
   const adminFleetData = [
@@ -697,11 +761,17 @@
     `).join("");
   };
 
-  const adminLiveOperationsView = () => `
+  const adminLiveOperationsView = () => {
+    const dispatchSnapshot = getDispatchSnapshot();
+    const onTimeUnits = dispatchSnapshot.movingUnits.filter((unit) => unit.statusType === "on-time");
+    const delayedUnitsSummary = dispatchSnapshot.delayedUnits.map((unit) => `Bus ${unit.busNo} · ${unit.statusText.replace("Delayed ", "")}`).join(", ") || "No delayed units in the sample";
+    const nearFullUnitsSummary = dispatchSnapshot.nearFullUnits.map((unit) => `Bus ${unit.busNo} · ${unit.occupancyPct}% full · ${unit.occupancySeats}`).join(", ") || "No near-full buses in the sample";
+    const rosterCount = (category) => adminFleetData.filter((bus) => bus.filterCategory === category).length;
+    return `
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Dashboard</h1>
+        <h1 class="admin-header-title">Live Operations</h1>
       </div>
 
       <div class="admin-header-actions">
@@ -715,92 +785,43 @@
       </div>
     </header>
 
-    <!-- 4 Bento KPI Cards -->
-    <section class="admin-metrics-grid" aria-label="Key Performance Indicators">
-      <!-- 1. Service Reminders -->
+    <p class="admin-kpi-context">Sample operational snapshot · Vehicle positions, occupancy and revenue are illustrative, not live.</p>
+    <section class="admin-metrics-grid" aria-label="Live operations key performance indicators">
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">Service reminders</span>
-          <span class="admin-pill-badge badge-total">12 Total</span>
+          <span class="admin-metric-label">Units on route</span>
+          <span class="admin-pill-badge badge-registered">${adminFleetSize} fleet units</span>
         </div>
-        <div class="bento-split-2">
-          <div class="bento-split-col">
-            <span class="bento-metric-sublabel">Due soon (Next 48 Hours)</span>
-            <div class="bento-metric-figure cyan">5</div>
-          </div>
-          <div class="bento-split-divider"></div>
-          <div class="bento-split-col">
-            <span class="bento-metric-sublabel">Overdue (Requires Action)</span>
-            <div class="bento-metric-figure red">9</div>
-          </div>
-        </div>
+        <div class="bento-metric-figure green">${dispatchSnapshot.movingUnits.length} / ${adminFleetSize}</div>
+        <span class="bento-metric-sublabel">${onTimeUnits.length} on time · ${dispatchSnapshot.delayedUnits.length} delayed · ${dispatchSnapshot.terminalUnits.length} at terminal</span>
       </article>
 
-      <!-- 2. Vehicle Fleet Status -->
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">Vehicle fleet status</span>
-          <span class="admin-pill-badge badge-registered">82 Registered</span>
+          <span class="admin-metric-label">Delayed units</span>
+          <span class="admin-pill-badge badge-cost">Needs attention</span>
         </div>
-        <div class="bento-split-3">
-          <div class="bento-split-col">
-            <div class="bento-metric-figure green">65</div>
-            <span class="bento-metric-sublabel">Active (79.2%)</span>
-          </div>
-          <div class="bento-split-divider"></div>
-          <div class="bento-split-col">
-            <div class="bento-metric-figure muted">13</div>
-            <span class="bento-metric-sublabel">Inactive (Depot)</span>
-          </div>
-          <div class="bento-split-divider"></div>
-          <div class="bento-split-col">
-            <div class="bento-metric-figure red">4</div>
-            <span class="bento-metric-sublabel">In shop (Repair)</span>
-          </div>
-        </div>
+        <div class="bento-metric-figure${dispatchSnapshot.delayedUnits.length ? " red" : " green"}">${dispatchSnapshot.delayedUnits.length}</div>
+        <span class="bento-metric-sublabel">${delayedUnitsSummary}</span>
       </article>
 
-      <!-- 3. Fuel & Operating Cost -->
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">Fuel &amp; operating cost</span>
-          <span class="admin-pill-badge badge-cost">$24.8K Total</span>
+          <span class="admin-metric-label">Near-full buses</span>
+          <span class="admin-pill-badge badge-cost">≥90% occupancy</span>
         </div>
-        <div class="admin-fuel-kpi-content">
-          <div class="admin-fuel-text-box">
-            <div class="bento-metric-figure">$24,800</div>
-            <span class="bento-metric-sublabel">Monthly total</span>
-          </div>
-          <div class="admin-chart-bars">
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 24px;"></div><span class="admin-bar-label">Aug</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 32px;"></div><span class="admin-bar-label">Sep</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 16px;"></div><span class="admin-bar-label">Oct</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 38px;"></div><span class="admin-bar-label">Nov</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill" style="height: 30px;"></div><span class="admin-bar-label">Dec</span></div>
-            <div class="admin-chart-col"><div class="admin-bar-fill accent" style="height: 12px;"></div><span class="admin-bar-label">Jan</span></div>
-          </div>
-        </div>
+        <div class="bento-metric-figure${dispatchSnapshot.nearFullUnits.length ? " red" : " green"}">${dispatchSnapshot.nearFullUnits.length}</div>
+        <span class="bento-metric-sublabel">${nearFullUnitsSummary}</span>
       </article>
 
-      <!-- 4. Active Shift Rate -->
       <article class="admin-metric-card">
         <div class="admin-metric-header">
-          <span class="admin-metric-label">Active shift rate</span>
-          <span class="admin-pill-badge badge-shift">↑ 5.2% vs last week</span>
+          <span class="admin-metric-label">Fare revenue run rate</span>
+          <span class="admin-pill-badge badge-total">MTD avg / day</span>
         </div>
-        <div class="admin-shift-rate-content">
-          <div class="admin-shift-text-box">
-            <div class="bento-metric-figure green">88%</div>
-            <span class="admin-shift-corridors">6 of 6 key routes covered</span>
-          </div>
-          <div class="admin-donut-wrap">
-            <svg class="admin-donut-svg" viewBox="0 0 36 36">
-              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1E293B" stroke-width="3.6"/>
-              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10B981" stroke-width="3.6" stroke-dasharray="88, 100" stroke-linecap="round"/>
-            </svg>
-            <div class="admin-donut-text">6/6</div>
-          </div>
-        </div>
+        <div class="bento-metric-figure">${formatPhp(dailyRevenue.total)}</div>
+        <span class="bento-metric-sublabel">From ${formatPhp(reportingSummary.revenueMonthToDate)} fare revenue over ${reportingSummary.revenueDaysElapsed} days</span>
+        <span class="admin-shift-corridors">88% shift coverage · 6 of 6 key routes</span>
       </article>
     </section>
 
@@ -809,10 +830,10 @@
       <div class="admin-directory-header">
         <h2 class="admin-directory-title">Buses &amp; Assignments</h2>
         <div class="admin-directory-tabs" role="tablist">
-          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Buses (8)</button>
-          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Route (6)</button>
-          <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (1)</button>
-          <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (1)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Units (${adminFleetData.length})</button>
+          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Duty (${rosterCount("on-duty")})</button>
+          <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (${rosterCount("on-break")})</button>
+          <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (${rosterCount("standby")})</button>
         </div>
         <div class="admin-table-search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -846,7 +867,7 @@
     </section>
 
     <!-- Bottom 3 Grid Cards -->
-    <section class="admin-bottom-grid">
+    <section class="admin-bottom-grid" hidden>
       <!-- Card 1: Recent Comments -->
       <article class="admin-bottom-card">
         <div class="admin-card-header">
@@ -938,6 +959,7 @@
       </article>
     </section>
   `;
+  };
 
   const adminPredictiveAnalyticsView = () => `
     <!-- Top Title & Action Header -->
@@ -955,6 +977,7 @@
           <option value="Tomorrow — 24hr Forecast">Tomorrow — 24hr Forecast</option>
           <option value="Weekend Surge Projection">Weekend Demand</option>
         </select>
+        <span class="analytics-range-badge">8-week aggregate forecast</span>
         <button class="admin-btn-assign" type="button" data-admin-action="export-surge" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: 700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -970,8 +993,8 @@
     <section class="admin-analytics-card">
       <div class="analytics-card-header">
         <div class="analytics-legend">
-          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Demand levels:</span>
-          <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">High</span></span>
+          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Weekly demand levels:</span>
+          <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">Peak / Surge</span></span>
           <span class="legend-item"><span class="legend-dot blue"></span><span style="color: #93c5fd;">Normal</span></span>
           <span class="legend-item"><span class="legend-dot green"></span><span style="color: #6ee7b7;">Low</span></span>
         </div>
@@ -979,22 +1002,15 @@
 
       <!-- Chart Wrap -->
       <div class="analytics-chart-wrap">
-        <div class="chart-y-axis">
-          <span>1.5k</span>
-          <span>1.1k</span>
-          <span>750</span>
-          <span>400</span>
-          <span>0</span>
-          <span style="color: #64748b; font-size: 10px; margin-top: 4px;">Heat</span>
-        </div>
+        <div class="chart-y-axis">${renderPredictiveYAxis()}<span style="color: #64748b; font-size: 10px; margin-top: 4px;">Commuters / week</span></div>
 
         <div class="chart-plot-container">
           <!-- Threshold lines -->
           <div class="chart-threshold-line line-peak" style="bottom: 72%;">
-            <span class="threshold-label text-red">Peak Limit (1,080)</span>
+            <span class="threshold-label text-red">Peak demand</span>
           </div>
           <div class="chart-threshold-line line-normal" style="bottom: 38%;">
-            <span class="threshold-label text-blue">Normal Threshold (570)</span>
+            <span class="threshold-label text-blue">Normal demand</span>
           </div>
 
           <!-- Bars row -->
@@ -1030,18 +1046,17 @@
 
         <div class="analytics-ctrl-col scrub-col">
           <div class="scrub-label-row">
-            <span class="ctrl-label">Scrub hour inspection</span>
-            <button class="scrub-reset-btn" type="button" data-scrub-hour="17">Reset selection</button>
+            <span class="ctrl-label">Inspect week</span>
+            <button class="scrub-reset-btn" type="button" data-scrub-week="Week 8">Reset selection</button>
           </div>
           <div class="scrub-buttons">
-            <button class="scrub-pill-btn${predictiveSelectedHour === 8 ? " is-active" : ""}" type="button" data-scrub-hour="8">8 AM Morning Peak</button>
-            <button class="scrub-pill-btn${predictiveSelectedHour === 17 ? " is-active" : ""}" type="button" data-scrub-hour="17">5 PM Evening Peak</button>
+          ${predictiveWeeklyForecast.map((week) => `<button class="scrub-pill-btn${predictiveSelectedWeek === week.week ? " is-active" : ""}" type="button" data-scrub-week="${week.week}" aria-label="Inspect ${week.week}">${week.label}</button>`).join("")}
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Bottom 3 Context Cards -->
+    <!-- Dispatch recommendation -->
     <section class="analytics-bottom-grid">
       <!-- Card 1: Economic Conditions -->
       <article class="analytics-bottom-card">
@@ -1126,7 +1141,7 @@
     </section>
   `;
 
-  const fleetDispatchTelemetryUnits = [
+  fleetDispatchTelemetryUnits = [
     {
       id: "bus-01",
       unitCode: "UNIT #01",
@@ -1247,9 +1262,32 @@
       scheduledStop: `${activeRoute.destination} (ETA 15:04 PHT)`,
       progressClass: "amber",
       dotClass: "mint"
+    },
+    {
+      id: "bus-06",
+      unitCode: "UNIT #06",
+      busNo: "06",
+      category: "deployed",
+      tripName: "Malolos Central Connector",
+      routeCorridor: "Malolos / Trinoma Corridor",
+      statusText: "On Time",
+      statusType: "on-time",
+      headwayAlert: "Nominal Headway: On schedule",
+      nextStop: "Bocaue Interchange",
+      etaText: "11 min ETA (15:02 PHT)",
+      occupancyPct: 64,
+      occupancySeats: "45/70 seats",
+      occupancyPassengers: "64% (45 / 70 Passengers)",
+      driverName: "Santos, A.",
+      driverId: "#DR-6206",
+      conductorName: "Reyes, M.",
+      gpsLocation: "Malolos Central Loop",
+      scheduledStop: "Bocaue Interchange (ETA 15:02 PHT)",
+      corridor: "malolos",
+      progressClass: "mint",
+      dotClass: "mint"
     }
   ];
-
   const renderFleetTelemetryRows = () => {
     const list = fleetDispatchTelemetryUnits.filter((u) => {
       if (dispatchTelemetryFilter === "deployed") return u.category === "deployed";
@@ -1501,6 +1539,12 @@
           <text x="520" y="108.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 02</text>
         </g>
 
+        <!-- BUS 06 Marker -->
+        <g class="bus-map-marker" data-map-bus="bus-06" style="cursor: pointer;">
+          <rect x="250" y="174" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
+          <text x="276" y="186.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 06</text>
+        </g>
+
         <!-- BUS 01 (DELAYED) Marker with Sonar Pulse Ring -->
         <g class="bus-map-marker" data-map-bus="bus-01" style="cursor: pointer;">
           <circle cx="450" cy="145" r="14" class="radar-ping-ring" stroke="#f59e0b" fill="none" opacity="0.8"/>
@@ -1660,10 +1704,10 @@
             </div>
 
             <div class="telemetry-filter-tabs">
-              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "all" ? " is-active" : ""}" type="button" data-telemetry-tab="all">All Buses (46)</button>
-              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "deployed" ? " is-active" : ""}" type="button" data-telemetry-tab="deployed">On Route (32)</button>
-              <button class="telemetry-tab-pill pill-amber${dispatchTelemetryFilter === "delayed" ? " is-active" : ""}" type="button" data-telemetry-tab="delayed">Delayed (1)</button>
-              <button class="telemetry-tab-pill pill-purple${dispatchTelemetryFilter === "terminal" ? " is-active" : ""}" type="button" data-telemetry-tab="terminal">At Terminal (4)</button>
+              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "all" ? " is-active" : ""}" type="button" data-telemetry-tab="all">Tracked Sample (${fleetDispatchTelemetryUnits.length})</button>
+              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "deployed" ? " is-active" : ""}" type="button" data-telemetry-tab="deployed">Deployed (${fleetDispatchTelemetryUnits.filter((unit) => unit.category === "deployed").length})</button>
+              <button class="telemetry-tab-pill pill-amber${dispatchTelemetryFilter === "delayed" ? " is-active" : ""}" type="button" data-telemetry-tab="delayed">Delayed (${fleetDispatchTelemetryUnits.filter((unit) => unit.category === "delayed").length})</button>
+              <button class="telemetry-tab-pill pill-purple${dispatchTelemetryFilter === "terminal" ? " is-active" : ""}" type="button" data-telemetry-tab="terminal">At Terminal (${fleetDispatchTelemetryUnits.filter((unit) => unit.category === "terminal").length})</button>
             </div>
           </div>
 
@@ -2759,11 +2803,168 @@
     `).join("");
   };
 
-  const adminReportsView = () => `
+  const reportsTrendData = {
+    weekly: {
+      periodLabel: "Last 7 days",
+      revenueLabel: "Daily revenue",
+      labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      revenue: [138000, 154500, 149800, 171200, 168900, 190400, 176350],
+      passengers: [4210, 4480, 4390, 4760, 4680, 5180, 4920]
+    },
+    monthly: {
+      periodLabel: "October 2026 · month to date",
+      revenueLabel: "Weekly revenue",
+      labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+      revenue: [291000, 304500, 317800, 335350],
+      passengers: [33100, 34750, 36600, 38430]
+    },
+    annual: {
+      periodLabel: "January–October 2026 · year to date",
+      revenueLabel: "Monthly revenue",
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"],
+      revenue: [1080000, 1125000, 1050000, 1180000, 1195000, 1160000, 1220000, 1240000, 1175000, 1248650],
+      passengers: [126400, 130200, 124800, 135100, 137500, 132600, 140300, 143200, 136900, 142880]
+    }
+  };
+
+  const formatChartValue = (value, type) => {
+    if (type === "revenue") return value >= 1000000 ? `₱${(value / 1000000).toFixed(1)}m` : `₱${Math.round(value / 1000)}k`;
+    return value >= 1000 ? `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k` : String(value);
+  };
+
+  const renderReportsTrendBars = (values, labels, type) => {
+    const maxValue = Math.max(...values);
+    return values.map((value, index) => `
+      <div class="reports-trend-column" aria-label="${labels[index]}: ${type === "revenue" ? formatPhp(value) : `${value.toLocaleString()} passengers`}">
+        <span class="reports-trend-value">${formatChartValue(value, type)}</span>
+        <div class="reports-trend-track" title="${labels[index]}: ${type === "revenue" ? formatPhp(value) : `${value.toLocaleString()} passengers`}">
+          <span class="reports-trend-bar${type === "passengers" ? " passengers" : ""}" style="height: ${Math.max(8, value / maxValue * 100)}%"></span>
+        </div>
+        <span class="reports-trend-label">${labels[index]}</span>
+      </div>
+    `).join("");
+  };
+
+  const renderReportsRevenueLine = (values, labels) => {
+    const maxValue = Math.max(...values) * 1.12;
+    const points = values.map((value, index) => ({
+      x: values.length === 1 ? 500 : 36 + index * 928 / (values.length - 1),
+      y: 178 - value / maxValue * 140,
+      value,
+      label: labels[index]
+    }));
+    const pointList = points.map(({ x, y }) => `${x},${y}`).join(" ");
+    const areaPath = `M ${points[0].x},178 L ${points.map(({ x, y }) => `${x},${y}`).join(" L ")} L ${points[points.length - 1].x},178 Z`;
+    const gridLines = [38, 83, 128, 173].map((y) => `<line x1="36" y1="${y}" x2="964" y2="${y}" class="reports-line-gridline"/>`).join("");
+    const markers = points.map((point) => `
+      <circle cx="${point.x}" cy="${point.y}" r="5" class="reports-line-marker">
+        <title>${point.label}: ${formatPhp(point.value)}</title>
+      </circle>
+    `).join("");
+
+    return `
+      <svg class="reports-line-chart-svg" viewBox="0 0 1000 205" preserveAspectRatio="none" role="img" aria-label="Fare revenue line chart">
+        ${gridLines}
+        <path d="${areaPath}" class="reports-line-area"/>
+        <polyline points="${pointList}" class="reports-line-path"/>
+        ${markers}
+      </svg>
+      <div class="reports-line-xlabels" style="--reports-point-count: ${labels.length}">
+        ${labels.map((label) => `<span>${label}</span>`).join("")}
+      </div>
+    `;
+  };
+
+  const renderReportsDecisionCharts = () => {
+    const trend = reportsTrendData[activeRevenueChartPeriod];
+    const revenueTotal = trend.revenue.reduce((total, value) => total + value, 0);
+    const passengerTotal = trend.passengers.reduce((total, value) => total + value, 0);
+    const snapshot = getDispatchSnapshot();
+    const cashShare = reportingSummary.cashRevenueMonthToDate / reportingSummary.revenueMonthToDate * 100;
+    const pouchShare = 100 - cashShare;
+    const activeShare = snapshot.movingUnits.length / adminFleetSize * 100;
+    const efficiencyShare = Math.min(100, reportingSummary.fleetEfficiency / 4.5 * 100);
+
+    return `
+      <div class="reports-trend-grid">
+        <section class="reports-visual-card reports-primary-chart" aria-label="Revenue trend">
+          <div class="reports-visual-header">
+            <div>
+              <h2 class="reports-visual-title">Fare revenue</h2>
+              <p class="reports-visual-caption">${trend.revenueLabel} · ${trend.periodLabel}</p>
+            </div>
+            <div class="reports-chart-total">${formatPhp(revenueTotal)}<span>selected period</span></div>
+          </div>
+          <div class="reports-line-chart revenue-chart" aria-label="${trend.revenueLabel} from ${trend.periodLabel}">
+            ${renderReportsRevenueLine(trend.revenue, trend.labels)}
+          </div>
+        </section>
+
+        <section class="reports-visual-card reports-ridership-chart" aria-label="Passenger trend">
+          <div class="reports-visual-header">
+            <div>
+              <h2 class="reports-visual-title">Passenger volume</h2>
+              <p class="reports-visual-caption">${trend.periodLabel}</p>
+            </div>
+            <div class="reports-chart-total">${passengerTotal.toLocaleString()}<span>passengers</span></div>
+          </div>
+          <div class="reports-trend-chart passenger-chart" role="img" aria-label="Passenger volume from ${trend.periodLabel}">
+            ${renderReportsTrendBars(trend.passengers, trend.labels, "passengers")}
+          </div>
+        </section>
+      </div>
+
+      <div class="reports-insight-grid">
+        <section class="reports-visual-card reports-insight-card">
+          <div class="reports-insight-heading">
+            <h2 class="reports-visual-title">Revenue collection mix</h2>
+            <span class="reports-visual-caption">Month to date</span>
+          </div>
+          <div class="reports-mix-track" role="img" aria-label="Cash ${cashShare.toFixed(0)} percent, U-Pouch ${pouchShare.toFixed(0)} percent">
+            <span class="reports-mix-cash" style="width: ${cashShare}%"></span>
+            <span class="reports-mix-pouch" style="width: ${pouchShare}%"></span>
+          </div>
+          <div class="reports-mix-legend">
+            <span><i class="reports-legend-dot cash"></i>Cash <strong>${cashShare.toFixed(0)}%</strong><small>${formatPhp(reportingSummary.cashRevenueMonthToDate)}</small></span>
+            <span><i class="reports-legend-dot pouch"></i>U-Pouch <strong>${pouchShare.toFixed(0)}%</strong><small>${formatPhp(reportingSummary.pouchRevenueMonthToDate)}</small></span>
+          </div>
+        </section>
+
+        <section class="reports-visual-card reports-insight-card">
+          <div class="reports-insight-heading">
+            <h2 class="reports-visual-title">Fleet deployment</h2>
+            <span class="reports-visual-caption">Dispatch snapshot</span>
+          </div>
+          <div class="reports-deployment-value">${snapshot.movingUnits.length}<span> / ${adminFleetSize} buses active</span></div>
+          <div class="reports-deployment-track" role="img" aria-label="${snapshot.movingUnits.length} of ${adminFleetSize} fleet buses active">
+            <span style="width: ${activeShare}%"></span>
+          </div>
+          <div class="reports-deployment-legend"><span>${snapshot.movingUnits.filter((unit) => unit.statusType === "on-time").length} on time</span><span>${snapshot.delayedUnits.length} delayed</span><span>${snapshot.terminalUnits.length} at terminal</span></div>
+        </section>
+
+        <section class="reports-visual-card reports-insight-card">
+          <div class="reports-insight-heading">
+            <h2 class="reports-visual-title">Fuel efficiency</h2>
+            <span class="reports-visual-caption">Month to date</span>
+          </div>
+          <div class="reports-efficiency-value">${reportingSummary.fleetEfficiency}<span> km/L</span></div>
+          <div class="reports-efficiency-track" role="img" aria-label="${reportingSummary.fleetEfficiency} kilometers per liter, planning benchmark 3.5 kilometers per liter">
+            <span style="width: ${efficiencyShare}%"></span>
+            <i style="left: 77.78%"></i>
+          </div>
+          <div class="reports-efficiency-legend"><span>Current fleet average</span><span>Benchmark: 3.5 km/L</span></div>
+        </section>
+      </div>
+    `;
+  };
+
+  const adminReportsView = () => {
+    const dispatchSnapshot = getDispatchSnapshot();
+    return `
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Reports</h1>
+  <h1 class="admin-header-title">Reports &amp; Decision Support</h1>
       </div>
 
       <div class="admin-header-actions">
@@ -2792,46 +2993,42 @@
       </div>
     </header>
 
-    <!-- 4 Bento KPI Cards -->
+    <p class="admin-kpi-context">Illustrative sample data · Revenue, passenger and fuel summaries are not connected to live operations.</p>
     <section class="reports-kpi-grid" aria-label="Executive Operational Totals">
-      <!-- 1. Total Fare Revenue -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">Total fare revenue (MTD)</span>
-          <span class="reports-growth-badge positive">+6.8% vs last mo</span>
+          <span class="reports-kpi-label">Fare revenue (MTD)</span>
+          <span class="reports-growth-badge neutral">Month to date</span>
         </div>
-        <div class="reports-kpi-figure">₱1,248,650.00</div>
-        <div class="reports-kpi-sub">Cash: <strong>₱784,400</strong> · U-Pouch RFID: <strong>₱464,250</strong></div>
+        <div class="reports-kpi-figure">${formatPhp(reportingSummary.revenueMonthToDate)}</div>
+        <div class="reports-kpi-sub">Average ${formatPhp(dailyRevenue.total)}/day · Cash: <strong>${formatPhp(reportingSummary.cashRevenueMonthToDate)}</strong> · U-Pouch: <strong>${formatPhp(reportingSummary.pouchRevenueMonthToDate)}</strong></div>
       </article>
 
-      <!-- 2. Passenger Volume -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">Total passengers (MTD)</span>
-          <span class="reports-growth-badge positive">92.4% Load</span>
+          <span class="reports-kpi-label">Passengers (MTD)</span>
+          <span class="reports-growth-badge neutral">Period total</span>
         </div>
-        <div class="reports-kpi-figure">142,880 Pax</div>
-        <div class="reports-kpi-sub">Avg 4,760 pax/day · <strong>31,420</strong> Concession/Student Fares</div>
+        <div class="reports-kpi-figure">${reportingSummary.passengersMonthToDate.toLocaleString()} Pax</div>
+        <div class="reports-kpi-sub">Average ${reportingSummary.passengersAveragePerDay.toLocaleString()} pax/day · <strong>${reportingSummary.concessionPassengersMonthToDate.toLocaleString()}</strong> concession/student fares</div>
       </article>
 
-      <!-- 3. Fleet On-Time Performance -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">Fleet on-time rate</span>
-          <span class="reports-growth-badge target">Target: 90.0%</span>
+          <span class="reports-kpi-label">Active buses (snapshot)</span>
+          <span class="reports-growth-badge neutral">${adminFleetSize} fleet units</span>
         </div>
-        <div class="reports-kpi-figure accent">92.8% OTP</div>
-        <div class="reports-kpi-sub">2,184 Trips Dispatched · Avg delay: <strong>+2.1m</strong></div>
+        <div class="reports-kpi-figure accent">${dispatchSnapshot.movingUnits.length} buses</div>
+        <div class="reports-kpi-sub">${dispatchSnapshot.movingUnits.filter((unit) => unit.statusType === "on-time").length} on time · <strong>${dispatchSnapshot.delayedUnits.length} delayed</strong> · ${dispatchSnapshot.terminalUnits.length} at terminal</div>
       </article>
 
-      <!-- 4. Fuel & Operating Mileage -->
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
-          <span class="reports-kpi-label">Fuel &amp; operating mileage</span>
-          <span class="reports-growth-badge neutral">18,420 L Diesel</span>
+          <span class="reports-kpi-label">Fuel efficiency (MTD)</span>
+          <span class="reports-growth-badge neutral">${reportingSummary.dieselLiters.toLocaleString()} L diesel</span>
         </div>
-        <div class="reports-kpi-figure">63,010 km</div>
-        <div class="reports-kpi-sub">3.42 km/L Fleet Efficiency · Cost: <strong>₱19.99/km</strong></div>
+        <div class="reports-kpi-figure">${reportingSummary.fleetEfficiency} km/L</div>
+        <div class="reports-kpi-sub">${reportingSummary.operatingKilometers.toLocaleString()} km operated · Cost: <strong>₱${reportingSummary.operatingCostPerKilometer}/km</strong></div>
       </article>
     </section>
 
@@ -2851,8 +3048,22 @@
         <div class="staff-header-search-wrap" style="width: 260px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" class="staff-header-search-input" placeholder="Search reports or report IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports">
+          </div>
+    <section class="reports-visualizations" aria-label="Operational decision visualizations">
+      <div class="reports-visual-toolbar">
+        <div>
+          <h2 class="reports-visual-title">Performance trends</h2>
+          <p class="reports-visual-caption">Compare revenue and passenger demand over time</p>
         </div>
+        <label class="reports-period-control">View
+          <select class="admin-select-corridor" data-revenue-period aria-label="Revenue chart period">
+            <option value="weekly"${activeRevenueChartPeriod === "weekly" ? " selected" : ""}>Weekly</option>
+            <option value="monthly"${activeRevenueChartPeriod === "monthly" ? " selected" : ""}>Monthly</option>
+            <option value="annual"${activeRevenueChartPeriod === "annual" ? " selected" : ""}>Annual</option>
+          </select>
+        </label>
       </div>
+  </section>
 
       <!-- Table Container -->
       <div class="reports-table-wrap">
@@ -2907,7 +3118,11 @@
         </div>
       </section>
     </div>
+  <section class="reports-visualizations" aria-label="Operational decision visualizations">
+      <div id="reports-decision-charts">${renderReportsDecisionCharts()}</div>
+    </section>
   `;
+  };
 
   const adminDashboardScreen = () => `
     <div class="admin-dashboard-layout" data-admin-screen="dashboard">
@@ -3179,9 +3394,11 @@
       isInfoOnly = true;
     } else if (type === "export-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
-      title = "Export Demand Report (PDF / CSV)";
-      desc = `Preparing a sample 24-hour passenger demand report for <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Expected peak: <strong>1,190 passengers per hour</strong><br>Estimated rain impact: <strong>35% longer stops</strong>`;
-      primaryBtn = "Download Report";
+  title = "Export Demand and Surge Report (PDF / CSV)";
+      const peakWeek = predictiveWeeklyForecast.reduce((peak, week) => week.val > peak.val ? week : peak);
+      const peakDemand = Math.round(peakWeek.val * (predictiveTransitLoadScale / 100));
+  desc = `Preparing a sample demand report for <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Peak week: <strong>${peakWeek.week}</strong><br>Projected demand: <strong>${peakDemand.toLocaleString()} commuters/week</strong><br>Expected peak: <strong>1,190 passengers per hour</strong><br>Estimated rain impact: <strong>35% longer stops</strong><br>Forecast Model Convergence: <strong>96.4%</strong>`;
+  primaryBtn = "Download Report";
       isInfoOnly = true;
     } else if (type === "approve-redistribution") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
@@ -4829,6 +5046,12 @@
       busMarker.click();
       return;
     }
+    const forecastWeek = event.target.closest("[data-chart-week]");
+    if (forecastWeek && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      forecastWeek.click();
+      return;
+    }
     if (event.key === "Escape" && activeState === "live-map") {
       const popup = screen.querySelector("[data-bus-popup]:not([hidden])");
       if (popup) {
@@ -5187,10 +5410,7 @@
       predictiveTransitLoadScale = Number(event.target.value);
       const display = screen.querySelector("#scale-val-display");
       if (display) display.textContent = `${predictiveTransitLoadScale}%`;
-      const barsContainer = screen.querySelector("#analytics-bars-container");
-      if (barsContainer) barsContainer.innerHTML = renderForecastBars();
-      const metricsContainer = screen.querySelector("#analytics-metrics-container");
-      if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
+      updatePredictiveView();
     }
 
     if (event.target.matches("#admin-email, #admin-password")) {
@@ -5228,6 +5448,13 @@
   });
 
   screen.addEventListener("change", (event) => {
+    if (event.target.matches("[data-revenue-period]")) {
+      activeRevenueChartPeriod = event.target.value;
+      const charts = screen.querySelector("#reports-decision-charts");
+      if (charts) charts.innerHTML = renderReportsDecisionCharts();
+      return;
+    }
+
     if (event.target.matches("#live-seat-picker")) {
       selectedBusSeatId = event.target.value;
     }
@@ -5409,29 +5636,23 @@
       return;
     }
 
-    const scrubBtn = event.target.closest("[data-scrub-hour]");
+    const scrubBtn = event.target.closest("[data-scrub-week]");
     if (scrubBtn) {
-      predictiveSelectedHour = Number(scrubBtn.dataset.scrubHour);
-      screen.querySelectorAll("[data-scrub-hour]").forEach((btn) => {
-        btn.classList.toggle("is-active", Number(btn.dataset.scrubHour) === predictiveSelectedHour);
+      predictiveSelectedWeek = scrubBtn.dataset.scrubWeek;
+      screen.querySelectorAll("[data-scrub-week]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.scrubWeek === predictiveSelectedWeek);
       });
-      const barsContainer = screen.querySelector("#analytics-bars-container");
-      if (barsContainer) barsContainer.innerHTML = renderForecastBars();
-      const metricsContainer = screen.querySelector("#analytics-metrics-container");
-      if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
+      updatePredictiveView();
       return;
     }
 
-    const chartCol = event.target.closest("[data-chart-hour]");
+    const chartCol = event.target.closest("[data-chart-week]");
     if (chartCol) {
-      predictiveSelectedHour = Number(chartCol.dataset.chartHour);
-      screen.querySelectorAll("[data-scrub-hour]").forEach((btn) => {
-        btn.classList.toggle("is-active", Number(btn.dataset.scrubHour) === predictiveSelectedHour);
+      predictiveSelectedWeek = chartCol.dataset.chartWeek;
+      screen.querySelectorAll("[data-scrub-week]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.scrubWeek === predictiveSelectedWeek);
       });
-      const barsContainer = screen.querySelector("#analytics-bars-container");
-      if (barsContainer) barsContainer.innerHTML = renderForecastBars();
-      const metricsContainer = screen.querySelector("#analytics-metrics-container");
-      if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
+      updatePredictiveView();
       return;
     }
 
