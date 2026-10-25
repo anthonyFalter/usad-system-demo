@@ -187,11 +187,19 @@
   let activeCorridorFilter = "all";
   let activeAdminSidebarTab = "fleet-dispatch";
   let selectedDispatchBusId = "bus-01";
+  let dispatchPanelOpen = false;
   let dispatchTelemetryFilter = "all";
   let dispatchCorridorFilter = "edsa";
   let dispatchMapZoom = 1;
   let dispatchLayersActive = true;
   let dispatchNoteInput = "";
+  const dispatchRemittances = [];
+  const formatPeso = (amount) => new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+  }).format(amount);
+  const sampleFarePerPassenger = 80;
   const peakDispatchQueue = [
     { id: "peak-03", busNo: "03", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Eldrei Acero", fuel: "92%", status: "ready" },
     { id: "peak-07", busNo: "07", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Juan Dela Cruz", fuel: "88%", status: "ready" },
@@ -494,7 +502,10 @@
         <td>${bus.rate}</td>
         <td><span class="status-badge ${bus.statusClass}"><span class="status-dot"></span>${bus.status}</span></td>
         <td>
-          <button class="btn-telemetry" type="button" data-admin-telemetry="${bus.id}">Telemetry</button>
+          <div class="admin-row-actions">
+            <button class="btn-telemetry" type="button" data-admin-telemetry="${bus.id}">Telemetry</button>
+            <button class="btn-row-actions" type="button" data-fleet-actions="${bus.id}" aria-label="More actions for ${bus.busNo}">Actions</button>
+          </div>
         </td>
       </tr>
     `).join("");
@@ -1079,7 +1090,7 @@
     });
 
     if (list.length === 0) {
-      return `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">No fleet vehicles in this category.</td></tr>`;
+      return `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No fleet vehicles in this category.</td></tr>`;
     }
 
     return list.map((bus) => {
@@ -1118,6 +1129,11 @@
             <div class="driver-name-text">${bus.driverName}</div>
             <div class="driver-id-sub">ID: ${bus.driverId}</div>
           </td>
+          <td>
+            ${bus.category === "terminal"
+              ? '<span class="dispatch-row-unavailable">Not in service</span>'
+              : `<button class="dispatch-row-manage" type="button" data-manage-trip="${bus.id}">${bus.tripFinished ? "View trip" : "Manage trip"}</button>`}
+          </td>
         </tr>
       `;
     }).join("");
@@ -1131,7 +1147,10 @@
           <div class="dispatch-panel-title-wrap">
             <h2 class="dispatch-panel-title">Dispatch Control Panel</h2>
           </div>
-          <span class="dispatch-unit-badge">${unit.unitCode}</span>
+          <div class="dispatch-panel-header-actions">
+            <span class="dispatch-unit-badge">${unit.unitCode}</span>
+            <button class="dispatch-panel-close" type="button" data-close-dispatch-panel aria-label="Close trip management">×</button>
+          </div>
         </header>
 
         <!-- Active Selection Box -->
@@ -1144,8 +1163,8 @@
             </button>
           </div>
           <div class="selection-alert-subtext">
-            <span class="alert-dot-amber"></span>
-            <span>${unit.headwayAlert}</span>
+            <span class="${unit.tripFinished ? "alert-dot-mint" : "alert-dot-amber"}"></span>
+            <span>${unit.tripFinished ? "Trip finished · remittance recorded" : unit.headwayAlert}</span>
           </div>
         </div>
 
@@ -1217,6 +1236,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
           <span>Send Dispatch Order</span>
         </button>
+        ${unit.tripFinished
+          ? '<div class="dispatch-finished-note" role="status">Trip completed. Remittance is recorded in the dashboard below.</div>'
+          : `<button class="dispatch-finish-trip-button" type="button" data-dispatch-action="finish-trip">Mark trip finished</button>`}
       </section>
     `;
   };
@@ -1315,8 +1337,8 @@
         <div class="peak-readiness-header">
           <div>
             <p class="peak-readiness-eyebrow">PRE-SERVICE STAGING</p>
-            <h2 id="peak-readiness-title">Peak-hour dispatch readiness</h2>
-            <p class="peak-readiness-description">Stage available buses before commuter demand rises, then release a vehicle in one step.</p>
+            <h2 id="peak-readiness-title">Pre-booking dispatch queue</h2>
+            <p class="peak-readiness-description">Buses are staged and checked before customers book. Dispatch one right away when service is needed.</p>
           </div>
           <div class="peak-readiness-summary" aria-label="${readyCount} buses ready to dispatch">
             <strong>${readyCount}</strong>
@@ -1346,7 +1368,7 @@
               </div>
               <span class="peak-ready-status${bus.status === "dispatched" ? " is-dispatched" : ""}">${bus.status === "ready" ? "Ready" : "Dispatched"}</span>
               <button class="peak-dispatch-button" type="button" data-peak-dispatch="${escapeHtml(bus.id)}"${bus.status === "dispatched" ? " disabled" : ""}>
-                ${bus.status === "ready" ? "Dispatch bus" : "Dispatched"}
+                ${bus.status === "ready" ? "Dispatch right away" : "Dispatched"}
               </button>
             </article>
           `).join("")}
@@ -1359,6 +1381,35 @@
       </section>
     `;
   };
+
+  const renderDispatchRemittances = () => `
+    <section class="dispatch-remittances-card" id="dispatch-remittances-container" aria-labelledby="dispatch-remittances-title">
+      <header class="dispatch-remittances-header">
+        <div>
+          <p class="peak-readiness-eyebrow">TRIP CLOSEOUT</p>
+          <h2 id="dispatch-remittances-title">Trip remittances</h2>
+        </div>
+        <span class="dispatch-remittances-count">${dispatchRemittances.length} recorded</span>
+      </header>
+      <p class="dispatch-remittances-note">Remittances are added when a dispatcher marks a trip finished. Demo totals use a sample fare of ${formatPeso(sampleFarePerPassenger)} per passenger.</p>
+      ${dispatchRemittances.length
+        ? `<div class="dispatch-remittances-table-wrap">
+            <table class="dispatch-remittances-table">
+              <thead><tr><th>TRIP / BUS</th><th>PASSENGERS</th><th>FARE</th><th>REMITTANCE</th><th>FINISHED</th></tr></thead>
+              <tbody>${dispatchRemittances.map((remittance) => `
+                <tr>
+                  <td><strong>${escapeHtml(remittance.route)}</strong><span>Bus ${escapeHtml(remittance.busNo)} · ${escapeHtml(remittance.id)}</span></td>
+                  <td>${remittance.passengers}</td>
+                  <td>${formatPeso(remittance.farePerPassenger)} / pax</td>
+                  <td><strong class="dispatch-remittance-amount">${formatPeso(remittance.amount)}</strong></td>
+                  <td>${escapeHtml(remittance.finishedAt)}</td>
+                </tr>
+              `).join("")}</tbody>
+            </table>
+          </div>`
+        : '<p class="dispatch-remittances-empty">No finished trips yet. Completed trip remittances will appear here automatically.</p>'}
+    </section>
+  `;
 
   const adminFleetDispatchView = () => `
     <!-- Top Title & Action Header -->
@@ -1378,7 +1429,7 @@
     ${renderPeakDispatchReadiness()}
 
     <!-- Main 2-Column Operational Grid -->
-    <div class="fleet-dispatch-grid">
+    <div class="fleet-dispatch-grid${dispatchPanelOpen ? "" : " is-panel-closed"}">
       <!-- Left Column: Map + Table -->
       <div class="fleet-dispatch-left-col">
         <!-- 1. Radar Map Card -->
@@ -1439,6 +1490,7 @@
                   <th>NEXT STOP &amp; ETA</th>
                   <th>OCCUPANCY</th>
                   <th>DRIVER</th>
+                  <th>ACTIONS</th>
                 </tr>
               </thead>
               <tbody id="fleet-telemetry-tbody">
@@ -1451,9 +1503,10 @@
 
       <!-- Right Column: Dispatch Control Panel -->
       <div class="fleet-dispatch-right-col" id="dispatch-panel-container">
-        ${renderDispatchControlPanel()}
+        ${dispatchPanelOpen ? renderDispatchControlPanel() : ""}
       </div>
     </div>
+    ${renderDispatchRemittances()}
   `;
 
   const adminStaffMembersData = [
@@ -2869,6 +2922,66 @@
             <button class="admin-modal-button-primary" type="submit">Confirm Dispatch</button>
           </div>
         </form>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("fleet-actions-")) {
+      const busId = type.replace("fleet-actions-", "");
+      const bus = adminFleetData.find((item) => item.id === busId);
+      if (!bus) throw new Error(`Fleet actions could not be opened: vehicle "${busId}" was not found.`);
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1 1.55V20h-2.4v-.21a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.52 15a1.7 1.7 0 0 0-1.55-1H6v-2.4h.97a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.7-1.7.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1-1.55V5h2.4v.81a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.55 1H22v2.4h-1.05a1.7 1.7 0 0 0-1.55 1.6Z"/></svg>`;
+      title = `Vehicle Actions — ${bus.busNo}`;
+      desc = `Choose an action for <strong>${bus.busNo}</strong> on <strong>${bus.route}</strong>.`;
+      customHtml = `
+        <div class="fleet-action-menu">
+          <button type="button" data-fleet-action="telemetry" data-fleet-id="${bus.id}">
+            <strong>View telemetry</strong><span>Review speed, fuel, GPS and onboard load.</span>
+          </button>
+          <button type="button" data-fleet-action="assign-driver" data-fleet-id="${bus.id}"${bus.filterCategory === "on-duty" ? " disabled" : ""}>
+            <strong>${bus.filterCategory === "on-duty" ? "Driver assigned" : "Assign driver"}</strong>
+            <span>${bus.filterCategory === "on-duty" ? "Driver changes are unavailable while this vehicle is on duty." : "Update the driver assigned to this vehicle."}</span>
+          </button>
+          <button type="button" data-fleet-action="dispatch" data-fleet-id="${bus.id}"${bus.filterCategory === "on-duty" ? " disabled" : ""}>
+            <strong>${bus.filterCategory === "on-duty" ? "Already on duty" : "Dispatch vehicle"}</strong>
+            <span>${bus.filterCategory === "on-duty" ? "This vehicle is currently in service." : "Place this vehicle into active service."}</span>
+          </button>
+          <p class="fleet-action-prototype-note">Actions update sample data in this prototype only.</p>
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
+        </div>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("fleet-assign-driver-")) {
+      const busId = type.replace("fleet-assign-driver-", "");
+      const bus = adminFleetData.find((item) => item.id === busId);
+      if (!bus) throw new Error(`Driver assignment could not be opened: vehicle "${busId}" was not found.`);
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>`;
+      title = `Assign Driver — ${bus.busNo}`;
+      desc = `Update the assigned driver for <strong>${bus.busNo}</strong>.`;
+      customHtml = `
+        <form class="admin-login-form" data-fleet-driver-form="${bus.id}" style="margin-top: 14px; text-align: left;">
+          <div class="admin-form-field">
+            <label for="fleet-driver-name" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Driver name</label>
+            <input class="admin-input" id="fleet-driver-name" name="driver" value="${escapeHtml(bus.driver)}" required style="height: 40px;">
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="submit">Save driver</button>
+          </div>
+        </form>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("fleet-dispatch-confirm-")) {
+      const busId = type.replace("fleet-dispatch-confirm-", "");
+      const bus = adminFleetData.find((item) => item.id === busId);
+      if (!bus) throw new Error(`Vehicle dispatch could not be opened: vehicle "${busId}" was not found.`);
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h17m-6-6 6 6-6 6"/><path d="M4 5v14"/></svg>`;
+      title = `Dispatch ${bus.busNo}?`;
+      desc = `Place <strong>${bus.busNo}</strong>, currently assigned to <strong>${bus.driver}</strong>, into active service on <strong>${bus.route}</strong>.`;
+      customHtml = `
+        <p class="fleet-action-prototype-note">This changes the sample fleet status only; it does not send a command to a real vehicle.</p>
+        <div class="admin-modal-actions">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+          <button class="admin-modal-button-primary" type="button" data-fleet-dispatch-confirm="${bus.id}">Confirm dispatch</button>
+        </div>
       `;
       isInfoOnly = true;
     } else if (type.startsWith("telemetry-")) {
@@ -4631,6 +4744,29 @@
       return;
     }
 
+    if (event.target.matches("[data-fleet-driver-form]")) {
+      event.preventDefault();
+      const busId = event.target.dataset.fleetDriverForm;
+      const bus = adminFleetData.find((item) => item.id === busId);
+      const driverInput = event.target.querySelector('[name="driver"]');
+      const driverName = driverInput?.value.trim();
+      if (!bus || !driverInput || !driverName) {
+        driverInput?.focus();
+        return;
+      }
+      bus.driver = driverName;
+      const telemetryUnit = fleetDispatchTelemetryUnits.find((item) => item.id === busId);
+      if (telemetryUnit) telemetryUnit.driverName = driverName;
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const tbody = screen.querySelector("#admin-fleet-tbody");
+      if (tbody) tbody.innerHTML = renderAdminFleetRows();
+      const dispatchTbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (dispatchTbody) dispatchTbody.innerHTML = renderFleetTelemetryRows();
+      const dispatchPanel = screen.querySelector("#dispatch-panel-container");
+      if (dispatchPanelOpen && dispatchPanel) dispatchPanel.innerHTML = renderDispatchControlPanel();
+      return;
+    }
+
     if (event.target.matches("[data-login-form]")) {
       event.preventDefault();
       const email = screen.querySelector("#login-email");
@@ -5144,6 +5280,51 @@
       return;
     }
 
+    const fleetActionsBtn = event.target.closest("[data-fleet-actions]");
+    if (fleetActionsBtn) {
+      openAdminModal(`fleet-actions-${fleetActionsBtn.dataset.fleetActions}`);
+      return;
+    }
+
+    const fleetActionBtn = event.target.closest("[data-fleet-action]");
+    if (fleetActionBtn) {
+      if (fleetActionBtn.disabled) return;
+      const { fleetAction, fleetId } = fleetActionBtn.dataset;
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      if (fleetAction === "telemetry") {
+        openAdminModal(`telemetry-${fleetId}`);
+      } else if (fleetAction === "assign-driver") {
+        openAdminModal(`fleet-assign-driver-${fleetId}`);
+      } else if (fleetAction === "dispatch") {
+        openAdminModal(`fleet-dispatch-confirm-${fleetId}`);
+      }
+      return;
+    }
+
+    const confirmFleetDispatch = event.target.closest("[data-fleet-dispatch-confirm]");
+    if (confirmFleetDispatch) {
+      const bus = adminFleetData.find((item) => item.id === confirmFleetDispatch.dataset.fleetDispatchConfirm);
+      if (!bus) {
+        throw new Error(`Vehicle dispatch failed: vehicle "${confirmFleetDispatch.dataset.fleetDispatchConfirm}" was not found.`);
+      }
+      bus.status = "On Duty";
+      bus.statusClass = "on-duty";
+      bus.dot = "green";
+      bus.filterCategory = "on-duty";
+      bus.speed = "0 km/h (Staged)";
+      const telemetryUnit = fleetDispatchTelemetryUnits.find((item) => item.id === bus.id);
+      if (telemetryUnit) {
+        telemetryUnit.category = "deployed";
+        telemetryUnit.statusText = "On Time";
+        telemetryUnit.statusType = "on-time";
+        telemetryUnit.headwayAlert = "Vehicle dispatched and staged for service";
+      }
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const tbody = screen.querySelector("#admin-fleet-tbody");
+      if (tbody) tbody.innerHTML = renderAdminFleetRows();
+      return;
+    }
+
     const telemetryTab = event.target.closest("[data-telemetry-tab]");
     if (telemetryTab) {
       dispatchTelemetryFilter = telemetryTab.dataset.telemetryTab;
@@ -5155,6 +5336,29 @@
       return;
     }
 
+    const manageTripBtn = event.target.closest("[data-manage-trip]");
+    if (manageTripBtn) {
+      selectedDispatchBusId = manageTripBtn.dataset.manageTrip;
+      dispatchPanelOpen = true;
+      screen.querySelectorAll("[data-select-bus]").forEach((row) => {
+        row.classList.toggle("is-selected", row.dataset.selectBus === selectedDispatchBusId);
+      });
+      const grid = screen.querySelector(".fleet-dispatch-grid");
+      if (grid) grid.classList.remove("is-panel-closed");
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = renderDispatchControlPanel();
+      return;
+    }
+
+    if (event.target.closest("[data-close-dispatch-panel]")) {
+      dispatchPanelOpen = false;
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = "";
+      const grid = screen.querySelector(".fleet-dispatch-grid");
+      if (grid) grid.classList.add("is-panel-closed");
+      return;
+    }
+
     const selectBusRow = event.target.closest("[data-select-bus]");
     if (selectBusRow) {
       selectedDispatchBusId = selectBusRow.dataset.selectBus;
@@ -5162,7 +5366,7 @@
         r.classList.toggle("is-selected", r === selectBusRow);
       });
       const panel = screen.querySelector("#dispatch-panel-container");
-      if (panel) panel.innerHTML = renderDispatchControlPanel();
+      if (dispatchPanelOpen && panel) panel.innerHTML = renderDispatchControlPanel();
       const mapContainer = screen.querySelector("#radar-viewport-container");
       if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
       return;
@@ -5174,7 +5378,7 @@
       const tbody = screen.querySelector("#fleet-telemetry-tbody");
       if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
       const panel = screen.querySelector("#dispatch-panel-container");
-      if (panel) panel.innerHTML = renderDispatchControlPanel();
+      if (dispatchPanelOpen && panel) panel.innerHTML = renderDispatchControlPanel();
       const mapContainer = screen.querySelector("#radar-viewport-container");
       if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
       return;
@@ -5257,6 +5461,38 @@
         openAdminModal(`dispatch-order-sent-${unit.id}`);
         dispatchNoteInput = "";
         if (textarea) textarea.value = "";
+      } else if (action === "finish-trip" && !unit.tripFinished) {
+        const passengerMatch = unit.occupancySeats.match(/^(\d+)\s*\/\s*\d+/);
+        const passengers = passengerMatch ? Number(passengerMatch[1]) : NaN;
+        if (!Number.isFinite(passengers)) {
+          peakDispatchAnnouncement = `Could not record remittance for Bus ${unit.busNo}: passenger count is unavailable.`;
+          const panel = screen.querySelector("#dispatch-panel-container");
+          if (panel) panel.innerHTML = renderDispatchControlPanel();
+          return;
+        }
+
+        unit.tripFinished = true;
+        unit.category = "completed";
+        unit.statusText = "Finished";
+        unit.statusType = "completed";
+        unit.nextStop = "Trip completed";
+        unit.etaText = "Finished";
+        const remittance = {
+          id: `REM-${unit.busNo}-${Date.now()}`,
+          busNo: unit.busNo,
+          route: unit.tripName,
+          passengers,
+          farePerPassenger: sampleFarePerPassenger,
+          amount: passengers * sampleFarePerPassenger,
+          finishedAt: new Date().toLocaleString(),
+        };
+        dispatchRemittances.unshift(remittance);
+        const panel = screen.querySelector("#dispatch-panel-container");
+        if (panel) panel.innerHTML = renderDispatchControlPanel();
+        const tbody = screen.querySelector("#fleet-telemetry-tbody");
+        if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+        const remittancePanel = screen.querySelector("#dispatch-remittances-container");
+        if (remittancePanel) remittancePanel.outerHTML = renderDispatchRemittances();
       }
       return;
     }
