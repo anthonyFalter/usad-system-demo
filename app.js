@@ -185,13 +185,19 @@
   let activeFleetFilter = "all";
   let fleetSearchQuery = "";
   let activeCorridorFilter = "all";
-  let activeAdminSidebarTab = "staff-resources";
+  let activeAdminSidebarTab = "fleet-dispatch";
   let selectedDispatchBusId = "bus-01";
   let dispatchTelemetryFilter = "all";
   let dispatchCorridorFilter = "edsa";
   let dispatchMapZoom = 1;
   let dispatchLayersActive = true;
   let dispatchNoteInput = "";
+  const peakDispatchQueue = [
+    { id: "peak-03", busNo: "03", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Eldrei Acero", fuel: "92%", status: "ready" },
+    { id: "peak-07", busNo: "07", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Juan Dela Cruz", fuel: "88%", status: "ready" },
+    { id: "peak-11", busNo: "11", route: "EDSA Northbound", terminal: "SM North Staging Bay 4", driver: "Rogers Santos", fuel: "84%", status: "ready" },
+  ];
+  let peakDispatchAnnouncement = "";
   let activeStaffRoleFilter = "all";
   let staffSearchQuery = "";
   let staffDepotFilter = "all";
@@ -1302,6 +1308,58 @@
     `;
   };
 
+  const renderPeakDispatchReadiness = () => {
+    const readyCount = peakDispatchQueue.filter((bus) => bus.status === "ready").length;
+    return `
+      <section class="peak-readiness-card" id="peak-readiness-container" aria-labelledby="peak-readiness-title">
+        <div class="peak-readiness-header">
+          <div>
+            <p class="peak-readiness-eyebrow">PRE-SERVICE STAGING</p>
+            <h2 id="peak-readiness-title">Peak-hour dispatch readiness</h2>
+            <p class="peak-readiness-description">Stage available buses before commuter demand rises, then release a vehicle in one step.</p>
+          </div>
+          <div class="peak-readiness-summary" aria-label="${readyCount} buses ready to dispatch">
+            <strong>${readyCount}</strong>
+            <span>Buses Ready</span>
+          </div>
+        </div>
+        <div class="peak-readiness-checks" aria-label="Readiness checks">
+          <span><i aria-hidden="true">✓</i> Crew assigned</span>
+          <span><i aria-hidden="true">✓</i> Fuel checked</span>
+          <span><i aria-hidden="true">✓</i> Vehicle inspection complete</span>
+        </div>
+        <div class="peak-ready-bus-list">
+          ${peakDispatchQueue.map((bus) => `
+            <article class="peak-ready-bus${bus.status === "dispatched" ? " is-dispatched" : ""}">
+              <div class="peak-ready-bus-identity">
+                <span class="peak-ready-bus-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14l1-7-2-5H6l-2 5 1 7Z"/><path d="M6 10h12M7 17v2m10-2v2M7 14h.01M17 14h.01"/></svg>
+                </span>
+                <div>
+                  <strong>Bus ${escapeHtml(bus.busNo)}</strong>
+                  <span>${escapeHtml(bus.route)} · ${escapeHtml(bus.terminal)}</span>
+                </div>
+              </div>
+              <div class="peak-ready-bus-meta">
+                <span>${escapeHtml(bus.driver)}</span>
+                <span>${escapeHtml(bus.fuel)} fuel</span>
+              </div>
+              <span class="peak-ready-status${bus.status === "dispatched" ? " is-dispatched" : ""}">${bus.status === "ready" ? "Ready" : "Dispatched"}</span>
+              <button class="peak-dispatch-button" type="button" data-peak-dispatch="${escapeHtml(bus.id)}"${bus.status === "dispatched" ? " disabled" : ""}>
+                ${bus.status === "ready" ? "Dispatch bus" : "Dispatched"}
+              </button>
+            </article>
+          `).join("")}
+        </div>
+        <div class="peak-readiness-footer">
+          <span class="peak-readiness-note">Illustrative staging data only; dispatch does not connect to live vehicles or commuter access.</span>
+          ${readyCount < peakDispatchQueue.length ? '<button class="peak-reset-button" type="button" data-peak-dispatch-reset>Reset demo queue</button>' : ""}
+        </div>
+        <p class="peak-readiness-announcement" role="status" aria-live="polite">${escapeHtml(peakDispatchAnnouncement)}</p>
+      </section>
+    `;
+  };
+
   const adminFleetDispatchView = () => `
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
@@ -1316,6 +1374,8 @@
         </button>
       </div>
     </header>
+
+    ${renderPeakDispatchReadiness()}
 
     <!-- Main 2-Column Operational Grid -->
     <div class="fleet-dispatch-grid">
@@ -5145,6 +5205,25 @@
       dispatchLayersActive = !dispatchLayersActive;
       const mapContainer = screen.querySelector("#radar-viewport-container");
       if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
+      return;
+    }
+
+    const peakDispatchBtn = event.target.closest("[data-peak-dispatch]");
+    if (peakDispatchBtn) {
+      const bus = peakDispatchQueue.find((item) => item.id === peakDispatchBtn.dataset.peakDispatch);
+      if (!bus || bus.status !== "ready") return;
+      bus.status = "dispatched";
+      peakDispatchAnnouncement = `Bus ${bus.busNo} marked as dispatched in this prototype.`;
+      const readinessPanel = screen.querySelector("#peak-readiness-container");
+      if (readinessPanel) readinessPanel.outerHTML = renderPeakDispatchReadiness();
+      return;
+    }
+
+    if (event.target.closest("[data-peak-dispatch-reset]")) {
+      peakDispatchQueue.forEach((bus) => { bus.status = "ready"; });
+      peakDispatchAnnouncement = "Demo queue reset. All staged buses are ready.";
+      const readinessPanel = screen.querySelector("#peak-readiness-container");
+      if (readinessPanel) readinessPanel.outerHTML = renderPeakDispatchReadiness();
       return;
     }
 

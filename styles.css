@@ -7576,8 +7576,244 @@ input:focus-visible,
   color: #ffffff;
 }
 
+.peak-readiness-card {
+  padding: 20px;
+  border: 1px solid #254138;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.09), rgba(17, 24, 39, 0.98) 48%);
+}
 
+.peak-readiness-header,
+.peak-readiness-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
 
+.peak-readiness-eyebrow {
+  margin: 0 0 5px;
+  color: #6ee7b7;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
 
+.peak-readiness-header h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 17px;
+  font-weight: 650;
+}
 
+.peak-readiness-description {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
 
+.peak-readiness-summary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 6px 12px;
+  border-left: 2px solid #3b8068;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.peak-readiness-summary strong {
+  color: #d1fae5;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.peak-readiness-summary span {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.peak-readiness-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 16px 0 12px;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.peak-readiness-checks span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.peak-readiness-checks i {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.peak-ready-bus-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+  gap: 9px;
+}
+
+.peak-ready-bus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #263447;
+  border-radius: 9px;
+  background: rgba(11, 15, 23, 0.72);
+}
+
+.peak-ready-bus.is-dispatched {
+  border-color: #334155;
+}
+
+.peak-ready-bus-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.peak-ready-bus-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+}
+
+.peak-ready-bus-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.peak-ready-bus-identity div,
+.peak-ready-bus-meta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.peak-ready-bus-identity strong {
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.peak-ready-bus-identity div span,
+.peak-ready-bus-meta span {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.peak-ready-bus-meta {
+  text-align: right;
+}
+
+.peak-ready-status {
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid rgba(52, 211, 153, 0.18);
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.08);
+  color: #a7f3d0;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.peak-ready-status.is-dispatched {
+  border-color: #334155;
+  background: #17202d;
+  color: #94a3b8;
+}
+
+.peak-dispatch-button,
+.peak-reset-button {
+  padding: 7px 11px;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.peak-dispatch-button:hover:not(:disabled) {
+  border-color: #34d399;
+  background: #24372f;
+  color: #d1fae5;
+}
+
+.peak-dispatch-button:disabled {
+  border-color: #334155;
+  background: #151d29;
+  color: #64748b;
+  cursor: default;
+}
+
+.peak-readiness-footer {
+  margin-top: 12px;
+}
+
+.peak-readiness-note,
+.peak-readiness-announcement {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.peak-readiness-announcement {
+  min-height: 14px;
+  margin: 6px 0 0;
+  color: #6ee7b7;
+}
+
+.peak-reset-button {
+  border-color: #334155;
+  background: transparent;
+  color: #cbd5e1;
+}
+
+.peak-reset-button:hover {
+  background: #1e293b;
+}
+
+@media (max-width: 700px) {
+  .peak-readiness-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .peak-readiness-summary {
+    min-width: 0;
+  }
+
+  .peak-readiness-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

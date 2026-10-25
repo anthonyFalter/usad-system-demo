@@ -34,7 +34,7 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 - Passenger-demand visibility is intended to inform route and schedule adjustments.
 - The initiative aims to support public utility vehicle modernization by improving the broader commuting experience as well as vehicle operations.
 - The user-side prototype includes login and email validation, registration and verification states, a commuter home dashboard, an illustrative live-map screen, booking/ticket flows, scrollable Account Information settings, and searchable/category-filtered FAQs.
-- The admin-side prototype introduces the dark-themed Admin login with provisioned-only account access (self-registration disabled), error alert states, biometric and RFID smart-card authentication, and the Saraza TRD Operations & Dispatch console.
+- The admin-side prototype introduces the dark-themed Admin login with provisioned-only account access (self-registration disabled), error alert states, biometric and RFID smart-card authentication, and the Saraza TRD Operations & Dispatch console. The dispatch console opens on a peak-hour readiness queue with illustrative pre-staged buses and simulated quick-dispatch actions; these do not connect to live vehicles or commuter access.
 
 ## Brand Commitments
 
