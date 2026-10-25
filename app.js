@@ -424,7 +424,8 @@
     }
     if (!Number.isInteger(bus.sampleOccupiedSeats)) bus.sampleOccupiedSeats = Number(match[1]);
     if (!Array.isArray(bus.walkInBookings)) bus.walkInBookings = [];
-    const occupied = bus.sampleOccupiedSeats + bus.walkInBookings.length;
+    if (!Array.isArray(bus.releasedSampleSeatIds)) bus.releasedSampleSeatIds = [];
+    const occupied = bus.sampleOccupiedSeats - bus.releasedSampleSeatIds.length + bus.walkInBookings.length;
     if (occupied > passengerCapacity) {
       throw new Error(`USAD seat management received invalid occupancy data for ${bus.busNo}.`);
     }
@@ -467,8 +468,9 @@
     if (passengerSeatIndex < 0) return null;
     const walkInBooking = (bus.walkInBookings || []).find((booking) => booking.seatId === seatId);
     if (walkInBooking) return walkInBooking;
+    if ((bus.releasedSampleSeatIds || []).includes(seatId)) return null;
     return passengerSeatIndex < bus.sampleOccupiedSeats
-      ? { seatId, ...getSampleSeatBooking(bus, passengerSeatIndex) }
+      ? { seatId, ...getSampleSeatBooking(bus, passengerSeatIndex), walkIn: false }
       : null;
   };
 
@@ -513,8 +515,24 @@
       `;
     }
 
+    if (selectedDispatchSeatBooking.type === "released") {
+      return `<p class="dispatch-seat-release-success">Seat ${escapeHtml(selectedDispatchSeatBooking.seatId)} is available again. Customer departure recorded.</p>`;
+    }
+
     if (selectedDispatchSeatBooking.busId !== bus.id) {
       return `<p>Select an available seat to book a walk-in customer, or an occupied seat to view its booking.</p>`;
+    }
+
+    if (selectedDispatchSeatBooking.confirmingRelease) {
+      return `
+        <div class="dispatch-seat-release-confirmation" role="group" aria-label="Confirm customer departure">
+          <p>Confirm that the customer has reached their destination and left the bus before releasing this seat.</p>
+          <div>
+            <button class="dispatch-seat-release-confirm" type="button" data-confirm-seat-release="${escapeHtml(selectedDispatchSeatBooking.seatId)}">Confirm customer left</button>
+            <button class="dispatch-seat-release-cancel" type="button" data-cancel-seat-release>Keep seat booked</button>
+          </div>
+        </div>
+      `;
     }
 
     return `
@@ -525,6 +543,7 @@
         <div><dt>Booking ID</dt><dd>${escapeHtml(selectedDispatchSeatBooking.reference)}</dd></div>
         <div><dt>Date &amp; time booked</dt><dd>${escapeHtml(selectedDispatchSeatBooking.bookedAt)}</dd></div>
       </dl>
+      <button class="dispatch-seat-release-button" type="button" data-start-seat-release="${escapeHtml(selectedDispatchSeatBooking.seatId)}">Customer left bus</button>
     `;
   };
 
@@ -5255,6 +5274,55 @@
         bookingDetails.classList.add("has-selection");
         bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
       }
+      return;
+    }
+
+    const startSeatRelease = event.target.closest("[data-start-seat-release]");
+    if (startSeatRelease) {
+      if (selectedDispatchSeatBooking?.seatId !== startSeatRelease.dataset.startSeatRelease) {
+        throw new Error(`USAD could not confirm the selected booking for seat ${startSeatRelease.dataset.startSeatRelease}.`);
+      }
+      selectedDispatchSeatBooking.confirmingRelease = true;
+      const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
+      if (bookingDetails) bookingDetails.innerHTML = renderDispatchSeatBookingDetails(fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId));
+      return;
+    }
+
+    const cancelSeatRelease = event.target.closest("[data-cancel-seat-release]");
+    if (cancelSeatRelease) {
+      if (!selectedDispatchSeatBooking?.confirmingRelease) return;
+      selectedDispatchSeatBooking.confirmingRelease = false;
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
+      if (bookingDetails && bus) bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
+      return;
+    }
+
+    const confirmSeatRelease = event.target.closest("[data-confirm-seat-release]");
+    if (confirmSeatRelease) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      const seatId = confirmSeatRelease.dataset.confirmSeatRelease;
+      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || !selectedDispatchSeatBooking.confirmingRelease) {
+        throw new Error(`USAD could not verify the customer departure confirmation for seat ${seatId}.`);
+      }
+
+      const bookingIndex = bus.walkInBookings.findIndex((booking) => booking.seatId === seatId);
+      if (bookingIndex >= 0) {
+        bus.walkInBookings.splice(bookingIndex, 1);
+      } else {
+        const passengerSeatIndex = getPassengerSeatIndex(seatId);
+        if (passengerSeatIndex < 0 || passengerSeatIndex >= bus.sampleOccupiedSeats || bus.releasedSampleSeatIds.includes(seatId)) {
+          throw new Error(`USAD could not release seat ${seatId} because its booking is no longer active.`);
+        }
+        bus.releasedSampleSeatIds.push(seatId);
+      }
+
+      updateFleetOccupancyDisplay(bus);
+      selectedDispatchSeatBooking = { busId: bus.id, seatId, type: "released" };
+      const tbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = renderDispatchControlPanel();
       return;
     }
 
