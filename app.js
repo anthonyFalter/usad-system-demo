@@ -197,6 +197,7 @@
   let activeAdminSidebarTab = "staff-resources";
   let selectedDispatchBusId = "bus-01";
   let selectedDispatchSeatBooking = null;
+  let nextWalkInBookingNumber = 1;
   let dispatchTelemetryFilter = "all";
   let dispatchMapZoom = 1;
   let dispatchLayersActive = true;
@@ -417,9 +418,14 @@
   const getSeatCounts = (bus) => {
     const match = /^(\d+)\s*\/\s*(\d+)\s*passenger seats$/i.exec(bus.occupancySeats);
     if (!match) throw new Error(`USAD seat management could not read passenger capacity for ${bus.busNo}.`);
-    const occupied = Number(match[1]);
     const passengerCapacity = Number(match[2]);
-    if (passengerCapacity !== PASSENGER_SEAT_CAPACITY || occupied > passengerCapacity) {
+    if (passengerCapacity !== PASSENGER_SEAT_CAPACITY) {
+      throw new Error(`USAD seat management received invalid occupancy data for ${bus.busNo}.`);
+    }
+    if (!Number.isInteger(bus.sampleOccupiedSeats)) bus.sampleOccupiedSeats = Number(match[1]);
+    if (!Array.isArray(bus.walkInBookings)) bus.walkInBookings = [];
+    const occupied = bus.sampleOccupiedSeats + bus.walkInBookings.length;
+    if (occupied > passengerCapacity) {
       throw new Error(`USAD seat management received invalid occupancy data for ${bus.busNo}.`);
     }
     return {
@@ -448,14 +454,72 @@
     };
   };
 
-  const renderDispatchSeatBookingDetails = () => {
+  const getPassengerSeatIndex = (seatId) => {
+    const match = /^(\d+)([AB])$/.exec(seatId);
+    if (!match) return -1;
+    const seatIndex = (Number(match[1]) - 1) * 2 + (match[2] === "B" ? 1 : 0);
+    const passengerSeatIndex = seatIndex - EMPLOYEE_RESERVED_SEATS.length;
+    return passengerSeatIndex >= 0 && passengerSeatIndex < PASSENGER_SEAT_CAPACITY ? passengerSeatIndex : -1;
+  };
+
+  const getBookingForSeat = (bus, seatId) => {
+    const passengerSeatIndex = getPassengerSeatIndex(seatId);
+    if (passengerSeatIndex < 0) return null;
+    const walkInBooking = (bus.walkInBookings || []).find((booking) => booking.seatId === seatId);
+    if (walkInBooking) return walkInBooking;
+    return passengerSeatIndex < bus.sampleOccupiedSeats
+      ? { seatId, ...getSampleSeatBooking(bus, passengerSeatIndex) }
+      : null;
+  };
+
+  const createWalkInBooking = (bus, seatId) => {
+    const busCode = bus.busNo.replace(/\D/g, "").padStart(2, "0").slice(-2);
+    const timestamp = new Date();
+    const formattedBookedAt = new Intl.DateTimeFormat("en-PH", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Manila"
+    }).format(timestamp);
+
+    return {
+      seatId,
+      reference: `BK-••••-${busCode}${String(nextWalkInBookingNumber++).padStart(4, "0")}`,
+      bookedAt: `${formattedBookedAt} PHT`,
+      walkIn: true
+    };
+  };
+
+  const updateFleetOccupancyDisplay = (bus) => {
+    const { occupied, passengerCapacity, occupancy } = getSeatCounts(bus);
+    bus.occupancyPct = occupancy;
+    bus.occupancySeats = `${occupied}/${passengerCapacity} passenger seats`;
+    bus.occupancyPassengers = `${occupancy}% (${occupied} / ${passengerCapacity} passenger seats)`;
+  };
+
+  const renderDispatchSeatBookingDetails = (bus) => {
     if (!selectedDispatchSeatBooking) {
-      return `<p>Select an occupied seat to view its masked booking ID and booking time.</p>`;
+      return `<p>Select an available seat to book a walk-in customer, or an occupied seat to view its booking.</p>`;
+    }
+
+    if (selectedDispatchSeatBooking.type === "available") {
+      return `
+        <div class="dispatch-seat-booking-heading">
+          <span>Seat ${escapeHtml(selectedDispatchSeatBooking.seatId)} is available</span>
+        </div>
+        <p>No passenger details are required for this walk-in booking.</p>
+        <button class="dispatch-seat-book-button" type="button" data-book-walk-in-seat="${escapeHtml(selectedDispatchSeatBooking.seatId)}">
+          Book walk-in customer
+        </button>
+      `;
+    }
+
+    if (selectedDispatchSeatBooking.busId !== bus.id) {
+      return `<p>Select an available seat to book a walk-in customer, or an occupied seat to view its booking.</p>`;
     }
 
     return `
       <div class="dispatch-seat-booking-heading">
-        <span>Seat ${escapeHtml(selectedDispatchSeatBooking.seatId)} booking</span>
+        <span>Seat ${escapeHtml(selectedDispatchSeatBooking.seatId)} booking${selectedDispatchSeatBooking.walkIn ? " · Walk-in" : ""}</span>
       </div>
       <dl>
         <div><dt>Booking ID</dt><dd>${escapeHtml(selectedDispatchSeatBooking.reference)}</dd></div>
@@ -476,12 +540,16 @@
         if (reservedSeat) {
           return `<span class="admin-seat is-reserved" title="Reserved for ${reservedSeat.role.toLowerCase()}" aria-label="Seat ${seatId}, reserved for ${reservedSeat.role.toLowerCase()}">${seatId} · ${reservedSeat.role}</span>`;
         }
-        const passengerSeatIndex = seatIndexInBus - EMPLOYEE_RESERVED_SEATS.length;
-        const seatState = passengerSeatIndex < occupied ? "is-occupied" : "is-available";
+        const existingBooking = bookingLookupBus ? getBookingForSeat(bookingLookupBus, seatId) : null;
+        const seatState = existingBooking ? "is-occupied" : "is-available";
         if (seatState === "is-occupied" && bookingLookupBus) {
-          const booking = getSampleSeatBooking(bookingLookupBus, passengerSeatIndex);
+          const booking = existingBooking;
           const isBookingSelected = selectedDispatchSeatBooking?.seatId === seatId;
           return `<button class="admin-seat ${seatState}${isBookingSelected ? " is-selected" : ""}" type="button" data-dispatch-booking-seat="${seatId}" aria-pressed="${isBookingSelected}" aria-label="Seat ${seatId}, occupied. View masked booking details">${seatId}</button>`;
+        }
+        if (bookingLookupBus) {
+          const isSeatSelected = selectedDispatchSeatBooking?.type === "available" && selectedDispatchSeatBooking.seatId === seatId;
+          return `<button class="admin-seat ${seatState}${isSeatSelected ? " is-selected" : ""}" type="button" data-dispatch-available-seat="${seatId}" aria-pressed="${isSeatSelected}" aria-label="Seat ${seatId}, available. Select to book a walk-in customer">${seatId}</button>`;
         }
         return `<span class="admin-seat ${seatState}" aria-label="Seat ${seatId}, ${seatState === "is-occupied" ? "occupied" : "available"}">${seatId}</span>`;
       });
@@ -1241,7 +1309,7 @@
               <span class="status-pill-telemetry ${unit.statusType}"><span class="status-dot"></span>${unit.statusText}</span>
             </span>
           </div>
-          <details class="dispatch-seat-dropdown dispatch-spec-row">
+          <details class="dispatch-seat-dropdown dispatch-spec-row"${selectedDispatchSeatBooking?.busId === unit.id ? " open" : ""}>
             <summary class="dispatch-seat-dropdown-trigger">
               <span class="spec-key-label">Seats Filled</span>
               <span class="dispatch-seat-trigger-value">
@@ -1257,7 +1325,7 @@
                 </div>
               </div>
               <div class="dispatch-seat-booking-details${selectedDispatchSeatBooking ? " has-selection" : ""}" data-dispatch-seat-booking-details aria-live="polite">
-                ${renderDispatchSeatBookingDetails()}
+                ${renderDispatchSeatBookingDetails(unit)}
               </div>
               <div class="dispatch-seat-dropdown-footer">
                 <span>${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available</span>
@@ -5166,28 +5234,75 @@
     if (dispatchBookingSeat) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for seat booking details.`);
-      const seatCounts = getSeatCounts(bus);
       const seatId = dispatchBookingSeat.dataset.dispatchBookingSeat;
-      const seatNumber = Number.parseInt(seatId, 10);
-      const seatLetter = seatId.slice(-1);
-      const seatIndex = (seatNumber - 1) * 2 + (seatLetter === "B" ? 1 : 0);
-      const passengerSeatIndex = seatIndex - EMPLOYEE_RESERVED_SEATS.length;
-      if (passengerSeatIndex < 0 || passengerSeatIndex >= seatCounts.occupied) {
+      const booking = getBookingForSeat(bus, seatId);
+      if (!booking) {
         throw new Error(`USAD could not show booking details for non-occupied seat ${seatId} on Bus ${bus.busNo}.`);
       }
 
-      const booking = getSampleSeatBooking(bus, passengerSeatIndex);
       selectedDispatchSeatBooking = { busId: bus.id, seatId, ...booking };
       screen.querySelectorAll("[data-dispatch-booking-seat]").forEach((seat) => {
         const isSelected = seat === dispatchBookingSeat;
         seat.classList.toggle("is-selected", isSelected);
         seat.setAttribute("aria-pressed", String(isSelected));
       });
+      screen.querySelectorAll("[data-dispatch-available-seat]").forEach((seat) => {
+        seat.classList.remove("is-selected");
+        seat.setAttribute("aria-pressed", "false");
+      });
       const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
       if (bookingDetails) {
         bookingDetails.classList.add("has-selection");
-        bookingDetails.innerHTML = renderDispatchSeatBookingDetails();
+        bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
       }
+      return;
+    }
+
+    const availableDispatchSeat = event.target.closest("[data-dispatch-available-seat]");
+    if (availableDispatchSeat) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for walk-in booking.`);
+      const seatId = availableDispatchSeat.dataset.dispatchAvailableSeat;
+      if (getBookingForSeat(bus, seatId)) {
+        throw new Error(`USAD cannot book seat ${seatId} on Bus ${bus.busNo} because it is already occupied.`);
+      }
+      selectedDispatchSeatBooking = { busId: bus.id, seatId, type: "available" };
+      screen.querySelectorAll("[data-dispatch-available-seat]").forEach((seat) => {
+        const isSelected = seat === availableDispatchSeat;
+        seat.classList.toggle("is-selected", isSelected);
+        seat.setAttribute("aria-pressed", String(isSelected));
+      });
+      screen.querySelectorAll("[data-dispatch-booking-seat]").forEach((seat) => {
+        seat.classList.remove("is-selected");
+        seat.setAttribute("aria-pressed", "false");
+      });
+      const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
+      if (bookingDetails) {
+        bookingDetails.classList.add("has-selection");
+        bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
+      }
+      return;
+    }
+
+    const bookWalkInButton = event.target.closest("[data-book-walk-in-seat]");
+    if (bookWalkInButton) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      const seatId = bookWalkInButton.dataset.bookWalkInSeat;
+      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || selectedDispatchSeatBooking.type !== "available") {
+        throw new Error(`USAD could not confirm the walk-in booking for seat ${seatId}. Select an available seat and try again.`);
+      }
+      if (getBookingForSeat(bus, seatId)) {
+        throw new Error(`USAD cannot book seat ${seatId} on Bus ${bus.busNo} because it is already occupied.`);
+      }
+
+      const booking = createWalkInBooking(bus, seatId);
+      bus.walkInBookings.push(booking);
+      updateFleetOccupancyDisplay(bus);
+      selectedDispatchSeatBooking = { busId: bus.id, ...booking };
+      const tbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      const panel = screen.querySelector("#dispatch-panel-container");
+      if (panel) panel.innerHTML = renderDispatchControlPanel();
       return;
     }
 
