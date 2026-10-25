@@ -35,7 +35,7 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 - The initiative aims to support public utility vehicle modernization by improving the broader commuting experience as well as vehicle operations.
 - The user-side prototype includes login and email validation, registration and verification states, a commuter home dashboard, an illustrative live-map screen, booking/ticket flows, scrollable Account Information settings, and searchable/category-filtered FAQs.
 - The admin-side prototype introduces the dark-themed Admin login with provisioned-only account access (self-registration disabled), error alert states, biometric and RFID smart-card authentication, and the Saraza TRD Operations & Dispatch console.
-- The Admin view includes a Seat Management page with illustrative per-bus occupied and available seat counts; individual seat assignments and live passenger tracking are not connected.
+- Fleet Management's selected-bus panel has an expandable Seats Filled row with a maximum of 15 seats per bus: 13 passenger seats and two permanently reserved employee seats (1A for the driver and 1B for the conductor). Selecting an occupied seat shows only a masked booking ID and booking date/time, with no passenger PII. Reserved seats are excluded from passenger availability. Per-bus counts, booking details, and layouts are illustrative; live seat assignments and passenger tracking are not connected.
 - The prototype currently represents one active route: Malolos to Trinoma via NLEX. Route selectors and route-specific sample content use the shared route data in `routes.js`; this does not represent live service data.
 
 ## Brand Commitments

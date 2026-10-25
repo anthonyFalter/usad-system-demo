@@ -196,6 +196,7 @@
   let activeCorridorFilter = activeRoute.id;
   let activeAdminSidebarTab = "staff-resources";
   let selectedDispatchBusId = "bus-01";
+  let selectedDispatchSeatBooking = null;
   let dispatchTelemetryFilter = "all";
   let dispatchMapZoom = 1;
   let dispatchLayersActive = true;
@@ -406,96 +407,86 @@
     }
   ];
 
+  const BUS_TOTAL_SEAT_CAPACITY = 15;
+  const EMPLOYEE_RESERVED_SEATS = [
+    { id: "1A", role: "Driver" },
+    { id: "1B", role: "Conductor" }
+  ];
+  const PASSENGER_SEAT_CAPACITY = BUS_TOTAL_SEAT_CAPACITY - EMPLOYEE_RESERVED_SEATS.length;
+
   const getSeatCounts = (bus) => {
-    const match = /^(\d+)\s*\/\s*(\d+)$/.exec(bus.telemetry.passengers);
+    const match = /^(\d+)\s*\/\s*(\d+)\s*passenger seats$/i.exec(bus.occupancySeats);
     if (!match) throw new Error(`USAD seat management could not read passenger capacity for ${bus.busNo}.`);
     const occupied = Number(match[1]);
-    const capacity = Number(match[2]);
-    if (capacity <= 0 || occupied > capacity) {
+    const passengerCapacity = Number(match[2]);
+    if (passengerCapacity !== PASSENGER_SEAT_CAPACITY || occupied > passengerCapacity) {
       throw new Error(`USAD seat management received invalid occupancy data for ${bus.busNo}.`);
     }
-    return { occupied, capacity, available: capacity - occupied, occupancy: Math.round((occupied / capacity) * 100) };
+    return {
+      occupied,
+      passengerCapacity,
+      reserved: EMPLOYEE_RESERVED_SEATS.length,
+      totalCapacity: BUS_TOTAL_SEAT_CAPACITY,
+      available: passengerCapacity - occupied,
+      occupancy: Math.floor((occupied / passengerCapacity) * 100)
+    };
   };
 
-  const adminSeatManagementView = () => {
-    const seatCounts = adminFleetData.map((bus) => ({ bus, ...getSeatCounts(bus) }));
-    const totalCapacity = seatCounts.reduce((total, item) => total + item.capacity, 0);
-    const totalOccupied = seatCounts.reduce((total, item) => total + item.occupied, 0);
-    const totalAvailable = totalCapacity - totalOccupied;
-    const averageOccupancy = totalCapacity ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
+  const getSampleSeatBooking = (bus, passengerSeatIndex) => {
+    const busCode = bus.busNo.replace(/\D/g, "").padStart(2, "0").slice(-2);
+    const bookingNumber = `${busCode}${String(passengerSeatIndex + 1).padStart(2, "0")}`;
+    const bookedAt = new Date(Date.UTC(2026, 9, 25, 6) + (Number(busCode) * 7 + passengerSeatIndex * 11) * 60 * 1000);
+    const formattedBookedAt = new Intl.DateTimeFormat("en-PH", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Manila"
+    }).format(bookedAt);
+
+    return {
+      reference: `BK-••••-${bookingNumber}`,
+      bookedAt: `${formattedBookedAt} PHT`
+    };
+  };
+
+  const renderDispatchSeatBookingDetails = () => {
+    if (!selectedDispatchSeatBooking) {
+      return `<p>Select an occupied seat to view its masked booking ID and booking time.</p>`;
+    }
 
     return `
-      <header class="admin-header-row">
-        <div class="admin-header-title-box">
-          <h1 class="admin-header-title">Seat Management</h1>
-        </div>
-        <div class="admin-header-actions">
-          <span class="seat-route-label">${escapeHtml(activeRoute.label)}</span>
-        </div>
-      </header>
-
-      <section class="seat-summary-grid" aria-label="Seat availability summary">
-        <article class="seat-summary-item">
-          <span class="seat-summary-label">Occupied seats</span>
-          <strong>${totalOccupied}</strong>
-          <small>Across ${seatCounts.length} tracked buses</small>
-        </article>
-        <article class="seat-summary-item">
-          <span class="seat-summary-label">Available seats</span>
-          <strong>${totalAvailable}</strong>
-          <small>Out of ${totalCapacity} total seats</small>
-        </article>
-        <article class="seat-summary-item">
-          <span class="seat-summary-label">Average occupancy</span>
-          <strong>${averageOccupancy}%</strong>
-          <small>Combined route capacity</small>
-        </article>
-      </section>
-
-      <section class="admin-telemetry-table-card seat-tracking-card" aria-labelledby="seat-tracking-title">
-        <div class="telemetry-table-header-row">
-          <div class="telemetry-card-title-wrap">
-            <h2 class="telemetry-card-title" id="seat-tracking-title">Seats by bus</h2>
-          </div>
-          <span class="seat-sample-badge">Sample data</span>
-        </div>
-        <div class="telemetry-table-wrap">
-          <table class="fleet-telemetry-table seat-tracking-table">
-            <thead>
-              <tr>
-                <th scope="col">BUS</th>
-                <th scope="col">STATUS</th>
-                <th scope="col">OCCUPIED</th>
-                <th scope="col">AVAILABLE</th>
-                <th scope="col">OCCUPANCY</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${seatCounts.map(({ bus, occupied, available, capacity, occupancy }) => `
-                <tr>
-                  <th scope="row">
-                    <span class="seat-bus-name">${escapeHtml(bus.busNo)}</span>
-                    <small>${escapeHtml(bus.route)}</small>
-                  </th>
-                  <td><span class="seat-bus-status ${escapeHtml(bus.statusClass)}">${escapeHtml(bus.status)}</span></td>
-                  <td>${occupied} <span class="seat-capacity-total">/ ${capacity}</span></td>
-                  <td>${available}</td>
-                  <td>
-                    <div class="seat-occupancy-cell">
-                      <div class="seat-occupancy-track" role="progressbar" aria-label="${escapeHtml(bus.busNo)} occupancy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${occupancy}">
-                        <span class="${occupancy >= 80 ? "is-high" : ""}" style="width: ${occupancy}%"></span>
-                      </div>
-                      <strong>${occupancy}%</strong>
-                    </div>
-                  </td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-        <p class="seat-tracking-note">Seat counts are illustrative sample data. Individual seat assignments and live passenger tracking are not available.</p>
-      </section>
+      <div class="dispatch-seat-booking-heading">
+        <span>Seat ${escapeHtml(selectedDispatchSeatBooking.seatId)} booking</span>
+      </div>
+      <dl>
+        <div><dt>Booking ID</dt><dd>${escapeHtml(selectedDispatchSeatBooking.reference)}</dd></div>
+        <div><dt>Date &amp; time booked</dt><dd>${escapeHtml(selectedDispatchSeatBooking.bookedAt)}</dd></div>
+      </dl>
     `;
+  };
+
+  const renderAdminSeatLayout = ({ occupied }, bookingLookupBus) => {
+    const seatLetters = ["A", "B"];
+    const rowCount = Math.ceil(BUS_TOTAL_SEAT_CAPACITY / seatLetters.length);
+    return Array.from({ length: rowCount }, (_, rowIndex) => {
+      const rowSeats = seatLetters.map((letter, seatIndex) => {
+        const seatIndexInBus = rowIndex * seatLetters.length + seatIndex;
+        if (seatIndexInBus >= BUS_TOTAL_SEAT_CAPACITY) return `<span aria-hidden="true"></span>`;
+        const seatId = `${rowIndex + 1}${letter}`;
+        const reservedSeat = EMPLOYEE_RESERVED_SEATS.find((seat) => seat.id === seatId);
+        if (reservedSeat) {
+          return `<span class="admin-seat is-reserved" title="Reserved for ${reservedSeat.role.toLowerCase()}" aria-label="Seat ${seatId}, reserved for ${reservedSeat.role.toLowerCase()}">${seatId} · ${reservedSeat.role}</span>`;
+        }
+        const passengerSeatIndex = seatIndexInBus - EMPLOYEE_RESERVED_SEATS.length;
+        const seatState = passengerSeatIndex < occupied ? "is-occupied" : "is-available";
+        if (seatState === "is-occupied" && bookingLookupBus) {
+          const booking = getSampleSeatBooking(bookingLookupBus, passengerSeatIndex);
+          const isBookingSelected = selectedDispatchSeatBooking?.seatId === seatId;
+          return `<button class="admin-seat ${seatState}${isBookingSelected ? " is-selected" : ""}" type="button" data-dispatch-booking-seat="${seatId}" aria-pressed="${isBookingSelected}" aria-label="Seat ${seatId}, occupied. View masked booking details">${seatId}</button>`;
+        }
+        return `<span class="admin-seat ${seatState}" aria-label="Seat ${seatId}, ${seatState === "is-occupied" ? "occupied" : "available"}">${seatId}</span>`;
+      });
+      return `<div class="admin-seat-row">${rowSeats[0]}<span class="admin-seat-aisle" aria-hidden="true"></span>${rowSeats[1]}</div>`;
+    }).join("");
   };
 
   const adminCommentsData = [
@@ -1044,9 +1035,9 @@
       headwayAlert: "8 minutes behind schedule",
       nextStop: activeRoute.destination,
       etaText: "23 min ETA (15:08 PHT)",
-      occupancyPct: 78,
-      occupancySeats: "55/70 seats",
-      occupancyPassengers: "78% (55 / 70 Passengers)",
+      occupancyPct: 92,
+      occupancySeats: "12/13 passenger seats",
+      occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
       conductorName: "Santos, M.",
@@ -1068,9 +1059,9 @@
       headwayAlert: "On schedule",
       nextStop: activeRoute.destination,
       etaText: "7 min ETA (14:55 PHT)",
-      occupancyPct: 78,
-      occupancySeats: "55/70 seats",
-      occupancyPassengers: "78% (55 / 70 Passengers)",
+      occupancyPct: 92,
+      occupancySeats: "12/13 passenger seats",
+      occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Rogers, S.",
       driverId: "#DR-9204",
       conductorName: "Barton, C.",
@@ -1092,9 +1083,9 @@
       headwayAlert: "At the terminal. Leaves in 19 minutes.",
       nextStop: activeRoute.origin,
       etaText: "Departing in 19 min",
-      occupancyPct: 78,
-      occupancySeats: "55/70 seats",
-      occupancyPassengers: "78% (55 / 70 Passengers)",
+      occupancyPct: 92,
+      occupancySeats: "12/13 passenger seats",
+      occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
       conductorName: "Reyes, K.",
@@ -1116,9 +1107,9 @@
       headwayAlert: "1 minute ahead of schedule",
       nextStop: activeRoute.destination,
       etaText: "12 min ETA (15:00 PHT)",
-      occupancyPct: 42,
-      occupancySeats: "30/70 seats",
-      occupancyPassengers: "42% (30 / 70 Passengers)",
+      occupancyPct: 46,
+      occupancySeats: "6/13 passenger seats",
+      occupancyPassengers: "46% (6 / 13 passenger seats)",
       driverName: "Bautista, M.",
       driverId: "#DR-7711",
       conductorName: "Villanueva, E.",
@@ -1141,9 +1132,9 @@
       headwayAlert: "Busy bus. Running on schedule.",
       nextStop: activeRoute.destination,
       etaText: "16 min ETA (15:04 PHT)",
-      occupancyPct: 92,
-      occupancySeats: "65/70 seats",
-      occupancyPassengers: "92% (65 / 70 Passengers)",
+      occupancyPct: 100,
+      occupancySeats: "13/13 passenger seats",
+      occupancyPassengers: "100% (13 / 13 passenger seats)",
       driverName: "Alcantara, R.",
       driverId: "#DR-3108",
       conductorName: "Morales, G.",
@@ -1209,6 +1200,7 @@
 
   const renderDispatchControlPanel = () => {
     const unit = fleetDispatchTelemetryUnits.find((u) => u.id === selectedDispatchBusId) || fleetDispatchTelemetryUnits[0];
+    const seatCounts = getSeatCounts(unit);
     return `
       <section class="dispatch-control-panel-card">
         <header class="dispatch-panel-header">
@@ -1249,10 +1241,30 @@
               <span class="status-pill-telemetry ${unit.statusType}"><span class="status-dot"></span>${unit.statusText}</span>
             </span>
           </div>
-          <div class="dispatch-spec-row">
-            <span class="spec-key-label">Seats Filled</span>
-            <span class="spec-val-content">${unit.occupancyPassengers}</span>
-          </div>
+          <details class="dispatch-seat-dropdown dispatch-spec-row">
+            <summary class="dispatch-seat-dropdown-trigger">
+              <span class="spec-key-label">Seats Filled</span>
+              <span class="dispatch-seat-trigger-value">
+                <span class="spec-val-content">${unit.occupancyPassengers}</span>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+              </span>
+            </summary>
+            <div class="dispatch-seat-dropdown-content">
+              <div class="admin-seat-map dispatch-seat-map" aria-label="Seat layout for Bus ${escapeHtml(unit.busNo)}">
+                <div class="admin-seat-driver">FRONT <span>Driver</span></div>
+                <div class="admin-seat-grid" role="group" aria-label="Seats on Bus ${escapeHtml(unit.busNo)}">
+                  ${renderAdminSeatLayout(seatCounts, unit)}
+                </div>
+              </div>
+              <div class="dispatch-seat-booking-details${selectedDispatchSeatBooking ? " has-selection" : ""}" data-dispatch-seat-booking-details aria-live="polite">
+                ${renderDispatchSeatBookingDetails()}
+              </div>
+              <div class="dispatch-seat-dropdown-footer">
+                <span>${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available</span>
+                <span>1A driver · 1B conductor</span>
+              </div>
+            </div>
+          </details>
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Assigned Driver</span>
             <span class="spec-val-content">${unit.driverName} (Conductor: ${unit.conductorName})</span>
@@ -2715,10 +2727,6 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               <span>Fleet</span>
             </button>
-            <button class="admin-nav-item${activeAdminSidebarTab === "seat-management" ? " is-active" : ""}" type="button" data-admin-nav="seat-management" aria-current="${activeAdminSidebarTab === "seat-management" ? "page" : "false"}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M3 11h18v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-7Z"/><path d="M7 19v2m10-2v2"/></svg>
-              <span>Seat Management</span>
-            </button>
             <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources" aria-current="${activeAdminSidebarTab === "staff-resources" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               <span>Staff Management</span>
@@ -2754,8 +2762,6 @@
       ? adminPredictiveAnalyticsView()
       : activeAdminSidebarTab === "fleet-dispatch"
         ? adminFleetDispatchView()
-        : activeAdminSidebarTab === "seat-management"
-          ? adminSeatManagementView()
         : activeAdminSidebarTab === "staff-resources"
           ? adminStaffResourcesView()
           : activeAdminSidebarTab === "sensor-camera"
@@ -5156,9 +5162,39 @@
       return;
     }
 
+    const dispatchBookingSeat = event.target.closest("[data-dispatch-booking-seat]");
+    if (dispatchBookingSeat) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for seat booking details.`);
+      const seatCounts = getSeatCounts(bus);
+      const seatId = dispatchBookingSeat.dataset.dispatchBookingSeat;
+      const seatNumber = Number.parseInt(seatId, 10);
+      const seatLetter = seatId.slice(-1);
+      const seatIndex = (seatNumber - 1) * 2 + (seatLetter === "B" ? 1 : 0);
+      const passengerSeatIndex = seatIndex - EMPLOYEE_RESERVED_SEATS.length;
+      if (passengerSeatIndex < 0 || passengerSeatIndex >= seatCounts.occupied) {
+        throw new Error(`USAD could not show booking details for non-occupied seat ${seatId} on Bus ${bus.busNo}.`);
+      }
+
+      const booking = getSampleSeatBooking(bus, passengerSeatIndex);
+      selectedDispatchSeatBooking = { busId: bus.id, seatId, ...booking };
+      screen.querySelectorAll("[data-dispatch-booking-seat]").forEach((seat) => {
+        const isSelected = seat === dispatchBookingSeat;
+        seat.classList.toggle("is-selected", isSelected);
+        seat.setAttribute("aria-pressed", String(isSelected));
+      });
+      const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
+      if (bookingDetails) {
+        bookingDetails.classList.add("has-selection");
+        bookingDetails.innerHTML = renderDispatchSeatBookingDetails();
+      }
+      return;
+    }
+
     const selectBusRow = event.target.closest("[data-select-bus]");
     if (selectBusRow) {
       selectedDispatchBusId = selectBusRow.dataset.selectBus;
+      selectedDispatchSeatBooking = null;
       screen.querySelectorAll("[data-select-bus]").forEach((r) => {
         r.classList.toggle("is-selected", r === selectBusRow);
       });
@@ -5172,6 +5208,7 @@
     const mapBus = event.target.closest("[data-map-bus]");
     if (mapBus) {
       selectedDispatchBusId = mapBus.dataset.mapBus;
+      selectedDispatchSeatBooking = null;
       const tbody = screen.querySelector("#fleet-telemetry-tbody");
       if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
       const panel = screen.querySelector("#dispatch-panel-container");

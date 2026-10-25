@@ -5379,6 +5379,46 @@ input:focus-visible,
   box-shadow: inset 3px 0 0 0 #10b981;
 }
 
+.fleet-seat-view-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  background: #0b0f17;
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.fleet-seat-view-button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fleet-seat-view-button:hover {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  color: #6ee7b7;
+}
+
+.fleet-seat-view-button:focus-visible,
+.seat-back-button:focus-visible {
+  outline: 2px solid #2fd9a8;
+  outline-offset: 2px;
+}
+
 .bus-cell-badge-wrap {
   display: flex;
   align-items: center;
@@ -5671,6 +5711,164 @@ input:focus-visible,
 .dispatch-spec-row:last-child {
   border-bottom: 0;
   padding-bottom: 4px;
+}
+
+.dispatch-seat-dropdown {
+  display: block;
+}
+
+.dispatch-seat-dropdown-trigger {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.dispatch-seat-dropdown-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.dispatch-seat-trigger-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  color: #f8fafc;
+  text-align: right;
+}
+
+.dispatch-seat-trigger-value svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: #94a3b8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+  transition: transform 0.18s ease;
+}
+
+.dispatch-seat-dropdown[open] .dispatch-seat-trigger-value svg {
+  transform: rotate(180deg);
+}
+
+.dispatch-seat-dropdown-trigger:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid #2fd9a8;
+  outline-offset: 4px;
+}
+
+.dispatch-seat-dropdown-content {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0 2px;
+}
+
+.dispatch-seat-map {
+  width: 100%;
+  padding: 10px;
+  border-color: #263244;
+  background: #0b0f17;
+}
+
+.dispatch-seat-map .admin-seat-grid {
+  max-height: 126px;
+}
+
+.dispatch-seat-map .admin-seat.is-available {
+  cursor: default;
+}
+
+.dispatch-seat-map .admin-seat.is-occupied {
+  cursor: pointer;
+}
+
+.dispatch-seat-map .admin-seat.is-occupied:hover,
+.dispatch-seat-map .admin-seat.is-occupied.is-selected {
+  border-color: #64748b;
+  background: #334155;
+  color: #f8fafc;
+}
+
+.dispatch-seat-map .admin-seat.is-occupied:focus-visible {
+  outline: 2px solid #2fd9a8;
+  outline-offset: 2px;
+}
+
+.dispatch-seat-map .admin-seat-row {
+  gap: 9px;
+}
+
+.dispatch-seat-booking-details {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #1e293b;
+  border-radius: 7px;
+  background: #111827;
+}
+
+.dispatch-seat-booking-details > p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.dispatch-seat-booking-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.dispatch-seat-booking-heading span:last-child {
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 400;
+  text-align: right;
+}
+
+.dispatch-seat-booking-details dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.dispatch-seat-booking-details dl > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dispatch-seat-booking-details dt {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.dispatch-seat-booking-details dd {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.dispatch-seat-dropdown-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 10px;
 }
 
 .spec-key-label {
@@ -7602,7 +7800,7 @@ input:focus-visible,
 
 .seat-summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -7653,7 +7851,7 @@ input:focus-visible,
 }
 
 .seat-tracking-table {
-  min-width: 680px;
+  min-width: 820px;
 }
 
 .seat-tracking-table th[scope="row"] {
@@ -7742,16 +7940,205 @@ input:focus-visible,
   line-height: 1.5;
 }
 
+.seat-back-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  background: #111827;
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.seat-back-button:hover {
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+.admin-seat-detail {
+  gap: 18px;
+}
+
+.admin-seat-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-seat-detail-heading p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.admin-seat-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-seat-detail-summary > div {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  background: #0b0f17;
+}
+
+.admin-seat-detail-summary strong {
+  color: #f8fafc;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-seat-detail-summary span {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.admin-seat-map {
+  width: min(100%, 340px);
+  margin: 0 auto;
+  padding: 12px 14px 10px;
+  border: 1px solid #263244;
+  border-radius: 9px;
+  background: #0b0f17;
+}
+
+.admin-seat-driver {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 2px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-seat-driver span {
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.admin-seat-grid {
+  display: grid;
+  max-height: 150px;
+  gap: 5px;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-color: #334155 transparent;
+  scrollbar-width: thin;
+}
+
+.admin-seat-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.admin-seat-aisle {
+  width: 1px;
+  height: 100%;
+  min-height: 22px;
+  justify-self: center;
+  background: #1e293b;
+}
+
+.admin-seat {
+  display: grid;
+  min-height: 22px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-seat.is-available {
+  border-color: rgba(47, 217, 168, 0.42);
+  background: rgba(47, 217, 168, 0.12);
+  color: #6ee7c0;
+  cursor: pointer;
+}
+
+.admin-seat.is-available:hover,
+.admin-seat.is-available.is-selected {
+  border-color: #2fd9a8;
+  background: rgba(47, 217, 168, 0.22);
+  color: #a7f3d7;
+}
+
+.admin-seat.is-available:focus-visible {
+  outline: 2px solid #2fd9a8;
+  outline-offset: 2px;
+}
+
+.admin-seat.is-occupied {
+  background: #1e293b;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.admin-seat.is-reserved {
+  border-color: #475569;
+  background: #273449;
+  color: #cbd5e1;
+  font-size: 9px;
+  cursor: not-allowed;
+}
+
+.admin-seat-selection-note {
+  margin: 5px 0 0;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 @media (max-width: 720px) {
   .seat-summary-grid {
     grid-template-columns: 1fr;
     gap: 10px;
   }
 
+  @media (max-width: 420px) {
+    .dispatch-seat-booking-details dl {
+      grid-template-columns: 1fr;
+    }
+
+    .dispatch-seat-booking-heading {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .dispatch-seat-booking-heading span:last-child {
+      text-align: left;
+    }
+  }
+
   .seat-summary-item {
     padding: 15px 16px;
   }
+
+  .admin-seat-detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-seat-map {
+    padding: 12px 10px 10px;
+  }
+
+  .admin-seat-row {
+    gap: 10px;
+  }
 }
-
-
-
