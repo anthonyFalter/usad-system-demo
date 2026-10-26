@@ -7734,7 +7734,7 @@ input:focus-visible,
 /* 4 Executive KPI Cards */
 .reports-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 0;
 }
@@ -7754,6 +7754,7 @@ input:focus-visible,
 }
 
 .reports-kpi-card {
+  min-width: 0;
   background: #111827;
   border: 1px solid #1e293b;
   border-radius: 12px;
@@ -7766,8 +7767,10 @@ input:focus-visible,
 
 .reports-kpi-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
@@ -7825,6 +7828,8 @@ input:focus-visible,
 
 /* Main Reports Table & Toolbar */
 .reports-table-card {
+  flex: 0 0 auto;
+  min-width: 0;
   background: #111827;
   border: 1px solid #1e293b;
   border-radius: 12px;
@@ -7833,23 +7838,35 @@ input:focus-visible,
   overflow: hidden;
 }
 
-.reports-table-toolbar {
+.reports-library-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0 16px 0;
-  border-bottom: 1px solid #1e293b;
   gap: 16px;
-  background: transparent;
+  margin-bottom: 8px;
+}
+
+.reports-library-title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .reports-filter-tabs {
+  min-width: 0;
   display: flex;
+  align-items: center;
   gap: 4px;
   flex-wrap: wrap;
+  border-bottom: 1px solid #1e293b;
 }
 
 .reports-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -7857,7 +7874,8 @@ input:focus-visible,
   color: #94a3b8;
   font-size: 13px;
   font-weight: 500;
-  padding: 8px 12px;
+  line-height: 1;
+  padding: 0 12px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -7874,11 +7892,13 @@ input:focus-visible,
 }
 
 .reports-table-wrap {
+  width: 100%;
   overflow-x: auto;
 }
 
 .reports-table {
   width: 100%;
+  min-width: 960px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -8073,11 +8093,12 @@ input:focus-visible,
 /* Lower 2-Column Split: Corridor Performance & Automated Runs */
 .reports-bottom-split {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 16px;
 }
 
 .reports-subcard {
+  min-width: 0;
   background: #111827;
   border: 1px solid #1e293b;
   border-radius: 12px;
@@ -8091,11 +8112,13 @@ input:focus-visible,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   border-bottom: 1px solid #1e293b;
   padding-bottom: 12px;
 }
 
 .reports-subcard-title-group {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -8106,6 +8129,24 @@ input:focus-visible,
   font-weight: 600;
   color: #f8fafc;
   margin: 0;
+}
+
+.reports-header-row .admin-header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.reports-search-wrap {
+  flex: 0 1 280px;
+  min-width: 200px;
+}
+
+.sched-report-info {
+  min-width: 0;
+}
+
+.sched-report-meta {
+  flex-wrap: wrap;
 }
 
 /* Corridor Distribution Breakdown */
@@ -9289,6 +9330,42 @@ input:focus-visible,
 
   .reports-insight-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .reports-header-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .reports-header-row .admin-header-actions {
+    justify-content: flex-start;
+  }
+
+  .reports-library-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .reports-search-wrap {
+    flex: 0 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .reports-filter-tabs {
+    gap: 0 4px;
+  }
+
+  .reports-bottom-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sched-report-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 }
 
