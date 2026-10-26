@@ -4601,12 +4601,6 @@
                 <span class="account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
                 <div class="profile-user-copy"><strong>${escapeHtml(registrationData.username || "JockyThePythonKing")}</strong><span>${escapeHtml([accountProfile.firstName, accountProfile.middleName, accountProfile.lastName].filter(Boolean).join(" "))}</span><span class="profile-status-badge${discountVerificationStatus === "pending" ? " is-pending" : ""}">${discountVerificationStatus === "pending" ? "Pending" : "Unverified"}</span></div>
               </section>
-              <section class="profile-menu-card" aria-label="Account actions">
-                <button class="profile-menu-row account-signout" type="button" data-mobile-action="logout">
-                  <span>Log out</span>
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-9h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>
-                </button>
-              </section>
               <button class="profile-verify-button" type="button" data-screen="verify-account">Verify Account <span aria-hidden="true">→</span></button>
               <section class="profile-menu-card" aria-labelledby="profile-security-heading">
                 <h2 id="profile-security-heading">Account Security</h2>
@@ -4651,6 +4645,12 @@
                 </div>
               </details>
               <p class="account-message profile-message" data-message role="status" aria-live="polite"></p>
+              <section class="profile-menu-card" aria-label="Account actions">
+                <button class="profile-menu-row account-signout" type="button" data-mobile-action="logout">
+                  <span>Log out</span>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-9h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>
+                </button>
+              </section>
               <button class="profile-support-banner" type="button" data-info="Customer service is not connected in this prototype."><span>Can’t find the topic you are looking for?</span><small>24/7 Live Customer Service</small><i aria-hidden="true">?</i></button>
             </div>`
             : `<div class="faq-page">
