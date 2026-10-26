@@ -6656,28 +6656,11 @@ input:focus-visible,
 }
 
 .staff-data-table tr {
-  cursor: pointer;
   transition: background-color 0.15s ease;
 }
 
 .staff-data-table tr:hover {
   background: rgba(255, 255, 255, 0.02);
-}
-
-.staff-data-table tr.is-selected {
-  background: rgba(245, 158, 11, 0.08);
-}
-
-.staff-data-table tr.is-selected:hover {
-  background: rgba(245, 158, 11, 0.12);
-}
-
-.staff-checkbox {
-  width: 14px;
-  height: 14px;
-  accent-color: #10b981;
-  cursor: pointer;
-  margin: 0;
 }
 
 .staff-member-cell {
@@ -6702,9 +6685,7 @@ input:focus-visible,
   transition: all 0.2s ease;
 }
 
-.staff-avatar.amber,
-.staff-avatar.is-selected,
-.staff-data-table tr.is-selected .staff-avatar {
+.staff-avatar.amber {
   background: rgba(245, 158, 11, 0.2);
   color: #f59e0b;
   border-color: rgba(245, 158, 11, 0.4);
@@ -6832,17 +6813,6 @@ input:focus-visible,
   color: #94a3b8;
 }
 
-.staff-per-page-select {
-  background: #0b0f17;
-  border: 1px solid #1e293b;
-  border-radius: 6px;
-  color: #f8fafc;
-  font-size: 12px;
-  padding: 4px 8px;
-  outline: none;
-  cursor: pointer;
-}
-
 .staff-pagination-nav {
   display: flex;
   align-items: center;
@@ -6868,6 +6838,11 @@ input:focus-visible,
 .staff-page-btn:hover {
   background: #1e293b;
   color: #f8fafc;
+}
+
+.staff-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .staff-page-btn.is-active {

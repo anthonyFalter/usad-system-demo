@@ -220,8 +220,7 @@
   let staffSearchQuery = "";
   let staffDepotFilter = "all";
   let staffCurrentPage = 1;
-  let staffPerPage = 8;
-  let staffSelectedRows = new Set();
+  const staffPageSize = 8;
   let activeCameraLocationFilter = "all";
   let activeCameraLayout = "3x2"; // "3x2", "2x2", "focus"
   let focusedCameraId = "cam-01";
@@ -1884,41 +1883,145 @@
     }
   ];
 
-  const renderStaffTableRows = () => {
-    const q = staffSearchQuery.toLowerCase().trim();
-    const filtered = adminStaffMembersData.filter((member) => {
-      if (activeStaffRoleFilter === "drivers" && member.roleKey !== "driver") return false;
-      if (activeStaffRoleFilter === "dispatchers" && member.roleKey !== "dispatcher") return false;
-      if (activeStaffRoleFilter === "maintenance" && member.roleKey !== "maintenance") return false;
+  const generatedStaffFirstNames = [
+    "Alex", "Bea", "Carlo", "Dana", "Emil", "Faith", "Gabriel", "Hazel", "Ian", "Jessa",
+    "Kevin", "Lara", "Marco", "Nina", "Oscar", "Paolo", "Queenie", "Rafael", "Sofia", "Tomas",
+    "Ulysses", "Vina", "Warren", "Yana", "Zandro", "Althea", "Bryan", "Celine", "Diego", "Erika",
+    "Francis", "Grace", "Harvey", "Isabel", "Joaquin", "Kyla", "Lorenzo", "Mika", "Nathan", "Olivia",
+    "Patrick", "Rina"
+  ];
+  const generatedStaffLastNames = [
+    "Abad", "Bautista", "Castillo", "Dizon", "Enriquez", "Flores", "Garcia", "Hernandez", "Ignacio", "Jimenez",
+    "Lazaro", "Mendoza", "Navarro", "Ocampo", "Pascual", "Quizon", "Ramos", "Santiago", "Torres", "Uy",
+    "Velasco", "Yap", "Zamora", "Aguilar", "Bernardo", "Cruz", "Domingo", "Estrada", "Fernandez", "Gonzales",
+    "Luna", "Manalo", "Reyes", "Salazar", "Villanueva", "Aquino", "Balagtas", "Cabrera", "David", "Evangelista",
+    "Francisco", "Gutierrez"
+  ];
+  const generatedStaffRoleKeys = [
+    ...Array(26).fill("driver"),
+    ...Array(6).fill("dispatcher"),
+    ...Array(10).fill("maintenance")
+  ];
+  generatedStaffRoleKeys.forEach((roleKey, index) => {
+    const staffNumber = index + 9;
+    const firstName = generatedStaffFirstNames[index];
+    const lastName = generatedStaffLastNames[index];
+    if (!firstName || !lastName) {
+      throw new Error(`USAD could not create sample staff record ${staffNumber}: a sample name is missing.`);
+    }
+    const role = roleKey === "driver" ? "Driver" : roleKey === "dispatcher" ? "Dispatcher" : "Maintenance";
+    const roleCode = roleKey === "driver" ? "DRV" : roleKey === "dispatcher" ? "DSP" : "MNT";
+    const depot = index % 2 === 0 ? "Trinoma Hub" : "Malolos Hub";
+    const status = index % 5 === 0 ? "On Break" : index % 7 === 0 ? "Off" : "On Duty";
+    adminStaffMembersData.push({
+      id: `staff-${String(staffNumber).padStart(2, "0")}`,
+      name: `${firstName} ${lastName}`,
+      staffId: `A${String((index % 8) + 1).padStart(2, "0")}OPS${String(100 + staffNumber)} • ${roleCode}`,
+      initials: `${firstName[0]}${lastName[0]}`,
+      avatarClass: "",
+      role,
+      roleKey,
+      busNo: "-",
+      depot,
+      rate: roleKey === "driver" ? "$4.50" : roleKey === "dispatcher" ? "$3.00" : "$3.50",
+      maxHours: roleKey === "driver" ? "10 hrs" : roleKey === "dispatcher" ? "8 hrs" : "8 hrs",
+      status,
+      statusKey: status.toLowerCase().replace(" ", "-"),
+      statusClass: status === "On Duty" ? "on-duty" : status === "On Break" ? "on-break" : "off"
+    });
+  });
+
+  const getFilteredStaffMembers = () => {
+    const query = staffSearchQuery.toLowerCase().trim();
+    const roleFilterKeys = {
+      drivers: "driver",
+      dispatchers: "dispatcher",
+      maintenance: "maintenance"
+    };
+    return adminStaffMembersData.filter((member) => {
+      if (activeStaffRoleFilter !== "all" && member.roleKey !== roleFilterKeys[activeStaffRoleFilter]) return false;
       if (staffDepotFilter !== "all" && !member.depot.toLowerCase().includes(staffDepotFilter.toLowerCase())) return false;
-      if (!q) return true;
+      if (!query) return true;
       return (
-        member.name.toLowerCase().includes(q) ||
-        member.staffId.toLowerCase().includes(q) ||
-        member.role.toLowerCase().includes(q) ||
-        member.depot.toLowerCase().includes(q) ||
-        member.busNo.toLowerCase().includes(q)
+        member.name.toLowerCase().includes(query) ||
+        member.staffId.toLowerCase().includes(query) ||
+        member.role.toLowerCase().includes(query) ||
+        member.depot.toLowerCase().includes(query) ||
+        member.busNo.toLowerCase().includes(query)
       );
     });
+  };
+
+  const renderStaffRoleTabs = () => {
+    const roles = [
+      { filter: "all", label: "All Staff", roleKey: null },
+      { filter: "drivers", label: "Drivers", roleKey: "driver" },
+      { filter: "dispatchers", label: "Dispatchers", roleKey: "dispatcher" },
+      { filter: "maintenance", label: "Maintenance", roleKey: "maintenance" }
+    ];
+    return roles.map(({ filter, label, roleKey }) => {
+      const count = roleKey
+        ? adminStaffMembersData.filter((member) => member.roleKey === roleKey).length
+        : adminStaffMembersData.length;
+      return `<button class="staff-role-pill${activeStaffRoleFilter === filter ? " is-active" : ""}" type="button" data-staff-role-filter="${filter}">${label} (${count})</button>`;
+    }).join("");
+  };
+
+  const renderStaffPagination = (filteredCount) => {
+    const pageCount = Math.ceil(filteredCount / staffPageSize);
+    if (pageCount === 0) return "";
+    const pageButtons = Array.from({ length: pageCount }, (_, index) => {
+      const page = index + 1;
+      return `<button class="staff-page-btn${staffCurrentPage === page ? " is-active" : ""}" type="button" data-staff-page="${page}" aria-current="${staffCurrentPage === page ? "page" : "false"}">${page}</button>`;
+    }).join("");
+    return `
+      <button class="staff-page-btn" type="button" data-staff-page="prev" aria-label="Previous page"${staffCurrentPage === 1 ? " disabled" : ""}>&lt;</button>
+      ${pageButtons}
+      <button class="staff-page-btn" type="button" data-staff-page="next" aria-label="Next page"${staffCurrentPage === pageCount ? " disabled" : ""}>&gt;</button>
+    `;
+  };
+
+  const updateStaffDirectory = () => {
+    const filtered = getFilteredStaffMembers();
+    const pageCount = Math.ceil(filtered.length / staffPageSize);
+    staffCurrentPage = Math.min(Math.max(staffCurrentPage, 1), Math.max(pageCount, 1));
+    const start = filtered.length === 0 ? 0 : (staffCurrentPage - 1) * staffPageSize + 1;
+    const end = Math.min(staffCurrentPage * staffPageSize, filtered.length);
+    const rangeText = `Showing ${start}-${end} of ${filtered.length} staff`;
+    const visibleCount = filtered.length === 0 ? 0 : end - start + 1;
+    const tableBody = screen.querySelector("#staff-table-tbody");
+    if (tableBody) tableBody.innerHTML = renderStaffTableRows();
+    const tabs = screen.querySelector(".staff-role-tabs");
+    if (tabs) tabs.innerHTML = renderStaffRoleTabs();
+    screen.querySelectorAll("[data-staff-count-summary]").forEach((summary) => {
+      summary.innerHTML = `Showing <strong>${visibleCount}</strong> of <strong>${filtered.length}</strong> matching staff`;
+    });
+    const pagination = screen.querySelector("#staff-pagination-nav");
+    if (pagination) pagination.innerHTML = renderStaffPagination(filtered.length);
+    const paginationCount = screen.querySelector("#staff-pagination-count");
+    if (paginationCount) paginationCount.textContent = rangeText;
+  };
+
+  const renderStaffTableRows = () => {
+    const filtered = getFilteredStaffMembers();
+    const pageCount = Math.ceil(filtered.length / staffPageSize);
+    staffCurrentPage = Math.min(Math.max(staffCurrentPage, 1), Math.max(pageCount, 1));
+    const pageRows = filtered.slice((staffCurrentPage - 1) * staffPageSize, staffCurrentPage * staffPageSize);
 
     if (filtered.length === 0) {
-      return `<tr><td colspan="9" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
+      return `<tr><td colspan="8" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
     }
 
-    return filtered.map((staff) => {
-      const isChecked = staffSelectedRows.has(staff.id);
+    return pageRows.map((staff) => {
       let statusDot = `<span class="status-dot-mint"></span>`;
       if (staff.statusKey === "on-break") statusDot = `<span class="status-dot-amber"></span>`;
       else if (staff.statusKey === "off") statusDot = `<span class="status-dot-gray"></span>`;
 
       return `
-        <tr data-staff-row="${staff.id}" class="${isChecked ? "is-selected" : ""}">
-          <td>
-            <input type="checkbox" class="staff-checkbox" data-staff-checkbox="${staff.id}" ${isChecked ? "checked" : ""} aria-label="Select ${escapeHtml(staff.name)}">
-          </td>
+        <tr data-staff-row="${staff.id}">
           <td>
             <div class="staff-member-cell">
-              <div class="staff-avatar ${staff.avatarClass}${isChecked ? " is-selected" : ""}">${staff.initials}</div>
+              <div class="staff-avatar ${staff.avatarClass}">${staff.initials}</div>
               <div class="staff-name-wrap">
                 <span class="staff-name-text">${escapeHtml(staff.name)}</span>
                 <span class="staff-id-text">${escapeHtml(staff.staffId)}</span>
@@ -2025,15 +2128,12 @@
         <div class="staff-directory-title-tabs">
           <h2 class="staff-directory-title">Staff Directory</h2>
           <div class="staff-role-tabs" role="tablist">
-            <button class="staff-role-pill${activeStaffRoleFilter === "all" ? " is-active" : ""}" type="button" data-staff-role-filter="all">All Staff (148)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "drivers" ? " is-active" : ""}" type="button" data-staff-role-filter="drivers">Drivers (96)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "dispatchers" ? " is-active" : ""}" type="button" data-staff-role-filter="dispatchers">Dispatchers (24)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "maintenance" ? " is-active" : ""}" type="button" data-staff-role-filter="maintenance">Maintenance (28)</button>
+            ${renderStaffRoleTabs()}
           </div>
         </div>
 
         <div class="staff-directory-tools-right">
-          <span class="staff-count-summary">Showing <strong>8</strong> of 148 operational members</span>
+          <span class="staff-count-summary" data-staff-count-summary>Showing <strong>${Math.min(staffPageSize, getFilteredStaffMembers().length)}</strong> of <strong>${getFilteredStaffMembers().length}</strong> matching staff</span>
           <button class="staff-depot-filter-btn" type="button" data-staff-action="toggle-depot-filter">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
@@ -2048,9 +2148,6 @@
         <table class="staff-data-table">
           <thead>
             <tr>
-              <th style="width: 32px;">
-                <input type="checkbox" class="staff-checkbox" data-staff-check-all aria-label="Select all staff">
-              </th>
               <th>STAFF MEMBER</th>
               <th>ROLE</th>
               <th>BUS NO.</th>
@@ -2069,27 +2166,8 @@
 
       <!-- Pagination Row -->
       <div class="staff-pagination-row">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span>Show</span>
-          <select class="staff-per-page-select" data-staff-per-page aria-label="Records per page">
-            <option value="8" selected>8 records</option>
-            <option value="16">16 records</option>
-            <option value="32">32 records</option>
-          </select>
-          <span>per page</span>
-        </div>
-
-        <div class="staff-pagination-nav">
-          <button class="staff-page-btn" type="button" data-staff-page="prev" aria-label="Previous page">&lt;</button>
-          <button class="staff-page-btn is-active" type="button" data-staff-page="1">1</button>
-          <button class="staff-page-btn" type="button" data-staff-page="2">2</button>
-          <button class="staff-page-btn" type="button" data-staff-page="3">3</button>
-          <span class="staff-page-ellipsis">...</span>
-          <button class="staff-page-btn" type="button" data-staff-page="19">19</button>
-          <button class="staff-page-btn" type="button" data-staff-page="next" aria-label="Next page">&gt;</button>
-        </div>
-
-        <span class="staff-pagination-count">Showing 1-8 of 148 staff</span>
+        <div class="staff-pagination-nav" id="staff-pagination-nav">${renderStaffPagination(getFilteredStaffMembers().length)}</div>
+        <span class="staff-pagination-count" id="staff-pagination-count">Showing 1-${Math.min(staffPageSize, getFilteredStaffMembers().length)} of ${getFilteredStaffMembers().length} staff</span>
       </div>
     </section>
   `;
@@ -5415,6 +5493,7 @@
       staff.statusKey = status.toLowerCase().replace(" ", "-");
       staff.statusClass = status === "On Duty" ? "on-duty" : status === "On Break" ? "on-break" : "off";
       staff.initials = name.split(/\s+/).map((word) => word[0]).join("").toUpperCase().slice(0, 2);
+      staffCurrentPage = 1;
 
       adminFleetData.forEach((bus) => {
         const busCode = normalizeStaffBusNo(bus.busNo);
@@ -5427,8 +5506,7 @@
         if (busCode === selectedBusNo) unit.driverName = name;
       });
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
       const fleetTbody = screen.querySelector("#admin-fleet-tbody");
       if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
       const dispatchTbody = screen.querySelector("#fleet-telemetry-tbody");
@@ -5472,8 +5550,8 @@
       });
 
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
       return;
     }
 
@@ -5557,14 +5635,8 @@
 
     if (event.target.matches("[data-staff-search]")) {
       staffSearchQuery = event.target.value;
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
-    }
-
-    if (event.target.matches("[data-staff-per-page]")) {
-      staffPerPage = Number(event.target.value);
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
     }
 
     if (event.target.matches("[data-faq-search]")) {
@@ -6201,11 +6273,8 @@
     const staffRoleFilter = event.target.closest("[data-staff-role-filter]");
     if (staffRoleFilter) {
       activeStaffRoleFilter = staffRoleFilter.dataset.staffRoleFilter;
-      screen.querySelectorAll("[data-staff-role-filter]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn === staffRoleFilter);
-      });
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
       return;
     }
 
@@ -6246,7 +6315,6 @@
       const staffIndex = adminStaffMembersData.findIndex((member) => member.id === staffId);
       if (staffIndex === -1) throw new Error(`Staff member could not be removed: "${staffId}" was not found.`);
       const [removedStaff] = adminStaffMembersData.splice(staffIndex, 1);
-      staffSelectedRows.delete(staffId);
       adminFleetData.forEach((bus) => {
         if (bus.driver === removedStaff.name) bus.driver = "Unassigned";
       });
@@ -6254,61 +6322,13 @@
         if (unit.driverName === removedStaff.name) unit.driverName = "Unassigned";
       });
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
       const fleetTbody = screen.querySelector("#admin-fleet-tbody");
       if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
       const dispatchTbody = screen.querySelector("#fleet-telemetry-tbody");
       if (dispatchTbody) dispatchTbody.innerHTML = renderFleetTelemetryRows();
       const dispatchPanel = screen.querySelector("#dispatch-panel-container");
       if (dispatchPanelOpen && dispatchPanel) dispatchPanel.innerHTML = renderDispatchControlPanel();
-      return;
-    }
-
-    const staffCheckbox = event.target.closest("[data-staff-checkbox]");
-    if (staffCheckbox) {
-      const id = staffCheckbox.dataset.staffCheckbox;
-      if (staffCheckbox.checked) {
-        staffSelectedRows.add(id);
-      } else {
-        staffSelectedRows.delete(id);
-      }
-      const row = screen.querySelector(`[data-staff-row="${id}"]`);
-      if (row) {
-        const isChecked = staffSelectedRows.has(id);
-        row.classList.toggle("is-selected", isChecked);
-        const avatar = row.querySelector(".staff-avatar");
-        if (avatar) avatar.classList.toggle("is-selected", isChecked);
-      }
-      return;
-    }
-
-    const staffRow = event.target.closest("[data-staff-row]");
-    if (staffRow && !event.target.closest("[data-staff-action]") && !event.target.closest("[data-staff-checkbox]")) {
-      const id = staffRow.dataset.staffRow;
-      if (staffSelectedRows.has(id)) {
-        staffSelectedRows.delete(id);
-      } else {
-        staffSelectedRows.add(id);
-      }
-      const isChecked = staffSelectedRows.has(id);
-      staffRow.classList.toggle("is-selected", isChecked);
-      const checkbox = staffRow.querySelector("[data-staff-checkbox]");
-      if (checkbox) checkbox.checked = isChecked;
-      const avatar = staffRow.querySelector(".staff-avatar");
-      if (avatar) avatar.classList.toggle("is-selected", isChecked);
-      return;
-    }
-
-    const staffCheckAll = event.target.closest("[data-staff-check-all]");
-    if (staffCheckAll) {
-      const isChecked = staffCheckAll.checked;
-      adminStaffMembersData.forEach((s) => {
-        if (isChecked) staffSelectedRows.add(s.id);
-        else staffSelectedRows.delete(s.id);
-      });
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
       return;
     }
 
@@ -6328,24 +6348,19 @@
         }
       }
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
       return;
     }
 
     const staffPageBtn = event.target.closest("[data-staff-page]");
     if (staffPageBtn) {
+      if (staffPageBtn.disabled) return;
       const pageVal = staffPageBtn.dataset.staffPage;
+      const pageCount = Math.ceil(getFilteredStaffMembers().length / staffPageSize);
       if (pageVal === "prev") staffCurrentPage = Math.max(1, staffCurrentPage - 1);
-      else if (pageVal === "next") staffCurrentPage = Math.min(19, staffCurrentPage + 1);
+      else if (pageVal === "next") staffCurrentPage = Math.min(pageCount, staffCurrentPage + 1);
       else staffCurrentPage = Number(pageVal) || 1;
-      screen.querySelectorAll("[data-staff-page]").forEach((btn) => {
-        if (btn.dataset.staffPage === String(staffCurrentPage)) {
-          btn.classList.add("is-active");
-        } else if (btn.dataset.staffPage !== "prev" && btn.dataset.staffPage !== "next") {
-          btn.classList.remove("is-active");
-        }
-      });
+      updateStaffDirectory();
       return;
     }
 
