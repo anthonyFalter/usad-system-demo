@@ -202,7 +202,6 @@
   const adminFleetSize = 20;
   let dispatchTelemetryFilter = "all";
   let dispatchMapZoom = 1;
-  let dispatchLayersActive = true;
   let dispatchNoteInput = "";
   const dispatchRemittances = [];
   const formatPeso = (amount) => new Intl.NumberFormat("en-PH", {
@@ -1149,13 +1148,13 @@
       unitCode: "UNIT #01",
       busNo: "01",
       category: "delayed",
-      tripName: "Northbound Express",
+      tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "Delayed (+8m)",
       statusType: "delayed",
       headwayAlert: "8 minutes behind schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "23 min ETA (15:08 PHT)",
       occupancyPct: 92,
       occupancySeats: "12/13 passenger seats",
@@ -1164,7 +1163,7 @@
       driverId: "#DR-4819",
       conductorName: "Santos, M.",
       gpsLocation: `${activeRoute.via} Northbound`,
-      scheduledStop: `${activeRoute.destination} (ETA 15:08 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 15:08 PHT)`,
       progressClass: "amber",
       dotClass: "amber"
     },
@@ -1175,11 +1174,11 @@
       category: "deployed",
       tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "On schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "7 min ETA (14:55 PHT)",
       occupancyPct: 92,
       occupancySeats: "12/13 passenger seats",
@@ -1188,7 +1187,7 @@
       driverId: "#DR-9204",
       conductorName: "Barton, C.",
       gpsLocation: activeRoute.via,
-      scheduledStop: `${activeRoute.destination} (ETA 14:55 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 14:55 PHT)`,
       progressClass: "mint",
       dotClass: "mint"
     },
@@ -1199,7 +1198,7 @@
       category: "terminal",
       tripName: "Southbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "At Terminal",
       statusType: "terminal",
       headwayAlert: "At the terminal. Leaves in 19 minutes.",
@@ -1223,11 +1222,11 @@
       category: "deployed",
       tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "1 minute ahead of schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "12 min ETA (15:00 PHT)",
       occupancyPct: 46,
       occupancySeats: "6/13 passenger seats",
@@ -1236,7 +1235,7 @@
       driverId: "#DR-7711",
       conductorName: "Villanueva, E.",
       gpsLocation: activeRoute.via,
-      scheduledStop: `${activeRoute.destination} (ETA 15:00 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 15:00 PHT)`,
       progressClass: "mint",
       dotClass: "mint"
     },
@@ -1246,9 +1245,9 @@
       busNo: "23",
       badge: "",
       category: "deployed",
-      tripName: "Northbound Bus",
+      tripName: "Southbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "Busy bus. Running on schedule.",
@@ -1270,8 +1269,8 @@
       unitCode: "UNIT #06",
       busNo: "06",
       category: "deployed",
-      tripName: "Malolos Central Connector",
-      routeCorridor: "Malolos / Trinoma Corridor",
+      tripName: "Southbound Bus",
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "Nominal Headway: On schedule",
@@ -1483,84 +1482,98 @@
   };
 
   const renderRadarMapSvg = () => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fallbackPositions = {
+      "bus-01": { x: 448, y: 158 },
+      "bus-02": { x: 525, y: 124 },
+      "bus-06": { x: 140, y: 214 },
+      "bus-14": { x: 674, y: 79 },
+      "bus-08": { x: 365, y: 180 },
+      "bus-23": { x: 278, y: 195 },
+    };
+    const motionStartSeconds = {
+      "bus-01": 8,
+      "bus-02": 17,
+      "bus-06": 23,
+      "bus-08": 2,
+      "bus-23": 12,
+    };
+    const statusColors = {
+      delayed: "#f59e0b",
+      deployed: "#2fd9a8",
+      terminal: "#a78bfa",
+    };
+    const mapMarkers = fleetDispatchTelemetryUnits.map((unit) => {
+      const position = fallbackPositions[unit.id];
+      const color = statusColors[unit.category];
+      const shouldAnimate = unit.category !== "terminal" && !reducedMotion;
+      if (!position || !color || (shouldAnimate && (motionStartSeconds[unit.id] === undefined ||
+        !["Northbound Bus", "Southbound Bus"].includes(unit.tripName)))) {
+        throw new Error(`USAD could not display Bus ${unit.busNo} on the fleet map: its sample position, status color, or route direction is missing.`);
+      }
+      const isSelected = unit.id === selectedDispatchBusId;
+      const labelWidth = 64;
+      const labelX = -labelWidth / 2;
+      const labelY = -31;
+      const markerTransform = shouldAnimate ? "" : ` transform="translate(${position.x} ${position.y})"`;
+      const motionPath = unit.tripName === "Northbound Bus"
+        ? "M 677 80 C 478 146 393 177 304 197 C 215 217 145 248 64 287"
+        : "M 64 287 C 145 248 215 217 304 197 S 478 146 677 80";
+      const motion = shouldAnimate
+        ? `<animateMotion dur="34s" begin="-${motionStartSeconds[unit.id]}s" repeatCount="indefinite" calcMode="linear" rotate="auto" path="${motionPath}"/>`
+        : "";
+      return `
+        <g class="bus-map-marker${isSelected ? " is-selected" : ""}" data-map-bus="${escapeHtml(unit.id)}"${markerTransform}>
+          ${shouldAnimate ? `<circle class="bus-map-live-pulse" cx="0" cy="0" r="15" stroke="${color}"/>` : ""}
+          ${isSelected ? '<circle cx="0" cy="0" r="24" fill="' + color + '" opacity="0.14"/><circle cx="0" cy="0" r="18" fill="none" stroke="' + color + '" stroke-opacity="0.6" stroke-width="1.5"/>' : ""}
+          <circle cx="0" cy="0" r="11" fill="#101a24" stroke="${color}" stroke-width="2.5"/>
+          <path d="M -5 -3 h 10 v 8 h -10 z M -3 -6 h 6 l 3 3 h -12 z" fill="${color}"/>
+          <circle cx="-2.5" cy="6" r="1.2" fill="#101a24"/>
+          <circle cx="2.5" cy="6" r="1.2" fill="#101a24"/>
+          <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="18" rx="9" fill="#101a24" stroke="${isSelected ? color : "#344353"}" stroke-width="${isSelected ? 1.5 : 1}"/>
+          <text x="0" y="${labelY + 12}" fill="#f8fafc" font-size="9" font-weight="700" text-anchor="middle">BUS ${escapeHtml(unit.busNo)}</text>
+          ${motion}
+        </g>
+      `;
+    }).join("");
+
     return `
-      <svg class="radar-map-svg" viewBox="0 0 740 260" preserveAspectRatio="xMidYMid meet" style="transform: scale(${dispatchMapZoom}); transition: transform 0.25s ease;">
+      <svg class="radar-map-svg" viewBox="0 0 740 300" preserveAspectRatio="xMidYMid meet" style="transform: scale(${dispatchMapZoom}); transition: transform 0.25s ease;" role="img" aria-label="Illustrative fleet map showing bus locations between Malolos and Trinoma">
         <defs>
-          <pattern id="tactical-grid-pat" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1"/>
+          <pattern id="fleet-map-blocks" width="74" height="58" patternUnits="userSpaceOnUse">
+            <rect x="7" y="7" width="24" height="15" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="38" y="7" width="28" height="15" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="7" y="31" width="20" height="18" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="34" y="31" width="32" height="18" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
           </pattern>
-          <filter id="radar-glow-filter" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
-        <!-- Grid Rect -->
-        <rect width="740" height="260" fill="url(#tactical-grid-pat)" />
+        <rect width="740" height="300" fill="#101a24"/>
+        <rect width="740" height="300" fill="url(#fleet-map-blocks)" opacity="0.88"/>
 
-        <!-- Faint Coordinate / Radar Guides -->
-        <circle cx="450" cy="145" r="120" fill="none" stroke="rgba(255,255,255,0.025)" stroke-dasharray="3 3"/>
-        <line x1="0" y1="145" x2="740" y2="145" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-        <line x1="450" y1="0" x2="450" y2="260" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+        <path d="M -30 78 C 115 92 165 46 285 66 S 500 102 770 50" fill="none" stroke="#1a2936" stroke-width="17" stroke-linecap="round"/>
+        <path d="M -30 78 C 115 92 165 46 285 66 S 500 102 770 50" fill="none" stroke="#314657" stroke-width="1.4" stroke-dasharray="5 7"/>
+        <path d="M 24 275 C 160 224 214 254 334 216 S 550 205 748 259" fill="none" stroke="#1a2936" stroke-width="15" stroke-linecap="round"/>
+        <path d="M 24 275 C 160 224 214 254 334 216 S 550 205 748 259" fill="none" stroke="#314657" stroke-width="1.2" stroke-dasharray="5 7"/>
 
-        <!-- Illustrative path for the active route -->
-        <path d="M 150 215 C 240 205, 250 120, 360 145 S 500 205, 660 75" fill="none" stroke="#2fd9a8" stroke-width="3.5" filter="url(#radar-glow-filter)" stroke-linecap="round"/>
-        <path d="M 150 215 C 240 205, 250 120, 360 145 S 500 205, 660 75" fill="none" stroke="#ffffff" stroke-width="1" stroke-dasharray="6 4" opacity="0.6"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#263747" stroke-width="24" stroke-linecap="round"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#40586b" stroke-width="1.5" stroke-dasharray="7 8"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#2fd9a8" stroke-width="2.5" stroke-linecap="round" opacity="0.72"/>
 
-        <!-- Stations / Waypoints -->
-        <!-- Route origin -->
-        <g opacity="0.9">
-          <circle cx="150" cy="215" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
-          <text x="150" y="233" fill="#72849a" font-size="9" font-weight="600" text-anchor="middle">${escapeHtml(activeRoute.origin)}</text>
-        </g>
+        <path d="M 104 0 L 138 300 M 221 0 L 240 300 M 572 0 L 541 300 M 0 129 L 740 140" fill="none" stroke="#253544" stroke-width="4"/>
+        <path d="M 104 0 L 138 300 M 221 0 L 240 300 M 572 0 L 541 300 M 0 129 L 740 140" fill="none" stroke="#35495b" stroke-width="1" stroke-dasharray="3 5"/>
 
-        <!-- Route destination -->
-        <g opacity="0.9">
-          <circle cx="590" cy="82" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
-          <text x="590" y="72" fill="#8da2bb" font-size="9" font-weight="600" text-anchor="middle">${escapeHtml(activeRoute.destinationShort)}</text>
-        </g>
+        <text x="44" y="37" fill="#7f93a5" font-size="10" font-weight="700" letter-spacing="1.4">BULACAN</text>
+        <text x="82" y="193" fill="#cbd5e1" font-size="11" font-weight="600">MALOLOS</text>
+        <text x="211" y="169" fill="#8fa3b5" font-size="9">GUIGUINTO</text>
+        <text x="316" y="166" fill="#8fa3b5" font-size="9">BOCAUE</text>
+        <text x="404" y="128" fill="#8fa3b5" font-size="9">MARILAO</text>
+        <text x="498" y="102" fill="#8fa3b5" font-size="9">MEYCAUAYAN</text>
+        <text x="596" y="62" fill="#cbd5e1" font-size="10" font-weight="600">TRINOMA</text>
+        <text x="432" y="228" fill="#7890a3" font-size="9" font-weight="600" letter-spacing="1">NORTH LUZON EXPRESSWAY</text>
 
-        <!-- Route destination terminal -->
-        <g opacity="1">
-          <circle cx="660" cy="75" r="5" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5"/>
-          <text x="670" y="65" fill="#fbbf24" font-size="9" font-weight="700">${escapeHtml(activeRoute.destination)}</text>
-        </g>
-
-        <!-- BUS 08 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-08" style="cursor: pointer;">
-          <rect x="348" y="70" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="374" y="82.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 08</text>
-        </g>
-
-        <!-- BUS 02 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-02" style="cursor: pointer;">
-          <rect x="494" y="96" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="520" y="108.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 02</text>
-        </g>
-
-        <!-- BUS 06 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-06" style="cursor: pointer;">
-          <rect x="250" y="174" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="276" y="186.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 06</text>
-        </g>
-
-        <!-- BUS 01 (DELAYED) Marker with Sonar Pulse Ring -->
-        <g class="bus-map-marker" data-map-bus="bus-01" style="cursor: pointer;">
-          <circle cx="450" cy="145" r="14" class="radar-ping-ring" stroke="#f59e0b" fill="none" opacity="0.8"/>
-          <circle cx="450" cy="145" r="8" stroke="#f59e0b" stroke-width="1.5" fill="rgba(245, 158, 11, 0.25)"/>
-          <circle cx="450" cy="145" r="3" fill="#f59e0b"/>
-          <rect x="402" y="118" width="96" height="20" rx="10" fill="#241406" stroke="#f59e0b" stroke-width="1.4"/>
-          <text x="450" y="131.5" fill="#fbbf24" font-size="8.5" font-weight="700" text-anchor="middle">BUS 01 (DELAYED)</text>
-        </g>
-
-        <!-- BUS 14 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-14" style="cursor: pointer;">
-          <rect x="534" y="161" width="52" height="18" rx="9" fill="#1e102b" stroke="#a855f7" stroke-width="1.2"/>
-          <text x="560" y="173.5" fill="#c084fc" font-size="8.5" font-weight="700" text-anchor="middle">BUS 14</text>
-        </g>
+        <circle cx="674" cy="79" r="4" fill="#64748b"/>
+        ${mapMarkers}
       </svg>
     `;
   };
@@ -1663,23 +1676,20 @@
 
     ${renderPeakDispatchReadiness()}
 
-    <!-- Active route map keeps its full-width layout while trip management is open. -->
+    <!-- Illustrative vehicle positions are shown on the fleet map. -->
     <section class="admin-radar-map-card">
       <div class="radar-map-toolbar">
         <div class="corridor-filter-group">
-          <span class="corridor-label">Active Route:</span>
-          <strong>${activeRoute.label}</strong>
+          <div>
+            <h2 class="fleet-map-title">Bus Monitoring Map</h2>
+            <p class="fleet-map-subtitle">${escapeHtml(activeRoute.originShort)} to ${escapeHtml(activeRoute.destinationShort)} via NLEX</p>
+          </div>
         </div>
 
         <div class="map-viewport-tools">
           <button class="map-tool-btn" type="button" data-map-zoom="in" title="Zoom In">+</button>
           <div class="map-tool-divider"></div>
           <button class="map-tool-btn" type="button" data-map-zoom="out" title="Zoom Out">-</button>
-          <div class="map-tool-divider"></div>
-          <button class="map-tool-btn" type="button" data-map-layers title="Toggle Layers">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-            <span>Layers</span>
-          </button>
         </div>
       </div>
 
@@ -1688,9 +1698,10 @@
       </div>
 
       <div class="radar-map-legend">
-        <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
-        <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
-        <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
+        <span class="legend-item"><span class="legend-dot-circle mint"></span> On time</span>
+        <span class="legend-item"><span class="legend-dot-circle amber"></span> Delayed</span>
+        <span class="legend-item"><span class="legend-dot-circle purple"></span> At terminal</span>
+        <span class="fleet-map-note"><span class="fleet-map-gps-dot" aria-hidden="true"></span>GPS preview</span>
       </div>
     </section>
 
@@ -5223,7 +5234,9 @@
       if (telemetryUnit) {
         telemetryUnit.driverName = assignedDriver.name;
         telemetryUnit.routeId = assignedRoute.id;
-        telemetryUnit.routeCorridor = assignedRoute.label;
+        telemetryUnit.routeCorridor = telemetryUnit.tripName === "Northbound Bus"
+          ? `${assignedRoute.destinationShort} to ${assignedRoute.originShort}`
+          : `${assignedRoute.originShort} to ${assignedRoute.destinationShort}`;
         telemetryUnit.category = "deployed";
         telemetryUnit.statusText = "On Time";
         telemetryUnit.statusType = "on-time";
@@ -6075,13 +6088,6 @@
       const zoom = mapZoomBtn.dataset.mapZoom;
       if (zoom === "in") dispatchMapZoom = Math.min(1.8, Math.round((dispatchMapZoom + 0.15) * 100) / 100);
       else if (zoom === "out") dispatchMapZoom = Math.max(0.7, Math.round((dispatchMapZoom - 0.15) * 100) / 100);
-      const mapContainer = screen.querySelector("#radar-viewport-container");
-      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
-      return;
-    }
-
-    if (event.target.closest("[data-map-layers]")) {
-      dispatchLayersActive = !dispatchLayersActive;
       const mapContainer = screen.querySelector("#radar-viewport-container");
       if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
       return;
