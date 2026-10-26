@@ -5223,6 +5223,19 @@ input:focus-visible,
   gap: 12px;
 }
 
+.fleet-map-title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.fleet-map-subtitle {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
 .corridor-filter-group {
   display: flex;
   align-items: center;
@@ -5302,8 +5315,8 @@ input:focus-visible,
 .radar-map-viewport {
   position: relative;
   width: 100%;
-  height: 255px;
-  background: #0b0f17;
+  height: 300px;
+  background: #101a24;
   border: 1px solid #1e293b;
   border-radius: 8px;
   overflow: hidden;
@@ -5326,21 +5339,39 @@ input:focus-visible,
   transform: scale(1.1);
 }
 
-.radar-ping-ring {
+.bus-map-live-pulse {
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0;
+  transform-box: fill-box;
   transform-origin: center;
-  animation: radarSonar 2.2s infinite ease-out;
+  animation: busMapLivePulse 2.4s ease-out infinite;
+  pointer-events: none;
 }
 
-@keyframes radarSonar {
-  0% { r: 10; opacity: 0.8; stroke-width: 1.5; }
-  70% { r: 24; opacity: 0.15; stroke-width: 1; }
-  100% { r: 28; opacity: 0; stroke-width: 0.5; }
+@keyframes busMapLivePulse {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bus-map-live-pulse {
+    animation: none;
+    opacity: 0.35;
+  }
 }
 
 /* Map Legend */
 .radar-map-legend {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 18px;
   padding-top: 4px;
 }
@@ -5370,7 +5401,24 @@ input:focus-visible,
 }
 
 .legend-dot-circle.purple {
-  background: #3b82f6;
+  background: #a78bfa;
+}
+
+.fleet-map-note {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #718096;
+  font-size: 11px;
+}
+
+.fleet-map-gps-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2fd9a8;
+  box-shadow: 0 0 8px rgba(47, 217, 168, 0.65);
 }
 
 /* 2. Active Fleet Telemetry Table Card */
@@ -5588,6 +5636,10 @@ input:focus-visible,
   background: #10b981;
 }
 
+.bus-active-dot.purple {
+  background: #a78bfa;
+}
+
 .bus-number-text {
   font-weight: 600;
   color: #f8fafc;
@@ -5653,12 +5705,12 @@ input:focus-visible,
 }
 
 .status-pill-telemetry.terminal {
-  background: rgba(59, 130, 246, 0.12);
-  color: #3b82f6;
+  background: rgba(167, 139, 250, 0.12);
+  color: #a78bfa;
 }
 
 .status-pill-telemetry.terminal .status-dot {
-  background: #3b82f6;
+  background: #a78bfa;
 }
 
 .status-pill-telemetry.completed {
@@ -5733,7 +5785,7 @@ input:focus-visible,
 }
 
 .occupancy-progress-fill.purple {
-  background: #3b82f6;
+  background: #a78bfa;
 }
 
 .driver-name-text {
@@ -6662,8 +6714,12 @@ input:focus-visible,
   transition: all 0.2s ease;
 }
 
-.staff-avatar.amber,
-.staff-avatar.is-selected,
+.staff-avatar.amber {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
 .staff-data-table tr.is-selected .staff-avatar {
   background: rgba(245, 158, 11, 0.2);
   color: #f59e0b;
@@ -6792,17 +6848,6 @@ input:focus-visible,
   color: #94a3b8;
 }
 
-.staff-per-page-select {
-  background: #0b0f17;
-  border: 1px solid #1e293b;
-  border-radius: 6px;
-  color: #f8fafc;
-  font-size: 12px;
-  padding: 4px 8px;
-  outline: none;
-  cursor: pointer;
-}
-
 .staff-pagination-nav {
   display: flex;
   align-items: center;
@@ -6828,6 +6873,11 @@ input:focus-visible,
 .staff-page-btn:hover {
   background: #1e293b;
   color: #f8fafc;
+}
+
+.staff-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .staff-page-btn.is-active {
