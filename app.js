@@ -502,10 +502,7 @@
         <td>${bus.rate}</td>
         <td><span class="status-badge ${bus.statusClass}"><span class="status-dot"></span>${bus.status}</span></td>
         <td>
-          <div class="admin-row-actions">
-            <button class="btn-telemetry" type="button" data-admin-telemetry="${bus.id}">Telemetry</button>
-            <button class="btn-row-actions" type="button" data-fleet-actions="${bus.id}" aria-label="More actions for ${bus.busNo}">Actions</button>
-          </div>
+          <button class="btn-telemetry" type="button" data-admin-telemetry="${bus.id}">Telemetry</button>
         </td>
       </tr>
     `).join("");
@@ -515,19 +512,19 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
+        <h1 class="admin-header-title">Dashboard</h1>
       </div>
 
       <div class="admin-header-actions">
-        <select class="admin-select-corridor" data-admin-corridor aria-label="Select Corridors">
-          <option value="all">All Corridors (Trinoma / Malolos / EDSA)</option>
-          <option value="trinoma">Trinoma Express Corridor</option>
-          <option value="malolos">Malolos Central Loop</option>
+        <select class="admin-select-corridor" data-admin-corridor aria-label="Select Route">
+          <option value="all">All Routes (Trinoma / Malolos / EDSA)</option>
+          <option value="trinoma">Trinoma Express Route</option>
+          <option value="malolos">Malolos Central Route</option>
           <option value="feeder">NLEX Feeder Route</option>
         </select>
         <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Assign Dispatch</span>
+          <span>Assign a Bus</span>
         </button>
       </div>
     </header>
@@ -608,7 +605,7 @@
         <div class="admin-shift-rate-content">
           <div class="admin-shift-text-box">
             <div class="bento-metric-figure green">88%</div>
-            <span class="admin-shift-corridors">6 of 6 Critical Corridors Covered</span>
+            <span class="admin-shift-corridors">6 of 6 key routes covered</span>
           </div>
           <div class="admin-donut-wrap">
             <svg class="admin-donut-svg" viewBox="0 0 36 36">
@@ -624,10 +621,10 @@
     <!-- Active Fleet Vehicles & Dispatch Directory -->
     <section class="admin-directory-panel">
       <div class="admin-directory-header">
-        <h2 class="admin-directory-title">Active Fleet Vehicles &amp; Dispatch Directory</h2>
+        <h2 class="admin-directory-title">Buses &amp; Assignments</h2>
         <div class="admin-directory-tabs" role="tablist">
-          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Live (8)</button>
-          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Duty (6)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "all" ? " is-active" : ""}" type="button" data-admin-fleet-filter="all">All Buses (8)</button>
+          <button class="admin-filter-pill${activeFleetFilter === "on-duty" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-duty">On Route (6)</button>
           <button class="admin-filter-pill${activeFleetFilter === "on-break" ? " is-active" : ""}" type="button" data-admin-fleet-filter="on-break">On Break (1)</button>
           <button class="admin-filter-pill${activeFleetFilter === "standby" ? " is-active" : ""}" type="button" data-admin-fleet-filter="standby">Standby (1)</button>
         </div>
@@ -772,7 +769,7 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Predictive Analytics</h1>
+        <h1 class="admin-header-title">Passenger Demand</h1>
       </div>
 
       <div class="admin-header-actions">
@@ -784,7 +781,7 @@
         <select class="admin-select-corridor" data-analytics-range aria-label="Select Forecast Range">
           <option value="Today — 24hr Forecast">Today — 24hr Forecast</option>
           <option value="Tomorrow — 24hr Forecast">Tomorrow — 24hr Forecast</option>
-          <option value="Weekend Surge Projection">Weekend Surge Projection</option>
+          <option value="Weekend Surge Projection">Weekend Demand</option>
         </select>
         <button class="admin-btn-assign" type="button" data-admin-action="export-surge" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: 700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -792,7 +789,7 @@
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          <span>Export Surge Report</span>
+          <span>Export Demand Report</span>
         </button>
       </div>
     </header>
@@ -801,8 +798,8 @@
     <section class="admin-analytics-card">
       <div class="analytics-card-header">
         <div class="analytics-legend">
-          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Congestion states:</span>
-          <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">Peak / Surge</span></span>
+          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Demand levels:</span>
+          <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">High</span></span>
           <span class="legend-item"><span class="legend-dot blue"></span><span style="color: #93c5fd;">Normal</span></span>
           <span class="legend-item"><span class="legend-dot green"></span><span style="color: #6ee7b7;">Low</span></span>
         </div>
@@ -935,14 +932,14 @@
             <div class="card-icon-badge mint">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Dispatch recommendation</div>
+            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Suggested Bus Changes</div>
           </div>
         </div>
 
         <div class="bento-denested-content">
           <ul class="recommendation-list">
             <li>• Inject <strong>+3 standby buses</strong> into Route 1 (Trinoma)</li>
-            <li>• Compress evening headway from <strong>12m → 5m</strong></li>
+            <li>• Reduce the time between evening buses from <strong>12m to 5m</strong></li>
             <li>• Borrow <strong>2 standby coaches</strong> from Malolos Feeder</li>
           </ul>
         </div>
@@ -950,8 +947,8 @@
         <div class="bento-divider-line"></div>
 
         <div class="analytics-action-row">
-          <button class="btn-approve-fleet" type="button" data-admin-action="approve-redistribution">Approve Fleet Redistribution</button>
-          <button class="btn-simulate-surge" type="button" data-admin-action="simulate-surge">Simulate</button>
+          <button class="btn-approve-fleet" type="button" data-admin-action="approve-redistribution">Apply Bus Changes</button>
+          <button class="btn-simulate-surge" type="button" data-admin-action="simulate-surge">Preview Estimate</button>
         </div>
       </article>
     </section>
@@ -967,7 +964,7 @@
       routeCorridor: "Trinoma / SM North Corridor",
       statusText: "Delayed (+8m)",
       statusType: "delayed",
-      headwayAlert: "Headway Deviation: +8 min behind schedule",
+      headwayAlert: "8 minutes behind schedule",
       nextStop: "SM North Edsa",
       etaText: "23 min ETA (15:08 PHT)",
       occupancyPct: 78,
@@ -991,7 +988,7 @@
       routeCorridor: "EDSA Carousel Loop",
       statusText: "On Time",
       statusType: "on-time",
-      headwayAlert: "Nominal Headway: On schedule (0 min deviation)",
+      headwayAlert: "On schedule",
       nextStop: "Trinoma Hub",
       etaText: "7 min ETA (14:55 PHT)",
       occupancyPct: 78,
@@ -1015,7 +1012,7 @@
       routeCorridor: "SM North to PITX Express",
       statusText: "At Terminal",
       statusType: "terminal",
-      headwayAlert: "Staged at Terminal Bay: Scheduled release in 19 min",
+      headwayAlert: "At the terminal. Leaves in 19 minutes.",
       nextStop: "SM North Edsa Staging",
       etaText: "Departing in 19 min",
       occupancyPct: 78,
@@ -1039,7 +1036,7 @@
       routeCorridor: "Quezon Ave Rapid",
       statusText: "On Time",
       statusType: "on-time",
-      headwayAlert: "Nominal Headway: -1 min ahead of schedule",
+      headwayAlert: "1 minute ahead of schedule",
       nextStop: "Ayala Center Interchange",
       etaText: "12 min ETA (15:00 PHT)",
       occupancyPct: 42,
@@ -1064,7 +1061,7 @@
       routeCorridor: "NAIA Loop Connector",
       statusText: "On Time",
       statusType: "on-time",
-      headwayAlert: "High Passenger Density: Nominal Headway +1m buffer",
+      headwayAlert: "Busy bus. Running on schedule.",
       nextStop: "Terminal 3 Hub",
       etaText: "16 min ETA (15:04 PHT)",
       occupancyPct: 92,
@@ -1145,7 +1142,7 @@
       <section class="dispatch-control-panel-card">
         <header class="dispatch-panel-header">
           <div class="dispatch-panel-title-wrap">
-            <h2 class="dispatch-panel-title">Dispatch Control Panel</h2>
+            <h2 class="dispatch-panel-title">Bus Assignment</h2>
           </div>
           <div class="dispatch-panel-header-actions">
             <span class="dispatch-unit-badge">${unit.unitCode}</span>
@@ -1158,7 +1155,7 @@
           <span class="selection-box-label">Selected Bus</span>
           <div class="selection-box-title-row">
             <h3 class="selection-bus-heading">Bus No. ${unit.busNo} — ${unit.tripName}</h3>
-            <button class="selection-clock-btn" type="button" title="View Schedule Headway">
+            <button class="selection-clock-btn" type="button" title="View Bus Schedule">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </button>
           </div>
@@ -1175,7 +1172,7 @@
             <span class="spec-val-content">${unit.busNo}</span>
           </div>
           <div class="dispatch-spec-row">
-            <span class="spec-key-label">Trip / Route</span>
+            <span class="spec-key-label">Route</span>
             <span class="spec-val-content">${unit.routeCorridor.replace(" Corridor", "").replace(" Loop", "")}</span>
           </div>
           <div class="dispatch-spec-row">
@@ -1185,7 +1182,7 @@
             </span>
           </div>
           <div class="dispatch-spec-row">
-            <span class="spec-key-label">Live Occupancy</span>
+            <span class="spec-key-label">Seats Filled</span>
             <span class="spec-val-content">${unit.occupancyPassengers}</span>
           </div>
           <div class="dispatch-spec-row">
@@ -1193,18 +1190,18 @@
             <span class="spec-val-content">${unit.driverName} (Conductor: ${unit.conductorName})</span>
           </div>
           <div class="dispatch-spec-row">
-            <span class="spec-key-label">Current GPS Location</span>
+            <span class="spec-key-label">Current Location</span>
             <span class="spec-val-content">${unit.gpsLocation}</span>
           </div>
           <div class="dispatch-spec-row">
-            <span class="spec-key-label">Next Scheduled Stop</span>
+            <span class="spec-key-label">Next Stop</span>
             <span class="spec-val-content" style="color: #2fd9a8;">${unit.scheduledStop}</span>
           </div>
         </div>
 
         <!-- 2x2 Dispatcher Interventions -->
         <div class="dispatch-interventions-section">
-          <span class="interventions-label">Dispatcher interventions</span>
+          <span class="interventions-label">Available Actions</span>
           <div class="interventions-grid-2x2">
             <button class="intervention-btn" type="button" data-dispatch-action="reroute">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
@@ -1227,14 +1224,14 @@
 
         <!-- Dispatch note input -->
         <div class="dispatch-note-wrap">
-          <label class="dispatch-note-label">Dispatch note (optional)</label>
-          <textarea class="dispatch-note-textarea" placeholder="Add special detour, headway instructions, or maintenance alert..." data-dispatch-note>${escapeHtml(dispatchNoteInput)}</textarea>
+          <label class="dispatch-note-label">Assignment note (optional)</label>
+          <textarea class="dispatch-note-textarea" placeholder="Add a route change, schedule note, or maintenance alert..." data-dispatch-note>${escapeHtml(dispatchNoteInput)}</textarea>
         </div>
 
         <!-- Main Send Action Button -->
         <button class="btn-send-dispatch-order" type="button" data-dispatch-action="send-order">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-          <span>Send Dispatch Order</span>
+          <span>Save Assignment</span>
         </button>
         ${unit.tripFinished
           ? '<div class="dispatch-finished-note" role="status">Trip completed. Remittance is recorded in the dashboard below.</div>'
@@ -1415,13 +1412,13 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Fleet Monitoring &amp; Dispatch</h1>
+        <h1 class="admin-header-title">Fleet Management</h1>
       </div>
 
       <div class="admin-header-actions">
         <button class="admin-btn-assign" type="button" data-admin-action="open-assign">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Assign Dispatch</span>
+          <span>Assign a Bus</span>
         </button>
       </div>
     </header>
@@ -1436,7 +1433,7 @@
         <section class="admin-radar-map-card">
           <div class="radar-map-toolbar">
             <div class="corridor-filter-group">
-              <span class="corridor-label">Corridor:</span>
+              <span class="corridor-label">Route:</span>
               <button class="corridor-pill-btn${dispatchCorridorFilter === "edsa" ? " is-active" : ""}" type="button" data-corridor-filter="edsa">EDSA Carousel</button>
               <button class="corridor-pill-btn${dispatchCorridorFilter === "c5" ? " is-active" : ""}" type="button" data-corridor-filter="c5">C-5 Hub</button>
               <button class="corridor-pill-btn${dispatchCorridorFilter === "quezon" ? " is-active" : ""}" type="button" data-corridor-filter="quezon">Quezon Ave</button>
@@ -1460,8 +1457,8 @@
 
           <div class="radar-map-legend">
             <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
-            <span class="legend-item"><span class="legend-dot-circle amber"></span> Delayed Headway (+8m)</span>
-            <span class="legend-item"><span class="legend-dot-circle purple"></span> At Terminal / Staging</span>
+            <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
+            <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
           </div>
         </section>
 
@@ -1469,12 +1466,12 @@
         <section class="admin-telemetry-table-card">
           <div class="telemetry-table-header-row">
             <div class="telemetry-card-title-wrap">
-              <h2 class="telemetry-card-title">Active Fleet Telemetry</h2>
+              <h2 class="telemetry-card-title">Bus Status</h2>
             </div>
 
             <div class="telemetry-filter-tabs">
-              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "all" ? " is-active" : ""}" type="button" data-telemetry-tab="all">All Units (46)</button>
-              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "deployed" ? " is-active" : ""}" type="button" data-telemetry-tab="deployed">Deployed (32)</button>
+              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "all" ? " is-active" : ""}" type="button" data-telemetry-tab="all">All Buses (46)</button>
+              <button class="telemetry-tab-pill${dispatchTelemetryFilter === "deployed" ? " is-active" : ""}" type="button" data-telemetry-tab="deployed">On Route (32)</button>
               <button class="telemetry-tab-pill pill-amber${dispatchTelemetryFilter === "delayed" ? " is-active" : ""}" type="button" data-telemetry-tab="delayed">Delayed (1)</button>
               <button class="telemetry-tab-pill pill-purple${dispatchTelemetryFilter === "terminal" ? " is-active" : ""}" type="button" data-telemetry-tab="terminal">At Terminal (4)</button>
             </div>
@@ -1714,7 +1711,7 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Staff and Resources</h1>
+        <h1 class="admin-header-title">Staff Management</h1>
       </div>
 
       <div class="admin-header-actions">
@@ -2093,22 +2090,22 @@
     <!-- Top Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Sensor &amp; Camera Management</h1>
+        <h1 class="admin-header-title">Cameras &amp; Devices</h1>
       </div>
 
       <div class="admin-header-actions">
         <!-- Search Feeds -->
         <div class="staff-header-search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="staff-header-search-input" placeholder="Filter camera or ID..." value="${escapeHtml(cameraSearchQuery)}" data-cctv-search aria-label="Filter camera feeds">
+          <input type="text" class="staff-header-search-input" placeholder="Search cameras or ID..." value="${escapeHtml(cameraSearchQuery)}" data-cctv-search aria-label="Search camera feeds">
         </div>
 
         <!-- Corridor Selector -->
-        <select class="admin-select-corridor" data-cctv-filter aria-label="Filter camera corridor">
-          <option value="all"${activeCameraCorridorFilter === "all" ? " selected" : ""}>All Corridors (6)</option>
+        <select class="admin-select-corridor" data-cctv-filter aria-label="Filter cameras by route">
+          <option value="all"${activeCameraCorridorFilter === "all" ? " selected" : ""}>All Routes (6)</option>
           <option value="trinoma"${activeCameraCorridorFilter === "trinoma" ? " selected" : ""}>Trinoma Hub (2)</option>
           <option value="fleet"${activeCameraCorridorFilter === "fleet" ? " selected" : ""}>Fleet Onboard (2)</option>
-          <option value="edsa"${activeCameraCorridorFilter === "edsa" ? " selected" : ""}>EDSA Corridor (1)</option>
+          <option value="edsa"${activeCameraCorridorFilter === "edsa" ? " selected" : ""}>EDSA Route (1)</option>
           <option value="depot"${activeCameraCorridorFilter === "depot" ? " selected" : ""}>Depot Bays (1)</option>
         </select>
 
@@ -2130,18 +2127,18 @@
 
         <!-- Feed Settings Popup Button & Dropdown -->
         <div class="cctv-settings-menu-wrap">
-          <button class="cctv-btn-settings${cctvSettingsPopupOpen ? " is-active" : ""}" type="button" data-cctv-action="toggle-settings-popup" title="Surveillance Display &amp; AI Settings" aria-expanded="${cctvSettingsPopupOpen}">
+          <button class="cctv-btn-settings${cctvSettingsPopupOpen ? " is-active" : ""}" type="button" data-cctv-action="toggle-settings-popup" title="Camera Settings" aria-expanded="${cctvSettingsPopupOpen}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
-            <span>Feed Settings</span>
+            <span>Camera Settings</span>
           </button>
 
           ${cctvSettingsPopupOpen ? `
-            <div class="cctv-settings-popup" id="cctv-settings-popup" role="dialog" aria-label="Surveillance Feed Options">
+            <div class="cctv-settings-popup" id="cctv-settings-popup" role="dialog" aria-label="Camera Options">
               <div class="cctv-popup-header">
-                <span class="cctv-popup-title">Feed Display Options</span>
+                <span class="cctv-popup-title">Camera Display Options</span>
                 <button class="cctv-popup-close-btn" type="button" data-cctv-action="close-settings-popup" aria-label="Close settings popup">✕</button>
               </div>
 
@@ -2149,8 +2146,8 @@
                 <!-- AI HUD Toggle Row -->
                 <div class="cctv-toggle-row">
                   <div class="cctv-toggle-info">
-                    <span class="cctv-toggle-label">AI Object &amp; Passenger HUD</span>
-                    <span class="cctv-toggle-desc">Overlay detection boxes &amp; passenger telemetry</span>
+                    <span class="cctv-toggle-label">Passenger Count Overlay</span>
+                    <span class="cctv-toggle-desc">Show sample passenger counts on the camera view</span>
                   </div>
                   <button class="admin-toggle-switch${cameraAiDetectionEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="ai" role="switch" aria-checked="${cameraAiDetectionEnabled}" aria-label="Toggle AI Detection HUD">
                     <span class="admin-toggle-thumb"></span>
@@ -2160,8 +2157,8 @@
                 <!-- CRT Scanlines Toggle Row -->
                 <div class="cctv-toggle-row">
                   <div class="cctv-toggle-info">
-                    <span class="cctv-toggle-label">CRT Scanline &amp; Reticle FX</span>
-                    <span class="cctv-toggle-desc">Simulate optical CCTV phosphor scanlines</span>
+                    <span class="cctv-toggle-label">Camera Guide Lines</span>
+                    <span class="cctv-toggle-desc">Show guide lines on the camera view</span>
                   </div>
                   <button class="admin-toggle-switch${cameraScanlinesEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="scanlines" role="switch" aria-checked="${cameraScanlinesEnabled}" aria-label="Toggle Scanlines">
                     <span class="admin-toggle-thumb"></span>
@@ -2171,10 +2168,10 @@
                 <!-- Live OSD Bar Toggle Row -->
                 <div class="cctv-toggle-row">
                   <div class="cctv-toggle-info">
-                    <span class="cctv-toggle-label">Live Telemetry OSD Bar</span>
-                    <span class="cctv-toggle-desc">Show bitrate, latency, and uptime tags</span>
+                    <span class="cctv-toggle-label">Camera Details</span>
+                    <span class="cctv-toggle-desc">Show image quality and connection details</span>
                   </div>
-                  <button class="admin-toggle-switch${cameraOsdEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="osd" role="switch" aria-checked="${cameraOsdEnabled}" aria-label="Toggle OSD Bar">
+                  <button class="admin-toggle-switch${cameraOsdEnabled ? " is-on" : ""}" type="button" data-cctv-toggle="osd" role="switch" aria-checked="${cameraOsdEnabled}" aria-label="Toggle camera details">
                     <span class="admin-toggle-thumb"></span>
                   </button>
                 </div>
@@ -2186,7 +2183,7 @@
         <!-- Register Camera Button -->
         <button class="staff-btn-add-member" type="button" data-cctv-action="add-device">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Add Feed</span>
+          <span>Add Camera</span>
         </button>
       </div>
     </header>
@@ -2212,7 +2209,7 @@
           <div class="cctv-setting-col">
             <h4 class="cctv-col-heading">General</h4>
             <div class="cctv-kv-item">
-              <span class="cctv-k">Input latency</span>
+              <span class="cctv-k">Response time</span>
               <span class="cctv-v accent">100ms</span>
             </div>
             <div class="cctv-kv-item">
@@ -2229,8 +2226,8 @@
           <div class="cctv-setting-col">
             <h4 class="cctv-col-heading">Network</h4>
             <div class="cctv-kv-item">
-              <span class="cctv-k">IP status</span>
-              <span class="cctv-v">Static</span>
+              <span class="cctv-k">Connection</span>
+              <span class="cctv-v">Connected</span>
             </div>
             <div class="cctv-kv-item">
               <span class="cctv-k">Firewall</span>
@@ -2263,7 +2260,7 @@
               <span class="cctv-v">100</span>
             </div>
             <div class="cctv-kv-item">
-              <span class="cctv-k">Sensors buffer</span>
+              <span class="cctv-k">Sensor storage</span>
               <span class="cctv-v">1024</span>
             </div>
             <div class="cctv-kv-item">
@@ -2279,11 +2276,11 @@
         <div class="cctv-console-card-header">
           <div class="cctv-waveform-tabs">
             <button class="cctv-tab-btn${cameraWaveformTab === "monitor" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="monitor">Monitor</button>
-            <button class="cctv-tab-btn${cameraWaveformTab === "ai" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="ai">Run AI</button>
-            <button class="cctv-tab-btn${cameraWaveformTab === "debug" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="debug">Debug</button>
+            <button class="cctv-tab-btn${cameraWaveformTab === "ai" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="ai">Passenger Counts</button>
+            <button class="cctv-tab-btn${cameraWaveformTab === "debug" ? " is-active" : ""}" type="button" data-cctv-waveform-tab="debug">Device Status</button>
           </div>
-          <button class="cctv-btn-calibrate" type="button" data-cctv-action="calibrate" title="Calibrate optical &amp; telemetry sensors">
-            <span>Calibrate</span>
+          <button class="cctv-btn-calibrate" type="button" data-cctv-action="calibrate" title="Check camera and sensor settings">
+            <span>Check Settings</span>
           </button>
         </div>
 
@@ -2320,12 +2317,12 @@
     },
     {
       id: "REP-2026-1047",
-      title: "Fleet Headway Variance & On-Time Performance",
+      title: "Bus Schedule and On-Time Performance",
       category: "otp",
-      categoryLabel: "Fleet & Headway",
+      categoryLabel: "Bus Schedules",
       dateRange: "Oct 14 - Oct 20, 2026",
       summaryMetric: "93.4% OTP",
-      secondaryMetric: "Avg Headway Deviation: +2.1m",
+      secondaryMetric: "Average schedule gap: +2.1 min",
       author: "Dispatch Control (Shift A)",
       status: "Audited",
       statusClass: "audited",
@@ -2345,7 +2342,7 @@
       id: "REP-2026-1046",
       title: "Driver Shift Hours & Safety Compliance Audit",
       category: "crew",
-      categoryLabel: "Crew & Personnel",
+      categoryLabel: "Staff",
       dateRange: "Oct 01 - Oct 15, 2026",
       summaryMetric: "1,840 Hours Logged",
       secondaryMetric: "98.8% Rest Rule Compliance",
@@ -2389,13 +2386,13 @@
     },
     {
       id: "REP-2026-1044",
-      title: "Peak Hour Passenger Surge & Dwell Time Analysis",
+      title: "Passenger Demand and Stop Times",
       category: "otp",
-      categoryLabel: "Fleet & Headway",
+      categoryLabel: "Bus Schedules",
       dateRange: "Oct 16 - Oct 19, 2026",
       summaryMetric: "28,450 Commuters",
       secondaryMetric: "Avg Platform Dwell: 1m 45s",
-      author: "Predictive Analytics Engine",
+      author: "Demand Estimate",
       status: "Audited",
       statusClass: "audited",
       fileFormat: "PDF",
@@ -2479,7 +2476,7 @@
     },
     {
       id: "SCHED-02",
-      title: "Weekly Fleet OTP & Headway Audit",
+      title: "Weekly Bus Schedule Review",
       frequency: "Mondays @ 06:00 PHT",
       recipient: "dispatch.ops@usad.ph",
       format: "PDF",
@@ -2600,7 +2597,7 @@
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
       <div class="admin-header-title-box">
-        <h1 class="admin-header-title">Operational Reports &amp; Audits</h1>
+        <h1 class="admin-header-title">Reports</h1>
       </div>
 
       <div class="admin-header-actions">
@@ -2610,15 +2607,15 @@
           <option value="today"${activeReportsDateRange === "today" ? " selected" : ""}>Today (Oct 21, 2026)</option>
           <option value="week"${activeReportsDateRange === "week" ? " selected" : ""}>This Week (Oct 15 - 21)</option>
           <option value="last-month"${activeReportsDateRange === "last-month" ? " selected" : ""}>Last Month (September 2026)</option>
-          <option value="q3"${activeReportsDateRange === "q3" ? " selected" : ""}>Q3 2026 Financial Audit</option>
+          <option value="q3"${activeReportsDateRange === "q3" ? " selected" : ""}>Q3 2026 Finance</option>
         </select>
 
         <!-- Corridor Filter -->
-        <select class="admin-select-corridor" data-report-corridor aria-label="Select Operational Corridor">
-          <option value="all"${activeReportsCorridor === "all" ? " selected" : ""}>All Corridors (4)</option>
-          <option value="trinoma"${activeReportsCorridor === "trinoma" ? " selected" : ""}>Trinoma Hub Express</option>
-          <option value="edsa"${activeReportsCorridor === "edsa" ? " selected" : ""}>EDSA Carousel Loop</option>
-          <option value="malolos"${activeReportsCorridor === "malolos" ? " selected" : ""}>Malolos Central Loop</option>
+        <select class="admin-select-corridor" data-report-corridor aria-label="Select Route">
+          <option value="all"${activeReportsCorridor === "all" ? " selected" : ""}>All Routes (4)</option>
+          <option value="trinoma"${activeReportsCorridor === "trinoma" ? " selected" : ""}>Trinoma Express Route</option>
+          <option value="edsa"${activeReportsCorridor === "edsa" ? " selected" : ""}>EDSA Carousel Route</option>
+          <option value="malolos"${activeReportsCorridor === "malolos" ? " selected" : ""}>Malolos Central Route</option>
           <option value="c5"${activeReportsCorridor === "c5" ? " selected" : ""}>C-5 &amp; Quezon Feeder</option>
         </select>
 
@@ -2683,15 +2680,15 @@
         <div class="reports-filter-tabs" role="tablist" aria-label="Filter reports by domain">
           <button class="reports-tab-btn${activeReportsCategoryFilter === "all" ? " is-active" : ""}" type="button" data-report-category="all">All Reports (6)</button>
           <button class="reports-tab-btn${activeReportsCategoryFilter === "financial" ? " is-active" : ""}" type="button" data-report-category="financial">Revenue &amp; Finance (2)</button>
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Fleet &amp; Headway (2)</button>
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Crew &amp; Personnel (1)</button>
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Bus Schedules (2)</button>
+          <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Staff (1)</button>
           <button class="reports-tab-btn${activeReportsCategoryFilter === "fuel" ? " is-active" : ""}" type="button" data-report-category="fuel">Fuel &amp; Maintenance (1)</button>
         </div>
 
         <!-- Search Bar -->
         <div class="staff-header-search-wrap" style="width: 260px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="staff-header-search-input" placeholder="Search reports, audit IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports directory">
+          <input type="text" class="staff-header-search-input" placeholder="Search reports or report IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports">
         </div>
       </div>
 
@@ -2703,7 +2700,7 @@
               <th>REPORT ID &amp; FORMAT</th>
               <th>REPORT TITLE &amp; CORRIDOR</th>
               <th>CATEGORY</th>
-              <th>AUDIT PERIOD</th>
+              <th>REPORT PERIOD</th>
               <th>PRIMARY METRICS</th>
               <th>STATUS</th>
               <th>ACTIONS</th>
@@ -2723,7 +2720,7 @@
         <div class="reports-subcard-header">
           <div class="reports-subcard-title-group">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #2fd9a8;"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-            <h2 class="reports-subcard-title">Corridor Revenue &amp; Ridership Share</h2>
+            <h2 class="reports-subcard-title">Revenue &amp; Passengers by Route</h2>
           </div>
           <span style="font-size: 11px; color: #64748b;">Month to Date (Oct 2026)</span>
         </div>
@@ -2738,7 +2735,7 @@
         <div class="reports-subcard-header">
           <div class="reports-subcard-title-group">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #2fd9a8;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <h2 class="reports-subcard-title">Scheduled Audit Dispatches</h2>
+            <h2 class="reports-subcard-title">Scheduled Reports</h2>
           </div>
           <span style="font-size: 11px; color: #64748b;">3 Standing Automated Runs</span>
         </div>
@@ -2765,26 +2762,26 @@
             <span class="admin-sidebar-brand-text">USAD</span>
           </div>
 
-          <nav class="admin-nav" aria-label="Operations Navigation">
+          <nav class="admin-nav" aria-label="Main Navigation">
             <button class="admin-nav-item${activeAdminSidebarTab === "live-operations" ? " is-active" : ""}" type="button" data-admin-nav="live-operations">
               <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
-              <span>Live Operations</span>
+              <span>Dashboard</span>
             </button>
             <button class="admin-nav-item${activeAdminSidebarTab === "predictive-analytics" ? " is-active" : ""}" type="button" data-admin-nav="predictive-analytics">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
-              <span>Predictive Analytics</span>
+              <span>Passenger Demand</span>
             </button>
             <button class="admin-nav-item${activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="fleet-dispatch">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>Fleet Monitoring and Dispatch</span>
+              <span>Fleet</span>
             </button>
             <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              <span>Staff &amp; Resources</span>
+              <span>Staff Management</span>
             </button>
             <button class="admin-nav-item${activeAdminSidebarTab === "sensor-camera" ? " is-active" : ""}" type="button" data-admin-nav="sensor-camera">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-              <span>Sensor &amp; Camera Management</span>
+              <span>Cameras &amp; Devices</span>
             </button>
             <button class="admin-nav-item${activeAdminSidebarTab === "reports" ? " is-active" : ""}" type="button" data-admin-nav="reports">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -2869,8 +2866,8 @@
             <span class="admin-profile-value">Saraza Central Operations Control</span>
           </div>
           <div class="admin-profile-row">
-            <span class="admin-profile-label">System Privileges</span>
-            <span class="admin-profile-value">Telemetry, Fleet Dispatch, Scheduling</span>
+            <span class="admin-profile-label">System Access</span>
+            <span class="admin-profile-value">Vehicle tracking, bus assignments, schedules</span>
           </div>
           <div class="admin-profile-row">
             <span class="admin-profile-label">Security Clearance</span>
@@ -2910,16 +2907,16 @@
             <input class="admin-input" id="assign-driver" value="Jocky King Garcia" placeholder="Enter driver name" style="height: 40px;">
           </div>
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Route</label>
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Route</label>
             <select class="admin-input" id="assign-route" style="height: 40px;">
-              <option value="Trinoma Express">Trinoma Express Corridor</option>
+              <option value="Trinoma Express">Trinoma Express Route</option>
               <option value="Trinoma Feeder">Trinoma Feeder Line</option>
               <option value="Malolos Central">Malolos Central Loop</option>
             </select>
           </div>
           <div style="display: flex; gap: 10px; margin-top: 8px;">
             <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
-            <button class="admin-modal-button-primary" type="submit">Confirm Dispatch</button>
+            <button class="admin-modal-button-primary" type="submit">Save Assignment</button>
           </div>
         </form>
       `;
@@ -2988,8 +2985,8 @@
       const busId = type.replace("telemetry-", "");
       const bus = adminFleetData.find((b) => b.id === busId) ?? adminFleetData[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
-      title = `Live Telemetry — ${bus.busNo}`;
-      desc = `Vehicle Telematics Active · Route: <strong>${bus.route}</strong><br>Driver: <strong>${bus.driver}</strong>`;
+      title = `Bus Details — ${bus.busNo}`;
+      desc = `Sample vehicle information · Route: <strong>${bus.route}</strong><br>Driver: <strong>${bus.driver}</strong>`;
       customHtml = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; text-align: left; font-size: 11.5px;">
           <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
@@ -3009,7 +3006,7 @@
             <strong style="color: #cbd5e1; font-size: 14px;">${bus.telemetry.temp}</strong>
           </div>
           <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838; grid-column: span 2;">
-            <span style="color: #64748b; display: block; font-size: 10px;">GPS TELEMATICS LOCATION</span>
+            <span style="color: #64748b; display: block; font-size: 10px;">CURRENT LOCATION</span>
             <span style="color: #ffffff; font-size: 12px;">${bus.telemetry.gps}</span>
           </div>
           <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838; grid-column: span 2;">
@@ -3017,34 +3014,34 @@
             <strong style="color: #2FD9A8; font-size: 13px;">${bus.telemetry.passengers} Seats Occupied</strong>
           </div>
         </div>
-        <button class="admin-modal-button-secondary" type="button" style="width: 100%;" data-admin-modal-close>Close Telemetry Feed</button>
+        <button class="admin-modal-button-secondary" type="button" style="width: 100%;" data-admin-modal-close>Close Details</button>
       `;
       isInfoOnly = true;
     } else if (type === "export-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
-      title = "Export Surge Report (PDF / CSV)";
-      desc = "Compiling 24-hour predictive transit surge analysis for <strong>Route 1: Trinoma Express</strong>.<br><br>Peak Volume: <strong>1,190 commuters/hr</strong><br>Monsoon Impact: <strong>+35% dwell surge</strong><br>Forecast Model Convergence: <strong>96.4%</strong>";
-      primaryBtn = "Download Operations Report";
+      title = "Export Demand Report (PDF / CSV)";
+      desc = "Preparing a sample 24-hour passenger demand report for <strong>Trinoma Express</strong>.<br><br>Expected peak: <strong>1,190 passengers per hour</strong><br>Estimated rain impact: <strong>35% longer stops</strong>";
+      primaryBtn = "Download Report";
       isInfoOnly = true;
     } else if (type === "approve-redistribution") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
-      title = "Fleet Redistribution Approved";
-      desc = "AI dispatch plan has been transmitted to operations control:<br><br>• <strong>+3 standby buses</strong> dispatched to Route 1 (Trinoma)<br>• Evening headway compressed from <strong>12m → 5m</strong><br>• <strong>2 standby coaches</strong> borrowed from Malolos Feeder";
-      primaryBtn = "Done";
+      title = "Bus Changes Applied";
+      desc = "Sample changes for the Trinoma route:<br><br>• Add <strong>3 standby buses</strong><br>• Reduce the time between evening buses from <strong>12 to 5 minutes</strong><br>• Add <strong>2 buses</strong> from the Malolos route<br><br>This prototype does not update real bus assignments.";
+      primaryBtn = "Close";
       isInfoOnly = true;
     } else if (type === "simulate-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>`;
-      title = "Monte Carlo Surge Simulation";
-      desc = "Model executed with 1,000 synthetic commuter agents.<br><br>Result: <strong>-42% Projected Queue Wait Time</strong> across Trinoma &amp; Cubao transit shelters with 98.4% system reliability.";
-      primaryBtn = "Close Simulation";
+      title = "Passenger Demand Estimate";
+      desc = "Sample estimate based on 1,000 simulated trips.<br><br>Estimated queue wait time: <strong>42% shorter</strong> at Trinoma and Cubao.";
+      primaryBtn = "Close Estimate";
       isInfoOnly = true;
     } else if (type.startsWith("dispatch-order-sent-")) {
       const busId = type.replace("dispatch-order-sent-", "");
       const bus = fleetDispatchTelemetryUnits.find((u) => u.id === busId) || fleetDispatchTelemetryUnits[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
-      title = `Dispatch Order Transmitted — Unit #${bus.busNo}`;
-      desc = `Telemetry order dispatched to <strong>Bus No. ${bus.busNo} (${bus.tripName})</strong>.<br><br>Assigned Driver: <strong>${bus.driverName}</strong><br>Conductor: <strong>${bus.conductorName}</strong><br>Corridor: <strong>${bus.routeCorridor}</strong><br><br>Status: <strong>Order acknowledged by onboard vehicle telematics unit via LTE-M handshake.</strong>`;
-      primaryBtn = "Acknowledge & Close";
+      title = `Assignment Saved — Bus ${bus.busNo}`;
+      desc = `Sample assignment for <strong>Bus ${bus.busNo} (${bus.tripName})</strong>.<br><br>Driver: <strong>${bus.driverName}</strong><br>Conductor: <strong>${bus.conductorName}</strong><br>Route: <strong>${bus.routeCorridor}</strong><br><br>This prototype does not send instructions to a real vehicle.`;
+      primaryBtn = "Close";
       isInfoOnly = true;
     } else if (type.startsWith("assign-driver-unit-")) {
       const busId = type.replace("assign-driver-unit-", "");
@@ -3140,7 +3137,7 @@
       const cam = adminCameraFeedsData.find((c) => c.id === camId) || adminCameraFeedsData[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
       title = `Snapshot Saved — ${cam.code}`;
-      desc = `Full-resolution 1080p frame captured with cryptographic timecode.<br>Feed: <strong>${cam.title}</strong> · Corridor: <strong>${cam.corridorLabel}</strong>`;
+      desc = `Sample camera image saved.<br>Camera: <strong>${cam.title}</strong> · Route: <strong>${cam.corridorLabel}</strong>`;
       customHtml = `
         <div style="margin: 14px 0; border-radius: 8px; overflow: hidden; border: 1px solid #1e2838; position: relative;">
           <img src="${cam.image}" alt="${cam.title}" style="width: 100%; height: 180px; object-fit: cover; display: block;">
@@ -3159,8 +3156,8 @@
       const camId = type.replace("cctv-ptz-", "");
       const cam = adminCameraFeedsData.find((c) => c.id === camId) || adminCameraFeedsData[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>`;
-      title = `PTZ Diagnostics — ${cam.code}`;
-      desc = `Remote motorized optical control for <strong>${cam.title}</strong>.`;
+      title = `Camera View — ${cam.code}`;
+      desc = `Adjust the sample view for <strong>${cam.title}</strong>.`;
       customHtml = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; text-align: left;">
           <div style="background: #0f1622; padding: 12px; border-radius: 8px; border: 1px solid #1e2838; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
@@ -3194,32 +3191,32 @@
       isInfoOnly = true;
     } else if (type === "cctv-calibrate") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`;
-      title = "Sensor Calibration";
-      desc = "Optical alignment and telematics diagnostics completed for all active camera feeds.";
+      title = "Camera and Sensor Check";
+      desc = "Sample camera and sensor checks are complete.";
       primaryBtn = "Done";
       isInfoOnly = true;
     } else if (type === "cctv-add-device") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
-      title = "Register Surveillance Feed";
-      desc = "Enroll a new RTSP / WebRTC camera unit or telemetry sensor hub into USAD mesh.";
+      title = "Add Camera or Device";
+      desc = "Add a camera or sensor to this sample device list.";
       customHtml = `
         <form class="admin-login-form" data-cctv-add-feed-form style="margin-top: 14px; text-align: left;">
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Camera Identifier / Name</label>
-            <input class="admin-input" id="new-cam-title" placeholder="e.g. CAM 9.1/ws — Balintawak South Gate" required style="height: 38px;">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Camera Name</label>
+            <input class="admin-input" id="new-cam-title" placeholder="e.g. Balintawak South Gate" required style="height: 38px;">
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <div class="admin-form-field">
-              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Zone</label>
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Route</label>
               <select class="admin-input" id="new-cam-corridor" style="height: 38px;">
                 <option value="trinoma">Trinoma Hub</option>
                 <option value="fleet">Fleet Onboard</option>
-                <option value="edsa">EDSA Corridor</option>
+                <option value="edsa">EDSA Route</option>
                 <option value="depot">Depot Bays</option>
               </select>
             </div>
             <div class="admin-form-field">
-              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Stream Protocol</label>
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Connection Type</label>
               <select class="admin-input" id="new-cam-protocol" style="height: 38px;">
                 <option value="webrtc">WebRTC (Ultra Low Latency)</option>
                 <option value="rtsp">RTSP over TLS</option>
@@ -3252,15 +3249,15 @@
               <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Audit Category</label>
               <select class="admin-input" id="rep-gen-category" style="height: 38px;">
                 <option value="financial">Revenue &amp; Finance</option>
-                <option value="otp">Fleet &amp; Headway</option>
+                <option value="otp">Bus Schedules</option>
                 <option value="crew">Crew &amp; Personnel</option>
                 <option value="fuel">Fuel &amp; Maintenance</option>
               </select>
             </div>
             <div class="admin-form-field">
-              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Corridor Scope</label>
+              <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Route</label>
               <select class="admin-input" id="rep-gen-corridor" style="height: 38px;">
-                <option value="All Corridors">All Corridors (4)</option>
+                <option value="All Corridors">All Routes (4)</option>
                 <option value="Trinoma Express">Trinoma Hub Express</option>
                 <option value="EDSA Carousel">EDSA Carousel Loop</option>
                 <option value="Malolos Central">Malolos Central Loop</option>
@@ -3971,7 +3968,7 @@
         <header class="live-map-header">
           <div class="live-map-header-content">
             <div class="live-map-topbar">
-              <div class="live-map-location"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Live View</span><strong>Live Operations Map</strong></div>
+              <div class="live-map-location"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Sample Map</span><strong>Bus Map</strong></div>
               <button class="notification-button compact" type="button" data-screen="notifications" aria-label="Notifications, ${unreadNotificationCount()} unread"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
             </div>
             <div class="live-map-search" role="search">
@@ -4958,7 +4955,7 @@
         title,
         corridor,
         category,
-        categoryLabel: category === "financial" ? "Revenue & Finance" : category === "otp" ? "Fleet & Headway" : category === "crew" ? "Crew & Personnel" : "Fuel & Maintenance",
+        categoryLabel: category === "financial" ? "Revenue & Finance" : category === "otp" ? "Bus Schedules" : category === "crew" ? "Staff" : "Fuel & Maintenance",
         period: `${period} (Verified)`,
         primaryMetric: category === "financial" ? "₱385,420 Fare Rev" : category === "otp" ? "93.4% On-Time" : category === "crew" ? "100% Shift Fill" : "3.48 km/L Fleet Avg",
         secondaryMetric: "Automated Data Ingestion",
@@ -5438,19 +5435,19 @@
       const textarea = screen.querySelector("[data-dispatch-note]");
 
       if (action === "reroute") {
-        dispatchNoteInput = `[Detour Order] Route via Shaw Blvd / C-5 service bypass to recover +8m headway gap.`;
+        dispatchNoteInput = `Route change: Use the Shaw Blvd / C-5 bypass to make up an 8-minute delay.`;
         if (textarea) {
           textarea.value = dispatchNoteInput;
           textarea.focus();
         }
       } else if (action === "hold") {
-        dispatchNoteInput = `[Headway Hold] Hold at SM North Edsa Terminal Bay 2 for 4 min to normalize spacing with Bus 02.`;
+        dispatchNoteInput = `Schedule adjustment: Wait at SM North Edsa Terminal Bay 2 for 4 minutes to keep buses evenly spaced.`;
         if (textarea) {
           textarea.value = dispatchNoteInput;
           textarea.focus();
         }
       } else if (action === "recall") {
-        dispatchNoteInput = `[Depot Recall] Immediate return to Saraza Central Depot for telemetry diagnostic inspection.`;
+        dispatchNoteInput = `Return to Saraza Central Depot for a vehicle check.`;
         if (textarea) {
           textarea.value = dispatchNoteInput;
           textarea.focus();
