@@ -232,13 +232,19 @@
   let cctvSettingsPopupOpen = false;
   let cameraWaveformTab = "monitor"; // "monitor", "ai", "debug"
   let cameraSearchQuery = "";
-  let predictiveSelectedWeek = "Week 8";
+  let predictiveSelectedBucket = "period-8";
   let predictiveTransitLoadScale = 100;
   let predictiveOperatingProfile = "Standard Service";
-  let activePredictiveForecastRange = "today";
+  let activePredictivePeriod = "daily";
   let activeAnalyticsRouteId = activeRoute.id;
-  let activeReportsCategoryFilter = "all"; // "all", "financial", "otp", "crew", "fuel"
-  let activeReportsDateRange = "month"; // "month", "today", "week", "last-month", "q3"
+  const getDateInputValue = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  let activeTripLogDate = getDateInputValue(new Date());
+  let showAllTripLogs = false;
   let activeReportsCorridor = activeRoute.id;
   let activeRevenueChartPeriod = "monthly";
   let reportsSearchQuery = "";
@@ -271,94 +277,89 @@
   };
   const formatPhp = (amount) => `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const predictiveForecastHours = [
-    { hour: 0, label: "12 AM", val: 280, state: "low", heat: "green", showLabel: true },
-    { hour: 1, label: "1 AM", val: 320, state: "low", heat: "green", showLabel: true },
-    { hour: 2, label: "2 AM", val: 250, state: "low", heat: "green", showLabel: true },
-    { hour: 3, label: "3 AM", val: 310, state: "low", heat: "green", showLabel: true },
-    { hour: 4, label: "4 AM", val: 380, state: "low", heat: "green", showLabel: true },
-    { hour: 5, label: "5 AM", val: 520, state: "low", heat: "green", showLabel: true },
-    { hour: 6, label: "6 AM", val: 820, state: "normal", heat: "blue", showLabel: true },
-    { hour: 7, label: "7 AM", val: 940, state: "normal", heat: "blue", showLabel: false },
-    { hour: 8, label: "8 AM", val: 1040, state: "normal", heat: "blue", showLabel: false },
-    { hour: 9, label: "9 AM", val: 920, state: "normal", heat: "blue", showLabel: true },
-    { hour: 10, label: "10 AM", val: 960, state: "normal", heat: "blue", showLabel: false },
-    { hour: 11, label: "11 AM", val: 980, state: "normal", heat: "blue", showLabel: false },
-    { hour: 12, label: "12 PM", val: 1050, state: "normal", heat: "blue", showLabel: true },
-    { hour: 13, label: "1 PM", val: 1020, state: "normal", heat: "blue", showLabel: false },
-    { hour: 14, label: "2 PM", val: 1080, state: "normal", heat: "blue", showLabel: false },
-    { hour: 15, label: "3 PM", val: 1130, state: "surge", heat: "red", showLabel: true },
-    { hour: 16, label: "4 PM", val: 1160, state: "surge", heat: "red", showLabel: false },
-    { hour: 17, label: "5 PM", val: 1190, state: "surge", heat: "red", showLabel: false },
-    { hour: 18, label: "6 PM", val: 1150, state: "surge", heat: "red", showLabel: true },
-    { hour: 19, label: "7 PM", val: 1120, state: "surge", heat: "red", showLabel: false },
-    { hour: 20, label: "8 PM", val: 980, state: "normal", heat: "blue", showLabel: false },
-    { hour: 21, label: "9 PM", val: 920, state: "normal", heat: "blue", showLabel: true },
-    { hour: 22, label: "10 PM", val: 740, state: "normal", heat: "blue", showLabel: false },
-    { hour: 23, label: "11 PM", val: 450, state: "low", heat: "green", showLabel: true }
+  const predictiveDailyPassengerBaseline = 1350;
+  const PREDICTIVE_DAILY_AXIS_MAXIMUM = 1800;
+  const predictiveDemandPeriodBase = [
+    { id: "period-1", multiplier: 0.82 },
+    { id: "period-2", multiplier: 0.88 },
+    { id: "period-3", multiplier: 0.94 },
+    { id: "period-4", multiplier: 1 },
+    { id: "period-5", multiplier: 1.06 },
+    { id: "period-6", multiplier: 1.12 },
+    { id: "period-7", multiplier: 1.08 },
+    { id: "period-8", multiplier: 1.16 }
   ];
-
-  const predictiveDailyBaseline = predictiveForecastHours.reduce((total, item) => total + item.val, 0);
-  const predictiveWeeklyBaseline = predictiveDailyBaseline * 7;
-  const predictiveWeeklyForecastBase = [
-    { week: "Week 1", label: "Wk 1", multiplier: 0.82 },
-    { week: "Week 2", label: "Wk 2", multiplier: 0.88 },
-    { week: "Week 3", label: "Wk 3", multiplier: 0.94 },
-    { week: "Week 4", label: "Wk 4", multiplier: 1 },
-    { week: "Week 5", label: "Wk 5", multiplier: 1.06 },
-    { week: "Week 6", label: "Wk 6", multiplier: 1.12 },
-    { week: "Week 7", label: "Wk 7", multiplier: 1.08 },
-    { week: "Week 8", label: "Wk 8", multiplier: 1.16 }
-  ].map((week) => ({
-    ...week,
-    val: Math.round(predictiveWeeklyBaseline * week.multiplier),
-    state: week.multiplier >= 1.1 ? "surge" : week.multiplier >= 0.9 ? "normal" : "low",
-    heat: week.multiplier >= 1.1 ? "red" : week.multiplier >= 0.9 ? "blue" : "green"
-  }));
-
-  const predictiveForecastScenarios = {
-    today: [1, 1, 1, 1, 1, 1, 1, 1],
-    tomorrow: [0.94, 0.96, 0.98, 1, 1.03, 1.06, 1.04, 1.08],
-    weekend: [0.98, 1.02, 1.07, 1.12, 1.16, 1.22, 1.19, 1.26]
+  const predictivePeriodOptions = {
+    daily: { label: "Daily", unit: "day", days: 1, bucketPrefix: "Day", shortPrefix: "Day" },
+    weekly: { label: "Weekly", unit: "week", days: 7, bucketPrefix: "Week", shortPrefix: "Wk" },
+    monthly: { label: "Monthly", unit: "month", days: 30, bucketPrefix: "Month", shortPrefix: "Mo" }
   };
-  let predictiveWeeklyForecast = predictiveWeeklyForecastBase;
+  const predictiveOperatingProfileFactors = {
+    "Standard Service": [1, 1, 1, 1, 1, 1, 1, 1],
+    "Peak Service": [1.08, 1.1, 1.12, 1.15, 1.18, 1.22, 1.25, 1.28],
+    "Reduced Service": [0.92, 0.9, 0.88, 0.86, 0.84, 0.82, 0.8, 0.78]
+  };
+  let predictiveDemandForecast = [];
 
   const updatePredictiveForecastData = () => {
-    const scenario = predictiveForecastScenarios[activePredictiveForecastRange];
-    if (!scenario) throw new Error(`Unknown passenger demand forecast range: "${activePredictiveForecastRange}".`);
-    predictiveWeeklyForecast = predictiveWeeklyForecastBase.map((week, index) => {
-      const multiplier = week.multiplier * scenario[index];
+    const period = predictivePeriodOptions[activePredictivePeriod];
+    if (!period) throw new Error(`Unknown passenger demand period: "${activePredictivePeriod}".`);
+    const selectedRoute = routes.find((route) => route.id === activeAnalyticsRouteId);
+    if (!selectedRoute) throw new Error(`Passenger demand forecast could not find route "${activeAnalyticsRouteId}".`);
+    const profileFactors = predictiveOperatingProfileFactors[predictiveOperatingProfile];
+    if (!profileFactors) throw new Error(`Unknown passenger demand operating profile: "${predictiveOperatingProfile}".`);
+    if (!Array.isArray(selectedRoute.demandFactors) || selectedRoute.demandFactors.length !== predictiveDemandPeriodBase.length) {
+      throw new Error(`Passenger demand forecast data is incomplete for route "${selectedRoute.id}".`);
+    }
+    predictiveDemandForecast = predictiveDemandPeriodBase.map((periodData, index) => {
+      const multiplier = periodData.multiplier * profileFactors[index] * selectedRoute.demandFactors[index];
+      const effectiveMultiplier = multiplier * predictiveTransitLoadScale / 100;
       return {
-        ...week,
-        val: Math.round(predictiveWeeklyBaseline * multiplier),
-        state: multiplier >= 1.1 ? "surge" : multiplier >= 0.9 ? "normal" : "low",
-        heat: multiplier >= 1.1 ? "red" : multiplier >= 0.9 ? "blue" : "green"
+        ...periodData,
+        label: `${period.shortPrefix} ${index + 1}`,
+        periodLabel: `${period.bucketPrefix} ${index + 1}`,
+        val: Math.round(predictiveDailyPassengerBaseline * period.days * multiplier),
+        state: effectiveMultiplier >= 1.1 ? "surge" : effectiveMultiplier >= 0.9 ? "normal" : "low",
+        heat: effectiveMultiplier >= 1.1 ? "red" : effectiveMultiplier >= 0.9 ? "blue" : "green"
       };
     });
   };
+  updatePredictiveForecastData();
 
-  const getPredictiveForecastRangeLabel = () => ({
-    today: "Today · 24hr forecast",
-    tomorrow: "Tomorrow · 24hr forecast",
-    weekend: "Weekend demand"
-  })[activePredictiveForecastRange];
+  const getPredictivePeriod = () => {
+    const period = predictivePeriodOptions[activePredictivePeriod];
+    if (!period) throw new Error(`Unknown passenger demand period: "${activePredictivePeriod}".`);
+    return period;
+  };
+
+  const PREDICTIVE_CHART_PLOT_HEIGHT = 140;
+  const PREDICTIVE_CHART_AXIS_HEIGHT = 165;
+  const PREDICTIVE_CHART_X_AXIS_HEIGHT = PREDICTIVE_CHART_AXIS_HEIGHT - PREDICTIVE_CHART_PLOT_HEIGHT;
+  const getScaledPredictiveValue = (item) => Math.round(item.val * (predictiveTransitLoadScale / 100));
+  const getPredictiveAxisMaximum = () => {
+    const period = getPredictivePeriod();
+    const axisUnit = PREDICTIVE_DAILY_AXIS_MAXIMUM * period.days * predictiveTransitLoadScale / 100;
+    const peak = Math.max(...predictiveDemandForecast.map(getScaledPredictiveValue));
+    return Math.max(axisUnit, Math.ceil(peak / (axisUnit / 4)) * (axisUnit / 4));
+  };
 
   const renderPredictiveYAxis = () => {
-    const peak = Math.max(...predictiveWeeklyForecast.map((item) => item.val)) * (predictiveTransitLoadScale / 100);
-    const axisMaximum = Math.ceil(peak / 4000) * 4000;
-    return [axisMaximum, axisMaximum * 0.75, axisMaximum * 0.5, axisMaximum * 0.25, 0]
+    const axisMaximum = getPredictiveAxisMaximum();
+    const ticks = [axisMaximum, axisMaximum * 0.75, axisMaximum * 0.5, axisMaximum * 0.25, 0]
       .map((value) => `<span>${Math.round(value).toLocaleString()}</span>`)
       .join("");
+    return `<div class="chart-y-axis-ticks" aria-hidden="true">${ticks}</div>`;
   };
 
   const renderForecastBars = () => {
-    const peak = Math.max(...predictiveWeeklyForecast.map((item) => item.val)) * (predictiveTransitLoadScale / 100);
-    return predictiveWeeklyForecast.map((item) => {
-      const scaledVal = Math.round(item.val * (predictiveTransitLoadScale / 100));
-      const heightPx = Math.min(156, Math.max(14, Math.round((scaledVal / peak) * 148)));
-      const isSelected = item.week === predictiveSelectedWeek;
+    const axisMaximum = getPredictiveAxisMaximum();
+    const period = getPredictivePeriod();
+    return predictiveDemandForecast.map((item) => {
+      const scaledVal = getScaledPredictiveValue(item);
+      const heightPx = Math.round((scaledVal / axisMaximum) * PREDICTIVE_CHART_PLOT_HEIGHT);
+      const isSelected = item.id === predictiveSelectedBucket;
       return `
-        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-week="${item.week}" role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${item.week}: ${scaledVal.toLocaleString()} projected commuters" title="${item.week}: ${scaledVal.toLocaleString()} projected commuters">
+        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-period="${item.id}" role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${item.periodLabel}: ${scaledVal.toLocaleString()} projected passengers per ${period.unit}" title="${item.periodLabel}: ${scaledVal.toLocaleString()} projected passengers per ${period.unit}">
           ${isSelected ? `<div class="bar-selected-badge">${scaledVal.toLocaleString()}</div>` : ""}
           <div class="chart-bar-fill ${item.state}" style="height: ${heightPx}px;"></div>
           <div class="bar-heat-pill ${item.heat}"></div>
@@ -369,10 +370,11 @@
   };
 
   const renderPredictiveStats = () => {
-    const selectedItem = predictiveWeeklyForecast.find((week) => week.week === predictiveSelectedWeek) ?? predictiveWeeklyForecast[7];
+    const period = getPredictivePeriod();
+    const selectedItem = predictiveDemandForecast.find((item) => item.id === predictiveSelectedBucket) ?? predictiveDemandForecast[7];
     const scaledVal = Math.round(selectedItem.val * (predictiveTransitLoadScale / 100));
-    const peakWeek = predictiveWeeklyForecast.reduce((peak, week) => week.val > peak.val ? week : peak);
-    const peakVolume = Math.round(peakWeek.val * (predictiveTransitLoadScale / 100));
+    const peakPeriod = predictiveDemandForecast.reduce((peak, item) => item.val > peak.val ? item : peak);
+    const peakVolume = Math.round(peakPeriod.val * (predictiveTransitLoadScale / 100));
     const demandLabel = selectedItem.state === "surge" ? "Peak surge" : selectedItem.state === "normal" ? "Normal" : "Low";
 
     let stateClass = "text-low";
@@ -385,17 +387,17 @@
 
     return `
       <div class="analytics-metric-box">
-        <span class="metric-box-label">Peak demand week</span>
-        <strong class="metric-box-val">${peakWeek.week}</strong>
+        <span class="metric-box-label">Peak demand period</span>
+        <strong class="metric-box-val">${peakPeriod.periodLabel}</strong>
       </div>
       <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
         <span class="metric-box-label">Peak projected ridership</span>
-        <strong class="metric-box-val">${peakVolume.toLocaleString()} / week</strong>
+        <strong class="metric-box-val">${peakVolume.toLocaleString()} / ${period.unit}</strong>
       </div>
       <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
-        <span class="metric-box-label">${selectedItem.week} projected ridership</span>
+        <span class="metric-box-label">${selectedItem.periodLabel} projected ridership</span>
         <strong class="metric-box-val ${stateClass}">${stateText}</strong>
       </div>
     `;
@@ -410,11 +412,13 @@
     const metricsContainer = screen.querySelector("#analytics-metrics-container");
     if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
     const yAxis = screen.querySelector(".chart-y-axis");
-    if (yAxis) yAxis.innerHTML = `${renderPredictiveYAxis()}<span style="color: #64748b; font-size: 10px; margin-top: 4px;">Commuters / week</span>`;
+    if (yAxis) yAxis.innerHTML = renderPredictiveYAxis();
+    const periodSelector = screen.querySelector("[data-inspect-period]");
+    if (periodSelector) periodSelector.value = predictiveSelectedBucket;
     const forecastBadge = screen.querySelector(".analytics-range-badge");
-    if (forecastBadge) forecastBadge.textContent = `${selectedForecastRoute.label} · ${getPredictiveForecastRangeLabel()}`;
+    if (forecastBadge) forecastBadge.textContent = `${selectedForecastRoute.label} · ${getPredictivePeriod().label} passenger demand`;
     const demandLegend = screen.querySelector(".analytics-legend > span:first-child");
-    if (demandLegend) demandLegend.textContent = `Weekly demand levels · ${getPredictiveForecastRangeLabel()}:`;
+    if (demandLegend) demandLegend.textContent = `${getPredictivePeriod().label} passenger demand levels:`;
   };
 
   const adminFleetData = [
@@ -523,6 +527,17 @@
   ];
 
   const isBusOffDuty = (bus) => bus.status.trim().toLowerCase() === "off duty";
+  const isBusAvailableForAssignment = (bus) => bus.filterCategory !== "on-duty" && !isBusOffDuty(bus);
+  const renderAssignableBusOptions = () => {
+    const availableBuses = adminFleetData.filter(isBusAvailableForAssignment);
+    if (availableBuses.length === 0) return `<option value="" selected disabled>No available buses</option>`;
+    return `
+      <option value="" selected disabled>Select an available bus</option>
+      ${availableBuses.map((bus) => `
+        <option value="${escapeHtml(bus.id)}">${escapeHtml(bus.busNo)} · ${escapeHtml(bus.status)}${bus.driver !== "Unassigned" ? ` · ${escapeHtml(bus.driver)}` : ""}</option>
+      `).join("")}
+    `;
+  };
 
   const BUS_TOTAL_SEAT_CAPACITY = 15;
   const EMPLOYEE_RESERVED_SEATS = [
@@ -1012,12 +1027,12 @@
         <select class="admin-select-corridor" data-analytics-route aria-label="Select Route">
           ${renderRouteOptions(activeAnalyticsRouteId)}
         </select>
-        <select class="admin-select-corridor" data-analytics-range aria-label="Select Forecast Range">
-          <option value="today"${activePredictiveForecastRange === "today" ? " selected" : ""}>Today — 24hr Forecast</option>
-          <option value="tomorrow"${activePredictiveForecastRange === "tomorrow" ? " selected" : ""}>Tomorrow — 24hr Forecast</option>
-          <option value="weekend"${activePredictiveForecastRange === "weekend" ? " selected" : ""}>Weekend Demand</option>
+        <select class="admin-select-corridor" data-analytics-range aria-label="Select Forecast Period">
+          <option value="daily"${activePredictivePeriod === "daily" ? " selected" : ""}>Daily</option>
+          <option value="weekly"${activePredictivePeriod === "weekly" ? " selected" : ""}>Weekly</option>
+          <option value="monthly"${activePredictivePeriod === "monthly" ? " selected" : ""}>Monthly</option>
         </select>
-        <span class="analytics-range-badge">${escapeHtml(activeRoute.label)} · ${escapeHtml(getPredictiveForecastRangeLabel())}</span>
+        <span class="analytics-range-badge">${escapeHtml(activeRoute.label)} · ${escapeHtml(getPredictivePeriod().label)} passenger demand</span>
         <button class="admin-btn-assign" type="button" data-admin-action="export-surge" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: 700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1033,7 +1048,7 @@
     <section class="admin-analytics-card">
       <div class="analytics-card-header">
         <div class="analytics-legend">
-          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Weekly demand levels · ${escapeHtml(getPredictiveForecastRangeLabel())}:</span>
+          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">${escapeHtml(getPredictivePeriod().label)} passenger demand levels:</span>
           <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">Peak / Surge</span></span>
           <span class="legend-item"><span class="legend-dot blue"></span><span style="color: #93c5fd;">Normal</span></span>
           <span class="legend-item"><span class="legend-dot green"></span><span style="color: #6ee7b7;">Low</span></span>
@@ -1042,14 +1057,14 @@
 
       <!-- Chart Wrap -->
       <div class="analytics-chart-wrap">
-        <div class="chart-y-axis">${renderPredictiveYAxis()}<span style="color: #64748b; font-size: 10px; margin-top: 4px;">Commuters / week</span></div>
+        <div class="chart-y-axis">${renderPredictiveYAxis()}</div>
 
-        <div class="chart-plot-container">
+        <div class="chart-plot-container" style="height: ${PREDICTIVE_CHART_AXIS_HEIGHT}px;">
           <!-- Threshold lines -->
-          <div class="chart-threshold-line line-peak" style="bottom: 72%;">
+          <div class="chart-threshold-line line-peak" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.8}px;">
             <span class="threshold-label text-red">Peak demand</span>
           </div>
-          <div class="chart-threshold-line line-normal" style="bottom: 38%;">
+          <div class="chart-threshold-line line-normal" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.5}px;">
             <span class="threshold-label text-blue">Normal demand</span>
           </div>
 
@@ -1085,13 +1100,10 @@
         </div>
 
         <div class="analytics-ctrl-col scrub-col">
-          <div class="scrub-label-row">
-            <span class="ctrl-label">Inspect week</span>
-            <button class="scrub-reset-btn" type="button" data-scrub-week="Week 8">Reset selection</button>
-          </div>
-          <div class="scrub-buttons">
-          ${predictiveWeeklyForecast.map((week) => `<button class="scrub-pill-btn${predictiveSelectedWeek === week.week ? " is-active" : ""}" type="button" data-scrub-week="${week.week}" aria-label="Inspect ${week.week}">${week.label}</button>`).join("")}
-          </div>
+          <label class="ctrl-label" for="analytics-inspect-period">Inspect period</label>
+          <select class="analytics-ctrl-select" id="analytics-inspect-period" data-inspect-period aria-label="Inspect period">
+            ${predictiveDemandForecast.map((item) => `<option value="${item.id}"${predictiveSelectedBucket === item.id ? " selected" : ""}>${item.periodLabel}</option>`).join("")}
+          </select>
         </div>
       </div>
     </section>
@@ -2771,60 +2783,89 @@
     }
   ];
 
+  const getTripLogDate = (daysAgo) => {
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return getDateInputValue(date);
+  };
+  const tripLogData = [
+    { busNo: "Bus 01", routeId: "malolos-trinoma", departure: "05:40 AM", arrival: "07:18 AM", driver: "Jocky King Garcia", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 31, studentPassengers: 12, daysAgo: 0 },
+    { busNo: "Bus 02", routeId: "trinoma-malolos", departure: "06:05 AM", arrival: "07:42 AM", driver: "Juan Dela Cruz", dispatcher: "Ross Anthony Jobs", regularPassengers: 27, studentPassengers: 16, daysAgo: 0 },
+    { busNo: "Bus 03", routeId: "malolos-trinoma", departure: "06:30 AM", arrival: "08:11 AM", driver: "Cyrhyl Naval", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 35, studentPassengers: 9, daysAgo: 0 },
+    { busNo: "Bus 04", routeId: "trinoma-malolos", departure: "07:00 AM", arrival: "08:39 AM", driver: "Royce Zaldivar", dispatcher: "Ross Anthony Jobs", regularPassengers: 24, studentPassengers: 21, daysAgo: 0 },
+    { busNo: "Bus 05", routeId: "malolos-trinoma", departure: "07:25 AM", arrival: "09:06 AM", driver: "Jericho Rosales", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 32, studentPassengers: 14, daysAgo: 0 },
+    { busNo: "Bus 06", routeId: "trinoma-malolos", departure: "08:10 AM", arrival: "09:49 AM", driver: "Joshua Garcia", dispatcher: "Ross Anthony Jobs", regularPassengers: 29, studentPassengers: 18, daysAgo: 0 },
+    { busNo: "Bus 07", routeId: "malolos-trinoma", departure: "09:00 AM", arrival: "10:43 AM", driver: "Mark Anthony Reyes", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 38, studentPassengers: 11, daysAgo: 0 },
+    { busNo: "Bus 08", routeId: "trinoma-malolos", departure: "09:35 AM", arrival: "11:13 AM", driver: "Paolo Mendoza", dispatcher: "Ross Anthony Jobs", regularPassengers: 26, studentPassengers: 20, daysAgo: 0 },
+    { busNo: "Bus 01", routeId: "trinoma-malolos", departure: "05:45 AM", arrival: "07:25 AM", driver: "Jocky King Garcia", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 30, studentPassengers: 13, daysAgo: 1 },
+    { busNo: "Bus 03", routeId: "trinoma-malolos", departure: "06:20 AM", arrival: "08:02 AM", driver: "Cyrhyl Naval", dispatcher: "Ross Anthony Jobs", regularPassengers: 33, studentPassengers: 17, daysAgo: 2 },
+    { busNo: "Bus 05", routeId: "trinoma-malolos", departure: "07:10 AM", arrival: "08:52 AM", driver: "Jericho Rosales", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 28, studentPassengers: 15, daysAgo: 3 },
+    { busNo: "Bus 07", routeId: "trinoma-malolos", departure: "08:00 AM", arrival: "09:41 AM", driver: "Mark Anthony Reyes", dispatcher: "Ross Anthony Jobs", regularPassengers: 36, studentPassengers: 10, daysAgo: 5 }
+  ].map((trip, index) => ({
+    ...trip,
+    id: `TRIP-${String(index + 1).padStart(3, "0")}`,
+    date: getTripLogDate(trip.daysAgo)
+  }));
+
   const renderReportsTableRows = () => {
-    let list = adminReportsData;
-    if (activeReportsCategoryFilter !== "all") {
-      list = list.filter((r) => r.category === activeReportsCategoryFilter);
+    let list = tripLogData;
+    if (!showAllTripLogs) {
+      list = list.filter((trip) => trip.date === activeTripLogDate);
     }
-    list = list.filter((report) => report.routeId === activeReportsCorridor);
     if (reportsSearchQuery.trim()) {
       const q = reportsSearchQuery.toLowerCase().trim();
-      list = list.filter((r) => r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q) || r.categoryLabel.toLowerCase().includes(q) || r.author.toLowerCase().includes(q));
+      list = list.filter((trip) => [trip.busNo, trip.driver, trip.dispatcher, routes.find((route) => route.id === trip.routeId)?.label ?? ""]
+        .some((value) => value.toLowerCase().includes(q)));
     }
 
     if (list.length === 0) {
-      return `<tr><td colspan="7" style="text-align: center; padding: 28px; color: #64748b;">No operational reports found matching the selected filters.</td></tr>`;
+      return `<tr><td colspan="7" style="text-align: center; padding: 28px; color: #94a3b8;">${showAllTripLogs ? "No trip logs match your search." : `No bus trips found for ${escapeHtml(activeTripLogDate)}. Choose another date or show all trips.`}</td></tr>`;
     }
 
-    return list.map((rep) => `
+    return list.map((trip) => {
+      const route = routes.find((item) => item.id === trip.routeId);
+      if (!route) throw new Error(`Trip log ${trip.id} references an unknown route "${trip.routeId}".`);
+      const passengerCount = trip.regularPassengers + trip.studentPassengers;
+      const revenue = trip.regularPassengers * 120 + trip.studentPassengers * 100;
+      const displayDate = new Date(`${trip.date}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      return `
       <tr class="reports-table-row">
         <td>
-          <div class="reports-id-cell">
-            <span class="reports-id-code">${rep.id}</span>
-            <span class="reports-format-tag">${rep.fileFormat}</span>
-          </div>
+          <span class="reports-period-text">${displayDate}</span>
         </td>
         <td>
           <div class="reports-title-cell">
-            <strong class="reports-item-title">${escapeHtml(rep.title)}</strong>
-            <span class="reports-item-corridor">${rep.corridorLabel}</span>
+            <strong class="reports-item-title">${escapeHtml(trip.busNo)}</strong>
+            <span class="reports-item-corridor">${escapeHtml(route.label)}</span>
           </div>
-        </td>
-        <td>
-          <span class="reports-cat-tag ${rep.category}">${rep.categoryLabel}</span>
-        </td>
-        <td>
-          <span class="reports-period-text">${rep.dateRange}</span>
         </td>
         <td>
           <div class="reports-metric-cell">
-            <span class="reports-metric-primary">${rep.summaryMetric}</span>
-            <span class="reports-metric-secondary">${rep.secondaryMetric}</span>
+            <span class="reports-metric-primary">${trip.departure}</span>
+            <span class="reports-metric-secondary">Arrived ${trip.arrival}</span>
           </div>
         </td>
         <td>
-          <span class="reports-status-pill ${rep.statusClass}"><span class="status-dot"></span>${rep.status}</span>
+          <span>${escapeHtml(trip.driver)}</span>
         </td>
         <td>
-          <div class="reports-row-actions">
-            <button class="reports-btn-view" type="button" data-report-action="view" data-report-id="${rep.id}" title="Inspect full audit ledger">View</button>
-            <button class="reports-btn-download" type="button" data-report-action="download" data-report-id="${rep.id}" title="Download report file">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            </button>
+          <div class="reports-metric-cell">
+            <span class="reports-metric-primary">${passengerCount} passengers</span>
+            <span class="reports-metric-secondary">${trip.regularPassengers} regular · ${trip.studentPassengers} student</span>
+          </div>
+        </td>
+        <td>
+          <span>${escapeHtml(trip.dispatcher)}</span>
+        </td>
+        <td>
+          <div class="reports-metric-cell">
+            <strong class="reports-metric-primary">${formatPhp(revenue)}</strong>
+            <span class="reports-metric-secondary">Regular ₱120 · Student ₱100</span>
           </div>
         </td>
       </tr>
-    `).join("");
+    `;
+    }).join("");
   };
 
   const reportsTrendData = {
@@ -2991,33 +3032,9 @@
   <h1 class="admin-header-title">Reports &amp; Decision Support</h1>
       </div>
 
-      <div class="admin-header-actions">
-        <!-- Date Range Filter -->
-        <select class="admin-select-corridor" data-report-date-range aria-label="Select Report Period">
-          <option value="month"${activeReportsDateRange === "month" ? " selected" : ""}>Month to Date (Oct 2026)</option>
-          <option value="today"${activeReportsDateRange === "today" ? " selected" : ""}>Today (Oct 21, 2026)</option>
-          <option value="week"${activeReportsDateRange === "week" ? " selected" : ""}>This Week (Oct 15 - 21)</option>
-          <option value="last-month"${activeReportsDateRange === "last-month" ? " selected" : ""}>Last Month (September 2026)</option>
-          <option value="q3"${activeReportsDateRange === "q3" ? " selected" : ""}>Q3 2026 Finance</option>
-        </select>
-
-        <!-- Corridor Filter -->
-        <select class="admin-select-corridor" data-report-corridor aria-label="Select Route">
-          ${renderRouteOptions(activeReportsCorridor)}
-        </select>
-
-        <!-- Generate Custom Report Button -->
-        <button class="staff-btn-add-member" type="button" data-report-action="generate">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px;">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          <span>Generate Report</span>
-        </button>
-      </div>
     </header>
 
-    <p class="admin-kpi-context">Illustrative sample data · Revenue, passenger and fuel summaries are not connected to live operations.</p>
+    <p class="admin-kpi-context">Illustrative trip logs · Times, passenger counts and revenue are sample data. Fare totals use ₱120 per regular passenger and ₱100 per student passenger.</p>
     <section class="reports-kpi-grid" aria-label="Executive Operational Totals">
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
@@ -3077,31 +3094,29 @@
     <section class="reports-table-card" aria-labelledby="reports-library-title">
       <div class="reports-library-heading">
         <h2 class="reports-library-title" id="reports-library-title">Report library</h2>
-        <div class="staff-header-search-wrap reports-search-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="staff-header-search-input" placeholder="Search reports or report IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports">
+        <div class="reports-log-controls">
+          <label class="reports-log-date-label" for="reports-trip-date">Trip date
+            <input class="admin-select-corridor reports-log-date" id="reports-trip-date" type="date" value="${activeTripLogDate}" data-trip-log-date aria-label="Filter trips by date">
+          </label>
+          <button class="reports-show-all-btn${showAllTripLogs ? " is-active" : ""}" type="button" data-trip-log-show-all aria-pressed="${showAllTripLogs}">${showAllTripLogs ? "Show selected date" : "Show all"}</button>
+          <div class="staff-header-search-wrap reports-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" class="staff-header-search-input" placeholder="Search bus, driver, dispatcher..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search trip logs">
+          </div>
         </div>
-      </div>
-
-      <div class="reports-filter-tabs" role="tablist" aria-label="Filter reports by domain">
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "all" ? " is-active" : ""}" type="button" data-report-category="all">All Reports (6)</button>
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "financial" ? " is-active" : ""}" type="button" data-report-category="financial">Revenue &amp; Finance (2)</button>
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Bus Schedules (2)</button>
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Staff (1)</button>
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "fuel" ? " is-active" : ""}" type="button" data-report-category="fuel">Fuel &amp; Maintenance (1)</button>
       </div>
 
       <div class="reports-table-wrap">
         <table class="reports-table">
           <thead>
             <tr>
-              <th>REPORT ID &amp; FORMAT</th>
-              <th>REPORT TITLE &amp; CORRIDOR</th>
-              <th>CATEGORY</th>
-              <th>REPORT PERIOD</th>
-              <th>PRIMARY METRICS</th>
-              <th>STATUS</th>
-              <th>ACTIONS</th>
+              <th>TRIP DATE</th>
+              <th>BUS &amp; ROUTE</th>
+              <th>DEPARTED / ARRIVED</th>
+              <th>DRIVER</th>
+              <th>PASSENGERS</th>
+              <th>DISPATCHER</th>
+              <th>TRIP REVENUE</th>
             </tr>
           </thead>
           <tbody id="reports-table-tbody">
@@ -3261,11 +3276,8 @@
         <form class="admin-login-form" data-admin-assign-form style="margin-top: 14px; text-align: left;">
           <div class="admin-form-field">
             <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Select Vehicle</label>
-            <select class="admin-input" id="assign-bus" style="height: 40px;">
-              <option value="Bus 01">Bus 01 (MLS-042) - Ready</option>
-              <option value="Bus 02">Bus 02 (MLS-018) - On Break</option>
-              <option value="Bus 03">Bus 03 (MLS-105) - Reserve</option>
-              <option value="Bus 04">Bus 04 (TRN-009) - Ready</option>
+            <select class="admin-input" id="assign-bus" required style="height: 40px;">
+              ${renderAssignableBusOptions()}
             </select>
           </div>
           <div class="admin-form-field">
@@ -3391,9 +3403,10 @@
     } else if (type === "export-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
   title = "Export Demand and Surge Report (PDF / CSV)";
-      const peakWeek = predictiveWeeklyForecast.reduce((peak, week) => week.val > peak.val ? week : peak);
-      const peakDemand = Math.round(peakWeek.val * (predictiveTransitLoadScale / 100));
-  desc = `Preparing a sample demand report for <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Peak week: <strong>${peakWeek.week}</strong><br>Projected demand: <strong>${peakDemand.toLocaleString()} commuters/week</strong><br>Expected peak: <strong>1,190 passengers per hour</strong><br>Estimated rain impact: <strong>35% longer stops</strong><br>Forecast Model Convergence: <strong>96.4%</strong>`;
+      const peakPeriod = predictiveDemandForecast.reduce((peak, item) => item.val > peak.val ? item : peak);
+      const peakDemand = Math.round(peakPeriod.val * (predictiveTransitLoadScale / 100));
+      const selectedPeriod = getPredictivePeriod();
+  desc = `Preparing a sample demand report for <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Peak ${selectedPeriod.unit}: <strong>${peakPeriod.periodLabel}</strong><br>Projected demand: <strong>${peakDemand.toLocaleString()} passengers/${selectedPeriod.unit}</strong><br>Forecast model convergence: <strong>96.4%</strong>`;
   primaryBtn = "Download Report";
       isInfoOnly = true;
     } else if (type === "approve-redistribution") {
@@ -5129,10 +5142,10 @@
       busMarker.click();
       return;
     }
-    const forecastWeek = event.target.closest("[data-chart-week]");
-    if (forecastWeek && (event.key === "Enter" || event.key === " ")) {
+    const forecastPeriod = event.target.closest("[data-chart-period]");
+    if (forecastPeriod && (event.key === "Enter" || event.key === " ")) {
       event.preventDefault();
-      forecastWeek.click();
+      forecastPeriod.click();
       return;
     }
     if (event.key === "Escape" && activeState === "live-map") {
@@ -5185,16 +5198,17 @@
 
     if (event.target.matches("[data-admin-assign-form]")) {
       event.preventDefault();
-      const busVal = screen.querySelector("#assign-bus")?.value;
+      const busId = screen.querySelector("#assign-bus")?.value;
       const driverId = screen.querySelector("#assign-driver")?.value;
       const assignedDriver = adminStaffMembersData.find((member) => member.id === driverId && member.roleKey === "driver" && !isStaffOffDuty(member));
       if (!assignedDriver) throw new Error("USAD could not assign a bus: select a driver who is not off duty.");
-      const routeId = screen.querySelector("#assign-route")?.value || activeRoute.id;
-      if (!busVal) throw new Error("USAD could not assign a bus: no vehicle was selected.");
+      const routeId = screen.querySelector("#assign-route")?.value;
+      if (!busId) throw new Error("USAD could not assign a bus: select an available vehicle.");
       const assignedRoute = routes.find((route) => route.id === routeId);
-      if (!assignedRoute) throw new Error(`USAD could not assign a bus: route "${routeId}" is not active.`);
-      const targetBus = adminFleetData.find((b) => b.busNo.toLowerCase() === busVal.toLowerCase() || b.id.toLowerCase() === busVal.toLowerCase().replace(" ", "-"));
-      if (!targetBus) throw new Error(`USAD could not assign a bus: vehicle "${busVal}" was not found.`);
+      if (!assignedRoute) throw new Error(`USAD could not assign a bus: route "${routeId}" is not available.`);
+      const targetBus = adminFleetData.find((bus) => bus.id === busId);
+      if (!targetBus) throw new Error(`USAD could not assign a bus: vehicle "${busId}" was not found.`);
+      if (!isBusAvailableForAssignment(targetBus)) throw new Error(`USAD could not assign ${targetBus.busNo}: it is on duty or off duty.`);
       targetBus.driver = assignedDriver.name;
       targetBus.routeId = assignedRoute.id;
       targetBus.route = assignedRoute.label;
@@ -5207,6 +5221,9 @@
         telemetryUnit.driverName = assignedDriver.name;
         telemetryUnit.routeId = assignedRoute.id;
         telemetryUnit.routeCorridor = assignedRoute.label;
+        telemetryUnit.nextStop = assignedRoute.destination;
+        telemetryUnit.scheduledStop = assignedRoute.destination;
+        telemetryUnit.gpsLocation = assignedRoute.via;
         telemetryUnit.category = "deployed";
         telemetryUnit.statusText = "On Time";
         telemetryUnit.statusType = "on-time";
@@ -5214,6 +5231,7 @@
       }
       activeCorridorFilter = assignedRoute.id;
       activeFleetFilter = "all";
+      screen.querySelector(".admin-modal-backdrop")?.remove();
       renderScreen("admin-dashboard");
       return;
     }
@@ -5646,6 +5664,8 @@
 
     if (event.target.matches("[data-analytics-profile]")) {
       predictiveOperatingProfile = event.target.value;
+      updatePredictiveView();
+      return;
     }
 
     if (event.target.matches("[data-analytics-route]")) {
@@ -5655,7 +5675,13 @@
     }
 
     if (event.target.matches("[data-analytics-range]")) {
-      activePredictiveForecastRange = event.target.value;
+      activePredictivePeriod = event.target.value;
+      updatePredictiveView();
+      return;
+    }
+
+    if (event.target.matches("[data-inspect-period]")) {
+      predictiveSelectedBucket = event.target.value;
       updatePredictiveView();
       return;
     }
@@ -5664,14 +5690,15 @@
       dispatchNoteInput = event.target.value;
     }
 
-    if (event.target.matches("[data-report-date-range]")) {
-      activeReportsDateRange = event.target.value;
-      const tbody = screen.querySelector("#reports-table-tbody");
-      if (tbody) tbody.innerHTML = renderReportsTableRows();
-    }
-
-    if (event.target.matches("[data-report-corridor]")) {
-      activeReportsCorridor = event.target.value;
+    if (event.target.matches("[data-trip-log-date]")) {
+      activeTripLogDate = event.target.value;
+      showAllTripLogs = false;
+      const showAllButton = screen.querySelector("[data-trip-log-show-all]");
+      if (showAllButton) {
+        showAllButton.textContent = "Show all";
+        showAllButton.classList.remove("is-active");
+        showAllButton.setAttribute("aria-pressed", "false");
+      }
       const tbody = screen.querySelector("#reports-table-tbody");
       if (tbody) tbody.innerHTML = renderReportsTableRows();
     }
@@ -5684,12 +5711,12 @@
   });
 
   screen.addEventListener("click", (event) => {
-    const repCatBtn = event.target.closest("[data-report-category]");
-    if (repCatBtn) {
-      activeReportsCategoryFilter = repCatBtn.dataset.reportCategory;
-      screen.querySelectorAll("[data-report-category]").forEach((b) => {
-        b.classList.toggle("is-active", b === repCatBtn);
-      });
+    const showAllTripsButton = event.target.closest("[data-trip-log-show-all]");
+    if (showAllTripsButton) {
+      showAllTripLogs = !showAllTripLogs;
+      showAllTripsButton.textContent = showAllTripLogs ? "Show selected date" : "Show all";
+      showAllTripsButton.classList.toggle("is-active", showAllTripLogs);
+      showAllTripsButton.setAttribute("aria-pressed", String(showAllTripLogs));
       const tbody = screen.querySelector("#reports-table-tbody");
       if (tbody) tbody.innerHTML = renderReportsTableRows();
       return;
@@ -5787,22 +5814,9 @@
       return;
     }
 
-    const scrubBtn = event.target.closest("[data-scrub-week]");
-    if (scrubBtn) {
-      predictiveSelectedWeek = scrubBtn.dataset.scrubWeek;
-      screen.querySelectorAll("[data-scrub-week]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn.dataset.scrubWeek === predictiveSelectedWeek);
-      });
-      updatePredictiveView();
-      return;
-    }
-
-    const chartCol = event.target.closest("[data-chart-week]");
+    const chartCol = event.target.closest("[data-chart-period]");
     if (chartCol) {
-      predictiveSelectedWeek = chartCol.dataset.chartWeek;
-      screen.querySelectorAll("[data-scrub-week]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn.dataset.scrubWeek === predictiveSelectedWeek);
-      });
+      predictiveSelectedBucket = chartCol.dataset.chartPeriod;
       updatePredictiveView();
       return;
     }

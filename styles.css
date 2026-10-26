@@ -4612,29 +4612,46 @@ input:focus-visible,
 .analytics-chart-wrap {
   display: flex;
   height: 195px;
-  gap: 12px;
+  gap: 8px;
   position: relative;
   padding-top: 10px;
+  box-sizing: border-box;
 }
 
 .chart-y-axis {
   display: flex;
+  align-items: stretch;
+  align-self: flex-start;
+  margin-top: 20px;
+  color: #64748b;
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  width: 68px;
+  height: 140px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.chart-y-axis-ticks {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-end;
-  color: #64748b;
-  font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
-  padding-bottom: 22px;
-  width: 32px;
-  flex-shrink: 0;
-  user-select: none;
+  min-width: 0;
+  height: 140px;
+}
+
+.chart-y-axis-ticks span {
+  white-space: nowrap;
+  line-height: 12px;
 }
 
 .chart-plot-container {
   position: relative;
   flex: 1;
-  height: 100%;
+  min-width: 0;
+  align-self: flex-end;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -4890,8 +4907,7 @@ input:focus-visible,
   border-color: #10b981;
 }
 
-.slider-label-row,
-.scrub-label-row {
+.slider-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4910,40 +4926,6 @@ input:focus-visible,
   height: 4px;
 }
 
-.scrub-reset-btn {
-  background: transparent;
-  border: 0;
-  color: #94a3b8;
-  font-size: 11px;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s;
-}
-
-.scrub-reset-btn:hover {
-  color: #f8fafc;
-  text-decoration: underline;
-}
-
-.scrub-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.scrub-pill-btn {
-  flex: 1;
-  min-width: 0;
-  height: 36px;
-  background: #0b0f17;
-  border: 1px solid #1e293b;
-  border-radius: 6px;
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
 .analytics-range-badge {
   display: inline-flex;
   align-items: center;
@@ -4954,18 +4936,6 @@ input:focus-visible,
   background: #111827;
   font-size: 12px;
   white-space: nowrap;
-}
-
-.scrub-pill-btn:hover {
-  background: #1e293b;
-  color: #f8fafc;
-}
-
-.scrub-pill-btn.is-active {
-  background: #1e293b;
-  border-color: #10b981;
-  color: #10b981;
-  font-weight: 600;
 }
 
 /* Bottom Grid for Analytics */
@@ -7800,49 +7770,54 @@ input:focus-visible,
   margin-bottom: 8px;
 }
 
+.reports-log-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.reports-log-date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.reports-log-date {
+  min-width: 170px;
+  min-height: 38px;
+  color-scheme: dark;
+}
+
+.reports-show-all-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0b0f17;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.reports-show-all-btn:hover,
+.reports-show-all-btn.is-active {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+}
+
 .reports-library-title {
   margin: 0;
   color: #f8fafc;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.01em;
-}
-
-.reports-filter-tabs {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  border-bottom: 1px solid #1e293b;
-}
-
-.reports-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1;
-  padding: 0 12px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.reports-tab-btn:hover {
-  color: #f8fafc;
-}
-
-.reports-tab-btn.is-active {
-  background: transparent;
-  border-bottom-color: #10b981;
-  color: #f8fafc;
-  font-weight: 600;
 }
 
 .reports-table-wrap {
@@ -7852,7 +7827,7 @@ input:focus-visible,
 
 .reports-table {
   width: 100%;
-  min-width: 960px;
+  min-width: 1100px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -8050,7 +8025,7 @@ input:focus-visible,
 }
 
 .reports-search-wrap {
-  flex: 0 1 280px;
+  flex: 0 1 240px;
   min-width: 200px;
 }
 
@@ -9088,10 +9063,6 @@ input:focus-visible,
     flex: 0 1 auto;
     width: 100%;
     min-width: 0;
-  }
-
-  .reports-filter-tabs {
-    gap: 0 4px;
   }
 
 }
