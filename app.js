@@ -4646,6 +4646,12 @@
               </details>
               <p class="account-message profile-message" data-message role="status" aria-live="polite"></p>
               <button class="profile-support-banner" type="button" data-info="Customer service is not connected in this prototype."><span>Can’t find the topic you are looking for?</span><small>24/7 Live Customer Service</small><i aria-hidden="true">?</i></button>
+              <section class="profile-menu-card" aria-label="Account actions">
+                <button class="profile-menu-row account-signout" type="button" data-mobile-action="logout">
+                  <span>Log out</span>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-9h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>
+                </button>
+              </section>
             </div>`
             : `<div class="faq-page">
               <section class="faq-intro">
@@ -5956,6 +5962,9 @@
       } else if (mobileAction === "toggle-error") {
         mobileLoginShowError = !mobileLoginShowError;
         renderScreen(mobileLoginShowError ? "login-error" : "login");
+      } else if (mobileAction === "logout") {
+        mobileLoginShowError = false;
+        renderScreen("login");
       }
       return;
     }
