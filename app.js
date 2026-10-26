@@ -502,7 +502,10 @@
         <td>${bus.rate}</td>
         <td><span class="status-badge ${bus.statusClass}"><span class="status-dot"></span>${bus.status}</span></td>
         <td>
-          <button class="btn-telemetry" type="button" data-admin-telemetry="${bus.id}">Telemetry</button>
+          <div class="admin-row-actions">
+            <button class="btn-telemetry" type="button" data-admin-telemetry="${bus.id}">View Details</button>
+            <button class="btn-row-actions" type="button" data-fleet-actions="${bus.id}" aria-label="More actions for ${bus.busNo}">Actions</button>
+          </div>
         </td>
       </tr>
     `).join("");
