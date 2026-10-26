@@ -2962,7 +2962,7 @@
     const dispatchSnapshot = getDispatchSnapshot();
     return `
     <!-- Top Title & Action Header -->
-    <header class="admin-header-row">
+    <header class="admin-header-row reports-header-row">
       <div class="admin-header-title-box">
   <h1 class="admin-header-title">Reports &amp; Decision Support</h1>
       </div>
@@ -3032,44 +3032,21 @@
       </article>
     </section>
 
-    <!-- Main Reports Hub & Table Card -->
-    <section class="reports-table-card">
-      <div class="reports-table-toolbar">
-        <!-- Category Filter Tabs -->
-        <div class="reports-filter-tabs" role="tablist" aria-label="Filter reports by domain">
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "all" ? " is-active" : ""}" type="button" data-report-category="all">All Reports (6)</button>
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "financial" ? " is-active" : ""}" type="button" data-report-category="financial">Revenue &amp; Finance (2)</button>
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Bus Schedules (2)</button>
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Staff (1)</button>
-          <button class="reports-tab-btn${activeReportsCategoryFilter === "fuel" ? " is-active" : ""}" type="button" data-report-category="fuel">Fuel &amp; Maintenance (1)</button>
+    <section class="reports-visualizations" aria-label="Operational decision visualizations">
+      <div class="reports-visual-toolbar">
+        <div>
+          <h2 class="reports-visual-title">Performance trends</h2>
+          <p class="reports-visual-caption">Compare revenue and passenger demand over time</p>
         </div>
-
-        <!-- Search Bar -->
-        <div class="staff-header-search-wrap" style="width: 260px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="staff-header-search-input" placeholder="Search reports or report IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports">
-        </div>
+        <label class="reports-period-control">View
+          <select class="admin-select-corridor" data-revenue-period aria-label="Revenue chart period">
+            <option value="weekly"${activeRevenueChartPeriod === "weekly" ? " selected" : ""}>Weekly</option>
+            <option value="monthly"${activeRevenueChartPeriod === "monthly" ? " selected" : ""}>Monthly</option>
+            <option value="annual"${activeRevenueChartPeriod === "annual" ? " selected" : ""}>Annual</option>
+          </select>
+        </label>
       </div>
-
-      <!-- Table Container -->
-      <div class="reports-table-wrap">
-        <table class="reports-table">
-          <thead>
-            <tr>
-              <th>REPORT ID &amp; FORMAT</th>
-              <th>REPORT TITLE &amp; CORRIDOR</th>
-              <th>CATEGORY</th>
-              <th>REPORT PERIOD</th>
-              <th>PRIMARY METRICS</th>
-              <th>STATUS</th>
-              <th>ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody id="reports-table-tbody">
-            ${renderReportsTableRows()}
-          </tbody>
-        </table>
-      </div>
+      <div id="reports-decision-charts">${renderReportsDecisionCharts()}</div>
     </section>
 
     <!-- Lower 2-Column Split: Corridor Performance & Automated Runs -->
@@ -3104,21 +3081,43 @@
         </div>
       </section>
     </div>
-    <section class="reports-visualizations" aria-label="Operational decision visualizations">
-      <div class="reports-visual-toolbar">
-        <div>
-          <h2 class="reports-visual-title">Performance trends</h2>
-          <p class="reports-visual-caption">Compare revenue and passenger demand over time</p>
+
+    <!-- Main Reports Hub & Table Card -->
+    <section class="reports-table-card" aria-labelledby="reports-library-title">
+      <div class="reports-library-heading">
+        <h2 class="reports-library-title" id="reports-library-title">Report library</h2>
+        <div class="staff-header-search-wrap reports-search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" class="staff-header-search-input" placeholder="Search reports or report IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports">
         </div>
-        <label class="reports-period-control">View
-          <select class="admin-select-corridor" data-revenue-period aria-label="Revenue chart period">
-            <option value="weekly"${activeRevenueChartPeriod === "weekly" ? " selected" : ""}>Weekly</option>
-            <option value="monthly"${activeRevenueChartPeriod === "monthly" ? " selected" : ""}>Monthly</option>
-            <option value="annual"${activeRevenueChartPeriod === "annual" ? " selected" : ""}>Annual</option>
-          </select>
-        </label>
       </div>
-      <div id="reports-decision-charts">${renderReportsDecisionCharts()}</div>
+
+      <div class="reports-filter-tabs" role="tablist" aria-label="Filter reports by domain">
+        <button class="reports-tab-btn${activeReportsCategoryFilter === "all" ? " is-active" : ""}" type="button" data-report-category="all">All Reports (6)</button>
+        <button class="reports-tab-btn${activeReportsCategoryFilter === "financial" ? " is-active" : ""}" type="button" data-report-category="financial">Revenue &amp; Finance (2)</button>
+        <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Bus Schedules (2)</button>
+        <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Staff (1)</button>
+        <button class="reports-tab-btn${activeReportsCategoryFilter === "fuel" ? " is-active" : ""}" type="button" data-report-category="fuel">Fuel &amp; Maintenance (1)</button>
+      </div>
+
+      <div class="reports-table-wrap">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>REPORT ID &amp; FORMAT</th>
+              <th>REPORT TITLE &amp; CORRIDOR</th>
+              <th>CATEGORY</th>
+              <th>REPORT PERIOD</th>
+              <th>PRIMARY METRICS</th>
+              <th>STATUS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="reports-table-tbody">
+            ${renderReportsTableRows()}
+          </tbody>
+        </table>
+      </div>
     </section>
   `;
   };
