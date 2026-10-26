@@ -84,6 +84,14 @@
     { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
     { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: activeRoute.destination, originDetail: "Trip cancelled by operator", destination: activeRoute.origin, destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
   ];
+  let bookingReferenceSequence = 1;
+  const createBookingReference = () => {
+    let reference;
+    do {
+      reference = `USAD-${Date.now().toString(36).toUpperCase()}-${String(bookingReferenceSequence++).padStart(3, "0")}`;
+    } while (tripHistory.some((trip) => trip.id === reference || trip.receiptId === reference));
+    return reference;
+  };
   let tripData = {
     origin: activeRoute.origin,
     destination: activeRoute.destinationShort,
@@ -202,7 +210,6 @@
   const adminFleetSize = 20;
   let dispatchTelemetryFilter = "all";
   let dispatchMapZoom = 1;
-  let dispatchLayersActive = true;
   let dispatchNoteInput = "";
   const dispatchRemittances = [];
   const formatPeso = (amount) => new Intl.NumberFormat("en-PH", {
@@ -211,6 +218,9 @@
     minimumFractionDigits: 2,
   }).format(amount);
   const sampleFarePerPassenger = 80;
+  const sampleUPouchBalance = 2;
+  const insufficientUPouchPayment = (payment, passengers) =>
+    payment === "U-Pouch" && sampleUPouchBalance < sampleFarePerPassenger * passengers;
   const peakDispatchQueue = [
     { id: "peak-03", busNo: "03", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Eldrei Acero", fuel: "92%", status: "ready" },
     { id: "peak-07", busNo: "07", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Juan Dela Cruz", fuel: "88%", status: "ready" },
@@ -221,7 +231,7 @@
   let staffSearchQuery = "";
   let staffDepotFilter = "all";
   let staffCurrentPage = 1;
-  let staffPerPage = 8;
+  const staffPageSize = 8;
   let staffSelectedRows = new Set();
   let activeCameraLocationFilter = "all";
   let activeCameraLayout = "3x2"; // "3x2", "2x2", "focus"
@@ -232,11 +242,19 @@
   let cctvSettingsPopupOpen = false;
   let cameraWaveformTab = "monitor"; // "monitor", "ai", "debug"
   let cameraSearchQuery = "";
-  let predictiveSelectedWeek = "Week 8";
+  let predictiveSelectedBucket = "period-8";
   let predictiveTransitLoadScale = 100;
   let predictiveOperatingProfile = "Standard Service";
-  let activeReportsCategoryFilter = "all"; // "all", "financial", "otp", "crew", "fuel"
-  let activeReportsDateRange = "month"; // "month", "today", "week", "last-month", "q3"
+  let activePredictivePeriod = "daily";
+  let activeAnalyticsRouteId = activeRoute.id;
+  const getDateInputValue = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  let activeTripLogDate = getDateInputValue(new Date());
+  let showAllTripLogs = false;
   let activeReportsCorridor = activeRoute.id;
   let activeRevenueChartPeriod = "monthly";
   let reportsSearchQuery = "";
@@ -269,67 +287,89 @@
   };
   const formatPhp = (amount) => `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const predictiveForecastHours = [
-    { hour: 0, label: "12 AM", val: 280, state: "low", heat: "green", showLabel: true },
-    { hour: 1, label: "1 AM", val: 320, state: "low", heat: "green", showLabel: true },
-    { hour: 2, label: "2 AM", val: 250, state: "low", heat: "green", showLabel: true },
-    { hour: 3, label: "3 AM", val: 310, state: "low", heat: "green", showLabel: true },
-    { hour: 4, label: "4 AM", val: 380, state: "low", heat: "green", showLabel: true },
-    { hour: 5, label: "5 AM", val: 520, state: "low", heat: "green", showLabel: true },
-    { hour: 6, label: "6 AM", val: 820, state: "normal", heat: "blue", showLabel: true },
-    { hour: 7, label: "7 AM", val: 940, state: "normal", heat: "blue", showLabel: false },
-    { hour: 8, label: "8 AM", val: 1040, state: "normal", heat: "blue", showLabel: false },
-    { hour: 9, label: "9 AM", val: 920, state: "normal", heat: "blue", showLabel: true },
-    { hour: 10, label: "10 AM", val: 960, state: "normal", heat: "blue", showLabel: false },
-    { hour: 11, label: "11 AM", val: 980, state: "normal", heat: "blue", showLabel: false },
-    { hour: 12, label: "12 PM", val: 1050, state: "normal", heat: "blue", showLabel: true },
-    { hour: 13, label: "1 PM", val: 1020, state: "normal", heat: "blue", showLabel: false },
-    { hour: 14, label: "2 PM", val: 1080, state: "normal", heat: "blue", showLabel: false },
-    { hour: 15, label: "3 PM", val: 1130, state: "surge", heat: "red", showLabel: true },
-    { hour: 16, label: "4 PM", val: 1160, state: "surge", heat: "red", showLabel: false },
-    { hour: 17, label: "5 PM", val: 1190, state: "surge", heat: "red", showLabel: false },
-    { hour: 18, label: "6 PM", val: 1150, state: "surge", heat: "red", showLabel: true },
-    { hour: 19, label: "7 PM", val: 1120, state: "surge", heat: "red", showLabel: false },
-    { hour: 20, label: "8 PM", val: 980, state: "normal", heat: "blue", showLabel: false },
-    { hour: 21, label: "9 PM", val: 920, state: "normal", heat: "blue", showLabel: true },
-    { hour: 22, label: "10 PM", val: 740, state: "normal", heat: "blue", showLabel: false },
-    { hour: 23, label: "11 PM", val: 450, state: "low", heat: "green", showLabel: true }
+  const predictiveDailyPassengerBaseline = 1350;
+  const PREDICTIVE_DAILY_AXIS_MAXIMUM = 1800;
+  const predictiveDemandPeriodBase = [
+    { id: "period-1", multiplier: 0.82 },
+    { id: "period-2", multiplier: 0.88 },
+    { id: "period-3", multiplier: 0.94 },
+    { id: "period-4", multiplier: 1 },
+    { id: "period-5", multiplier: 1.06 },
+    { id: "period-6", multiplier: 1.12 },
+    { id: "period-7", multiplier: 1.08 },
+    { id: "period-8", multiplier: 1.16 }
   ];
+  const predictivePeriodOptions = {
+    daily: { label: "Daily", unit: "day", days: 1, bucketPrefix: "Day", shortPrefix: "Day" },
+    weekly: { label: "Weekly", unit: "week", days: 7, bucketPrefix: "Week", shortPrefix: "Wk" },
+    monthly: { label: "Monthly", unit: "month", days: 30, bucketPrefix: "Month", shortPrefix: "Mo" }
+  };
+  const predictiveOperatingProfileFactors = {
+    "Standard Service": [1, 1, 1, 1, 1, 1, 1, 1],
+    "Peak Service": [1.08, 1.1, 1.12, 1.15, 1.18, 1.22, 1.25, 1.28],
+    "Reduced Service": [0.92, 0.9, 0.88, 0.86, 0.84, 0.82, 0.8, 0.78]
+  };
+  let predictiveDemandForecast = [];
 
-  const predictiveDailyBaseline = predictiveForecastHours.reduce((total, item) => total + item.val, 0);
-  const predictiveWeeklyBaseline = predictiveDailyBaseline * 7;
-  const predictiveWeeklyForecast = [
-    { week: "Week 1", label: "Wk 1", multiplier: 0.82 },
-    { week: "Week 2", label: "Wk 2", multiplier: 0.88 },
-    { week: "Week 3", label: "Wk 3", multiplier: 0.94 },
-    { week: "Week 4", label: "Wk 4", multiplier: 1 },
-    { week: "Week 5", label: "Wk 5", multiplier: 1.06 },
-    { week: "Week 6", label: "Wk 6", multiplier: 1.12 },
-    { week: "Week 7", label: "Wk 7", multiplier: 1.08 },
-    { week: "Week 8", label: "Wk 8", multiplier: 1.16 }
-  ].map((week) => ({
-    ...week,
-    val: Math.round(predictiveWeeklyBaseline * week.multiplier),
-    state: week.multiplier >= 1.1 ? "surge" : week.multiplier >= 0.9 ? "normal" : "low",
-    heat: week.multiplier >= 1.1 ? "red" : week.multiplier >= 0.9 ? "blue" : "green"
-  }));
+  const updatePredictiveForecastData = () => {
+    const period = predictivePeriodOptions[activePredictivePeriod];
+    if (!period) throw new Error(`Unknown passenger demand period: "${activePredictivePeriod}".`);
+    const selectedRoute = routes.find((route) => route.id === activeAnalyticsRouteId);
+    if (!selectedRoute) throw new Error(`Passenger demand forecast could not find route "${activeAnalyticsRouteId}".`);
+    const profileFactors = predictiveOperatingProfileFactors[predictiveOperatingProfile];
+    if (!profileFactors) throw new Error(`Unknown passenger demand operating profile: "${predictiveOperatingProfile}".`);
+    if (!Array.isArray(selectedRoute.demandFactors) || selectedRoute.demandFactors.length !== predictiveDemandPeriodBase.length) {
+      throw new Error(`Passenger demand forecast data is incomplete for route "${selectedRoute.id}".`);
+    }
+    predictiveDemandForecast = predictiveDemandPeriodBase.map((periodData, index) => {
+      const multiplier = periodData.multiplier * profileFactors[index] * selectedRoute.demandFactors[index];
+      const effectiveMultiplier = multiplier * predictiveTransitLoadScale / 100;
+      return {
+        ...periodData,
+        label: `${period.shortPrefix} ${index + 1}`,
+        periodLabel: `${period.bucketPrefix} ${index + 1}`,
+        val: Math.round(predictiveDailyPassengerBaseline * period.days * multiplier),
+        state: effectiveMultiplier >= 1.1 ? "surge" : effectiveMultiplier >= 0.9 ? "normal" : "low",
+        heat: effectiveMultiplier >= 1.1 ? "red" : effectiveMultiplier >= 0.9 ? "blue" : "green"
+      };
+    });
+  };
+  updatePredictiveForecastData();
+
+  const getPredictivePeriod = () => {
+    const period = predictivePeriodOptions[activePredictivePeriod];
+    if (!period) throw new Error(`Unknown passenger demand period: "${activePredictivePeriod}".`);
+    return period;
+  };
+
+  const PREDICTIVE_CHART_PLOT_HEIGHT = 140;
+  const PREDICTIVE_CHART_AXIS_HEIGHT = 165;
+  const PREDICTIVE_CHART_X_AXIS_HEIGHT = PREDICTIVE_CHART_AXIS_HEIGHT - PREDICTIVE_CHART_PLOT_HEIGHT;
+  const getScaledPredictiveValue = (item) => Math.round(item.val * (predictiveTransitLoadScale / 100));
+  const getPredictiveAxisMaximum = () => {
+    const period = getPredictivePeriod();
+    const axisUnit = PREDICTIVE_DAILY_AXIS_MAXIMUM * period.days * predictiveTransitLoadScale / 100;
+    const peak = Math.max(...predictiveDemandForecast.map(getScaledPredictiveValue));
+    return Math.max(axisUnit, Math.ceil(peak / (axisUnit / 4)) * (axisUnit / 4));
+  };
 
   const renderPredictiveYAxis = () => {
-    const peak = Math.max(...predictiveWeeklyForecast.map((item) => item.val)) * (predictiveTransitLoadScale / 100);
-    const axisMaximum = Math.ceil(peak / 4000) * 4000;
-    return [axisMaximum, axisMaximum * 0.75, axisMaximum * 0.5, axisMaximum * 0.25, 0]
+    const axisMaximum = getPredictiveAxisMaximum();
+    const ticks = [axisMaximum, axisMaximum * 0.75, axisMaximum * 0.5, axisMaximum * 0.25, 0]
       .map((value) => `<span>${Math.round(value).toLocaleString()}</span>`)
       .join("");
+    return `<div class="chart-y-axis-ticks" aria-hidden="true">${ticks}</div>`;
   };
 
   const renderForecastBars = () => {
-    const peak = Math.max(...predictiveWeeklyForecast.map((item) => item.val)) * (predictiveTransitLoadScale / 100);
-    return predictiveWeeklyForecast.map((item) => {
-      const scaledVal = Math.round(item.val * (predictiveTransitLoadScale / 100));
-      const heightPx = Math.min(156, Math.max(14, Math.round((scaledVal / peak) * 148)));
-      const isSelected = item.week === predictiveSelectedWeek;
+    const axisMaximum = getPredictiveAxisMaximum();
+    const period = getPredictivePeriod();
+    return predictiveDemandForecast.map((item) => {
+      const scaledVal = getScaledPredictiveValue(item);
+      const heightPx = Math.round((scaledVal / axisMaximum) * PREDICTIVE_CHART_PLOT_HEIGHT);
+      const isSelected = item.id === predictiveSelectedBucket;
       return `
-        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-week="${item.week}" role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${item.week}: ${scaledVal.toLocaleString()} projected commuters" title="${item.week}: ${scaledVal.toLocaleString()} projected commuters">
+        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-period="${item.id}" role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${item.periodLabel}: ${scaledVal.toLocaleString()} projected passengers per ${period.unit}" title="${item.periodLabel}: ${scaledVal.toLocaleString()} projected passengers per ${period.unit}">
           ${isSelected ? `<div class="bar-selected-badge">${scaledVal.toLocaleString()}</div>` : ""}
           <div class="chart-bar-fill ${item.state}" style="height: ${heightPx}px;"></div>
           <div class="bar-heat-pill ${item.heat}"></div>
@@ -340,10 +380,11 @@
   };
 
   const renderPredictiveStats = () => {
-    const selectedItem = predictiveWeeklyForecast.find((week) => week.week === predictiveSelectedWeek) ?? predictiveWeeklyForecast[7];
+    const period = getPredictivePeriod();
+    const selectedItem = predictiveDemandForecast.find((item) => item.id === predictiveSelectedBucket) ?? predictiveDemandForecast[7];
     const scaledVal = Math.round(selectedItem.val * (predictiveTransitLoadScale / 100));
-    const peakWeek = predictiveWeeklyForecast.reduce((peak, week) => week.val > peak.val ? week : peak);
-    const peakVolume = Math.round(peakWeek.val * (predictiveTransitLoadScale / 100));
+    const peakPeriod = predictiveDemandForecast.reduce((peak, item) => item.val > peak.val ? item : peak);
+    const peakVolume = Math.round(peakPeriod.val * (predictiveTransitLoadScale / 100));
     const demandLabel = selectedItem.state === "surge" ? "Peak surge" : selectedItem.state === "normal" ? "Normal" : "Low";
 
     let stateClass = "text-low";
@@ -356,29 +397,38 @@
 
     return `
       <div class="analytics-metric-box">
-        <span class="metric-box-label">Peak demand week</span>
-        <strong class="metric-box-val">${peakWeek.week}</strong>
+        <span class="metric-box-label">Peak demand period</span>
+        <strong class="metric-box-val">${peakPeriod.periodLabel}</strong>
       </div>
       <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
         <span class="metric-box-label">Peak projected ridership</span>
-        <strong class="metric-box-val">${peakVolume.toLocaleString()} / week</strong>
+        <strong class="metric-box-val">${peakVolume.toLocaleString()} / ${period.unit}</strong>
       </div>
       <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
-        <span class="metric-box-label">${selectedItem.week} projected ridership</span>
+        <span class="metric-box-label">${selectedItem.periodLabel} projected ridership</span>
         <strong class="metric-box-val ${stateClass}">${stateText}</strong>
       </div>
     `;
   };
 
   const updatePredictiveView = () => {
+    const selectedForecastRoute = routes.find((route) => route.id === activeAnalyticsRouteId);
+    if (!selectedForecastRoute) throw new Error(`Passenger demand forecast could not find route "${activeAnalyticsRouteId}".`);
+    updatePredictiveForecastData();
     const barsContainer = screen.querySelector("#analytics-bars-container");
     if (barsContainer) barsContainer.innerHTML = renderForecastBars();
     const metricsContainer = screen.querySelector("#analytics-metrics-container");
     if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
     const yAxis = screen.querySelector(".chart-y-axis");
-    if (yAxis) yAxis.innerHTML = `${renderPredictiveYAxis()}<span style="color: #64748b; font-size: 10px; margin-top: 4px;">Commuters / week</span>`;
+    if (yAxis) yAxis.innerHTML = renderPredictiveYAxis();
+    const periodSelector = screen.querySelector("[data-inspect-period]");
+    if (periodSelector) periodSelector.value = predictiveSelectedBucket;
+    const forecastBadge = screen.querySelector(".analytics-range-badge");
+    if (forecastBadge) forecastBadge.textContent = `${selectedForecastRoute.label} · ${getPredictivePeriod().label} passenger demand`;
+    const demandLegend = screen.querySelector(".analytics-legend > span:first-child");
+    if (demandLegend) demandLegend.textContent = `${getPredictivePeriod().label} passenger demand levels:`;
   };
 
   const adminFleetData = [
@@ -486,15 +536,32 @@
     }
   ];
 
+  const isBusOffDuty = (bus) => bus.status.trim().toLowerCase() === "off duty";
+  const isBusAvailableForAssignment = (bus) => bus.filterCategory !== "on-duty" && !isBusOffDuty(bus);
+  const renderAssignableBusOptions = () => {
+    const availableBuses = adminFleetData.filter(isBusAvailableForAssignment);
+    if (availableBuses.length === 0) return `<option value="" selected disabled>No available buses</option>`;
+    return `
+      <option value="" selected disabled>Select an available bus</option>
+      ${availableBuses.map((bus) => `
+        <option value="${escapeHtml(bus.id)}">${escapeHtml(bus.busNo)} · ${escapeHtml(bus.status)}${bus.driver !== "Unassigned" ? ` · ${escapeHtml(bus.driver)}` : ""}</option>
+      `).join("")}
+    `;
+  };
+
   const BUS_TOTAL_SEAT_CAPACITY = 15;
   const EMPLOYEE_RESERVED_SEATS = [
-    { id: "1A", role: "Driver" },
-    { id: "1B", role: "Conductor" }
+    { id: "1A", role: "Driver" }
   ];
   const PASSENGER_SEAT_CAPACITY = BUS_TOTAL_SEAT_CAPACITY - EMPLOYEE_RESERVED_SEATS.length;
   const supportsSeatManagement = (bus) => (
     new RegExp(`^\\d+\\s*\\/\\s*${PASSENGER_SEAT_CAPACITY}\\s*passenger seats$`, "i").test(bus.occupancySeats)
   );
+  const assertSeatMapEditable = (bus) => {
+    if (bus.tripFinished) {
+      throw new Error(`Seat assignments for Bus ${bus.busNo} are locked because its trip is finished.`);
+    }
+  };
 
   const getSeatCounts = (bus) => {
     const match = /^(\d+)\s*\/\s*(\d+)\s*passenger seats$/i.exec(bus.occupancySeats);
@@ -580,6 +647,10 @@
   };
 
   const renderDispatchSeatBookingDetails = (bus) => {
+    if (bus.tripFinished) {
+      return `<p class="dispatch-seat-release-success">Trip finished. Seat assignments are locked.</p>`;
+    }
+
     if (!selectedDispatchSeatBooking) {
       return `<p>Select an available seat to book a walk-in customer, or an occupied seat to view its booking.</p>`;
     }
@@ -629,6 +700,7 @@
   };
 
   const renderAdminSeatLayout = ({ occupied }, bookingLookupBus) => {
+    const isReadOnly = bookingLookupBus?.tripFinished === true;
     const seatLetters = ["A", "B"];
     const rowCount = Math.ceil(BUS_TOTAL_SEAT_CAPACITY / seatLetters.length);
     return Array.from({ length: rowCount }, (_, rowIndex) => {
@@ -638,10 +710,15 @@
         const seatId = `${rowIndex + 1}${letter}`;
         const reservedSeat = EMPLOYEE_RESERVED_SEATS.find((seat) => seat.id === seatId);
         if (reservedSeat) {
-          return `<span class="admin-seat is-reserved" title="Reserved for ${reservedSeat.role.toLowerCase()}" aria-label="Seat ${seatId}, reserved for ${reservedSeat.role.toLowerCase()}">${seatId} · ${reservedSeat.role}</span>`;
+          const seatLabel = reservedSeat.role === "Driver" ? `${seatId} · Driver` : seatId;
+          const seatDescription = reservedSeat.role === "Driver" ? `Seat ${seatId}, reserved for driver` : `Seat ${seatId}, reserved for staff`;
+          return `<span class="admin-seat is-reserved" title="Reserved employee seat" aria-label="${seatDescription}">${seatLabel}</span>`;
         }
         const existingBooking = bookingLookupBus ? getBookingForSeat(bookingLookupBus, seatId) : null;
         const seatState = existingBooking ? "is-occupied" : "is-available";
+        if (isReadOnly) {
+          return `<span class="admin-seat ${seatState}" aria-label="Seat ${seatId}, ${seatState === "is-occupied" ? "occupied" : "available"}; trip finished">${seatId}</span>`;
+        }
         if (seatState === "is-occupied" && bookingLookupBus) {
           const booking = existingBooking;
           const isBookingSelected = selectedDispatchSeatBooking?.seatId === seatId;
@@ -972,14 +1049,14 @@
 
       <div class="admin-header-actions">
         <select class="admin-select-corridor" data-analytics-route aria-label="Select Route">
-          ${renderRouteOptions(activeRoute.id)}
+          ${renderRouteOptions(activeAnalyticsRouteId)}
         </select>
-        <select class="admin-select-corridor" data-analytics-range aria-label="Select Forecast Range">
-          <option value="Today — 24hr Forecast">Today — 24hr Forecast</option>
-          <option value="Tomorrow — 24hr Forecast">Tomorrow — 24hr Forecast</option>
-          <option value="Weekend Surge Projection">Weekend Demand</option>
+        <select class="admin-select-corridor" data-analytics-range aria-label="Select Forecast Period">
+          <option value="daily"${activePredictivePeriod === "daily" ? " selected" : ""}>Daily</option>
+          <option value="weekly"${activePredictivePeriod === "weekly" ? " selected" : ""}>Weekly</option>
+          <option value="monthly"${activePredictivePeriod === "monthly" ? " selected" : ""}>Monthly</option>
         </select>
-        <span class="analytics-range-badge">8-week aggregate forecast</span>
+        <span class="analytics-range-badge">${escapeHtml(activeRoute.label)} · ${escapeHtml(getPredictivePeriod().label)} passenger demand</span>
         <button class="admin-btn-assign" type="button" data-admin-action="export-surge" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: 700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -995,7 +1072,7 @@
     <section class="admin-analytics-card">
       <div class="analytics-card-header">
         <div class="analytics-legend">
-          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">Weekly demand levels:</span>
+          <span style="color: #64748b; font-size: 11.5px; font-weight: 600;">${escapeHtml(getPredictivePeriod().label)} passenger demand levels:</span>
           <span class="legend-item"><span class="legend-dot red"></span><span style="color: #ef4444;">Peak / Surge</span></span>
           <span class="legend-item"><span class="legend-dot blue"></span><span style="color: #93c5fd;">Normal</span></span>
           <span class="legend-item"><span class="legend-dot green"></span><span style="color: #6ee7b7;">Low</span></span>
@@ -1004,14 +1081,14 @@
 
       <!-- Chart Wrap -->
       <div class="analytics-chart-wrap">
-        <div class="chart-y-axis">${renderPredictiveYAxis()}<span style="color: #64748b; font-size: 10px; margin-top: 4px;">Commuters / week</span></div>
+        <div class="chart-y-axis">${renderPredictiveYAxis()}</div>
 
-        <div class="chart-plot-container">
+        <div class="chart-plot-container" style="height: ${PREDICTIVE_CHART_AXIS_HEIGHT}px;">
           <!-- Threshold lines -->
-          <div class="chart-threshold-line line-peak" style="bottom: 72%;">
+          <div class="chart-threshold-line line-peak" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.8}px;">
             <span class="threshold-label text-red">Peak demand</span>
           </div>
-          <div class="chart-threshold-line line-normal" style="bottom: 38%;">
+          <div class="chart-threshold-line line-normal" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.5}px;">
             <span class="threshold-label text-blue">Normal demand</span>
           </div>
 
@@ -1047,13 +1124,10 @@
         </div>
 
         <div class="analytics-ctrl-col scrub-col">
-          <div class="scrub-label-row">
-            <span class="ctrl-label">Inspect week</span>
-            <button class="scrub-reset-btn" type="button" data-scrub-week="Week 8">Reset selection</button>
-          </div>
-          <div class="scrub-buttons">
-          ${predictiveWeeklyForecast.map((week) => `<button class="scrub-pill-btn${predictiveSelectedWeek === week.week ? " is-active" : ""}" type="button" data-scrub-week="${week.week}" aria-label="Inspect ${week.week}">${week.label}</button>`).join("")}
-          </div>
+          <label class="ctrl-label" for="analytics-inspect-period">Inspect period</label>
+          <select class="analytics-ctrl-select" id="analytics-inspect-period" data-inspect-period aria-label="Inspect period">
+            ${predictiveDemandForecast.map((item) => `<option value="${item.id}"${predictiveSelectedBucket === item.id ? " selected" : ""}>${item.periodLabel}</option>`).join("")}
+          </select>
         </div>
       </div>
     </section>
@@ -1149,22 +1223,22 @@
       unitCode: "UNIT #01",
       busNo: "01",
       category: "delayed",
-      tripName: "Northbound Express",
+      tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "Delayed (+8m)",
       statusType: "delayed",
       headwayAlert: "8 minutes behind schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "23 min ETA (15:08 PHT)",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
-      conductorName: "Santos, M.",
+      dispatcherName: "Klintroy Suerte Felipe",
       gpsLocation: `${activeRoute.via} Northbound`,
-      scheduledStop: `${activeRoute.destination} (ETA 15:08 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 15:08 PHT)`,
       progressClass: "amber",
       dotClass: "amber"
     },
@@ -1175,20 +1249,20 @@
       category: "deployed",
       tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "On schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "7 min ETA (14:55 PHT)",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Rogers, S.",
       driverId: "#DR-9204",
-      conductorName: "Barton, C.",
+      dispatcherName: "Ross Anthony Jobs",
       gpsLocation: activeRoute.via,
-      scheduledStop: `${activeRoute.destination} (ETA 14:55 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 14:55 PHT)`,
       progressClass: "mint",
       dotClass: "mint"
     },
@@ -1199,22 +1273,22 @@
       category: "terminal",
       tripName: "Southbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "At Terminal",
       statusType: "terminal",
       headwayAlert: "At the terminal. Leaves in 19 minutes.",
       nextStop: activeRoute.origin,
       etaText: "Departing in 19 min",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
-      conductorName: "Reyes, K.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.destination,
       scheduledStop: `${activeRoute.origin} (ETA 16:30 PHT)`,
       progressClass: "purple",
-      dotClass: ""
+      dotClass: "purple"
     },
     {
       id: "bus-08",
@@ -1223,20 +1297,20 @@
       category: "deployed",
       tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "1 minute ahead of schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "12 min ETA (15:00 PHT)",
-      occupancyPct: 46,
-      occupancySeats: "6/13 passenger seats",
-      occupancyPassengers: "46% (6 / 13 passenger seats)",
+      occupancyPct: 43,
+      occupancySeats: "6/14 passenger seats",
+      occupancyPassengers: "43% (6 / 14 passenger seats)",
       driverName: "Bautista, M.",
       driverId: "#DR-7711",
-      conductorName: "Villanueva, E.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.via,
-      scheduledStop: `${activeRoute.destination} (ETA 15:00 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 15:00 PHT)`,
       progressClass: "mint",
       dotClass: "mint"
     },
@@ -1246,20 +1320,20 @@
       busNo: "23",
       badge: "",
       category: "deployed",
-      tripName: "Northbound Bus",
+      tripName: "Southbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "Busy bus. Running on schedule.",
       nextStop: activeRoute.destination,
       etaText: "16 min ETA (15:04 PHT)",
-      occupancyPct: 100,
-      occupancySeats: "13/13 passenger seats",
-      occupancyPassengers: "100% (13 / 13 passenger seats)",
+      occupancyPct: 93,
+      occupancySeats: "13/14 passenger seats",
+      occupancyPassengers: "93% (13 / 14 passenger seats)",
       driverName: "Alcantara, R.",
       driverId: "#DR-3108",
-      conductorName: "Morales, G.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.via,
       scheduledStop: `${activeRoute.destination} (ETA 15:04 PHT)`,
       progressClass: "amber",
@@ -1270,8 +1344,8 @@
       unitCode: "UNIT #06",
       busNo: "06",
       category: "deployed",
-      tripName: "Malolos Central Connector",
-      routeCorridor: "Malolos / Trinoma Corridor",
+      tripName: "Southbound Bus",
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "Nominal Headway: On schedule",
@@ -1282,7 +1356,7 @@
       occupancyPassengers: "64% (45 / 70 Passengers)",
       driverName: "Santos, A.",
       driverId: "#DR-6206",
-      conductorName: "Reyes, M.",
+      dispatcherName: "Piolo Pascual",
       gpsLocation: "Malolos Central Loop",
       scheduledStop: "Bocaue Interchange (ETA 15:02 PHT)",
       corridor: "malolos",
@@ -1297,7 +1371,7 @@
       if (dispatchTelemetryFilter === "delayed") return u.category === "delayed";
       if (dispatchTelemetryFilter === "terminal") return u.category === "terminal";
       return true;
-    });
+    }).sort((a, b) => Number(a.busNo) - Number(b.busNo));
 
     if (list.length === 0) {
       return `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No fleet vehicles in this category.</td></tr>`;
@@ -1340,9 +1414,12 @@
             <div class="driver-id-sub">ID: ${bus.driverId}</div>
           </td>
           <td>
-            ${bus.category === "terminal"
-              ? '<span class="dispatch-row-unavailable">Not in service</span>'
-              : `<button class="dispatch-row-manage" type="button" data-manage-trip="${bus.id}">${bus.tripFinished ? "View trip" : "Manage trip"}</button>`}
+            <div class="dispatch-row-actions">
+              ${bus.category === "terminal"
+                ? '<span class="dispatch-row-unavailable">Not in service</span>'
+                : `<button class="dispatch-row-manage" type="button" data-manage-trip="${bus.id}">${bus.tripFinished ? "View trip" : "Manage trip"}</button>`}
+              <button class="dispatch-row-delete" type="button" data-telemetry-delete="${bus.id}" aria-label="Delete telemetry for Bus ${escapeHtml(bus.busNo)}">Delete</button>
+            </div>
           </td>
         </tr>
       `;
@@ -1414,8 +1491,8 @@
                 ${renderDispatchSeatBookingDetails(unit)}
               </div>
               <div class="dispatch-seat-dropdown-footer">
-                <span>${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available</span>
-                <span>1A driver · 1B conductor</span>
+                <span>${unit.tripFinished ? "Trip finished · seat map locked" : `${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available`}</span>
+                <span>1A Driver · 1B Passenger</span>
               </div>
             </div>
           </details>` : `<div class="dispatch-spec-row">
@@ -1424,7 +1501,11 @@
           </div>`}
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Assigned Driver</span>
-            <span class="spec-val-content">${unit.driverName} (Conductor: ${unit.conductorName})</span>
+            <span class="spec-val-content">${unit.driverName}</span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Assigned Dispatcher</span>
+            <span class="spec-val-content">${unit.dispatcherName}</span>
           </div>
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Current Location</span>
@@ -1483,84 +1564,99 @@
   };
 
   const renderRadarMapSvg = () => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fallbackPositions = {
+      "bus-01": { x: 448, y: 158 },
+      "bus-02": { x: 525, y: 124 },
+      "bus-06": { x: 140, y: 214 },
+      "bus-14": { x: 674, y: 79 },
+      "bus-08": { x: 365, y: 180 },
+      "bus-23": { x: 278, y: 195 },
+    };
+    const motionStartSeconds = {
+      "bus-01": 8,
+      "bus-02": 17,
+      "bus-06": 23,
+      "bus-08": 2,
+      "bus-23": 12,
+    };
+    const statusColors = {
+      delayed: "#f59e0b",
+      deployed: "#2fd9a8",
+      terminal: "#a78bfa",
+      completed: "#94a3b8",
+    };
+    const mapMarkers = fleetDispatchTelemetryUnits.map((unit) => {
+      const position = fallbackPositions[unit.id];
+      const color = statusColors[unit.category];
+      const shouldAnimate = unit.category !== "terminal" && !unit.tripFinished && !reducedMotion;
+      if (!position || !color || (shouldAnimate && (motionStartSeconds[unit.id] === undefined ||
+        !["Northbound Bus", "Southbound Bus"].includes(unit.tripName)))) {
+        throw new Error(`USAD could not display Bus ${unit.busNo} on the fleet map: its sample position, status color, or route direction is missing.`);
+      }
+      const isSelected = unit.id === selectedDispatchBusId;
+      const labelWidth = 64;
+      const labelX = -labelWidth / 2;
+      const labelY = -31;
+      const markerTransform = shouldAnimate ? "" : ` transform="translate(${position.x} ${position.y})"`;
+      const motionPath = unit.tripName === "Northbound Bus"
+        ? "M 677 80 C 478 146 393 177 304 197 C 215 217 145 248 64 287"
+        : "M 64 287 C 145 248 215 217 304 197 S 478 146 677 80";
+      const motion = shouldAnimate
+        ? `<animateMotion dur="34s" begin="-${motionStartSeconds[unit.id]}s" repeatCount="indefinite" calcMode="linear" rotate="auto" path="${motionPath}"/>`
+        : "";
+      return `
+        <g class="bus-map-marker${isSelected ? " is-selected" : ""}" data-map-bus="${escapeHtml(unit.id)}"${markerTransform}>
+          ${shouldAnimate ? `<circle class="bus-map-live-pulse" cx="0" cy="0" r="15" stroke="${color}"/>` : ""}
+          ${isSelected ? '<circle cx="0" cy="0" r="24" fill="' + color + '" opacity="0.14"/><circle cx="0" cy="0" r="18" fill="none" stroke="' + color + '" stroke-opacity="0.6" stroke-width="1.5"/>' : ""}
+          <circle cx="0" cy="0" r="11" fill="#101a24" stroke="${color}" stroke-width="2.5"/>
+          <path d="M -5 -3 h 10 v 8 h -10 z M -3 -6 h 6 l 3 3 h -12 z" fill="${color}"/>
+          <circle cx="-2.5" cy="6" r="1.2" fill="#101a24"/>
+          <circle cx="2.5" cy="6" r="1.2" fill="#101a24"/>
+          <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="18" rx="9" fill="#101a24" stroke="${isSelected ? color : "#344353"}" stroke-width="${isSelected ? 1.5 : 1}"/>
+          <text x="0" y="${labelY + 12}" fill="#f8fafc" font-size="9" font-weight="700" text-anchor="middle">BUS ${escapeHtml(unit.busNo)}</text>
+          ${motion}
+        </g>
+      `;
+    }).join("");
+
     return `
-      <svg class="radar-map-svg" viewBox="0 0 740 260" preserveAspectRatio="xMidYMid meet" style="transform: scale(${dispatchMapZoom}); transition: transform 0.25s ease;">
+      <svg class="radar-map-svg" viewBox="0 0 740 300" preserveAspectRatio="xMidYMid meet" style="transform: scale(${dispatchMapZoom}); transition: transform 0.25s ease;" role="img" aria-label="Illustrative fleet map showing bus locations between Malolos and Trinoma">
         <defs>
-          <pattern id="tactical-grid-pat" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1"/>
+          <pattern id="fleet-map-blocks" width="74" height="58" patternUnits="userSpaceOnUse">
+            <rect x="7" y="7" width="24" height="15" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="38" y="7" width="28" height="15" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="7" y="31" width="20" height="18" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="34" y="31" width="32" height="18" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
           </pattern>
-          <filter id="radar-glow-filter" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
-        <!-- Grid Rect -->
-        <rect width="740" height="260" fill="url(#tactical-grid-pat)" />
+        <rect width="740" height="300" fill="#101a24"/>
+        <rect width="740" height="300" fill="url(#fleet-map-blocks)" opacity="0.88"/>
 
-        <!-- Faint Coordinate / Radar Guides -->
-        <circle cx="450" cy="145" r="120" fill="none" stroke="rgba(255,255,255,0.025)" stroke-dasharray="3 3"/>
-        <line x1="0" y1="145" x2="740" y2="145" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-        <line x1="450" y1="0" x2="450" y2="260" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+        <path d="M -30 78 C 115 92 165 46 285 66 S 500 102 770 50" fill="none" stroke="#1a2936" stroke-width="17" stroke-linecap="round"/>
+        <path d="M -30 78 C 115 92 165 46 285 66 S 500 102 770 50" fill="none" stroke="#314657" stroke-width="1.4" stroke-dasharray="5 7"/>
+        <path d="M 24 275 C 160 224 214 254 334 216 S 550 205 748 259" fill="none" stroke="#1a2936" stroke-width="15" stroke-linecap="round"/>
+        <path d="M 24 275 C 160 224 214 254 334 216 S 550 205 748 259" fill="none" stroke="#314657" stroke-width="1.2" stroke-dasharray="5 7"/>
 
-        <!-- Illustrative path for the active route -->
-        <path d="M 150 215 C 240 205, 250 120, 360 145 S 500 205, 660 75" fill="none" stroke="#2fd9a8" stroke-width="3.5" filter="url(#radar-glow-filter)" stroke-linecap="round"/>
-        <path d="M 150 215 C 240 205, 250 120, 360 145 S 500 205, 660 75" fill="none" stroke="#ffffff" stroke-width="1" stroke-dasharray="6 4" opacity="0.6"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#263747" stroke-width="24" stroke-linecap="round"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#40586b" stroke-width="1.5" stroke-dasharray="7 8"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#2fd9a8" stroke-width="2.5" stroke-linecap="round" opacity="0.72"/>
 
-        <!-- Stations / Waypoints -->
-        <!-- Route origin -->
-        <g opacity="0.9">
-          <circle cx="150" cy="215" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
-          <text x="150" y="233" fill="#72849a" font-size="9" font-weight="600" text-anchor="middle">${escapeHtml(activeRoute.origin)}</text>
-        </g>
+        <path d="M 104 0 L 138 300 M 221 0 L 240 300 M 572 0 L 541 300 M 0 129 L 740 140" fill="none" stroke="#253544" stroke-width="4"/>
+        <path d="M 104 0 L 138 300 M 221 0 L 240 300 M 572 0 L 541 300 M 0 129 L 740 140" fill="none" stroke="#35495b" stroke-width="1" stroke-dasharray="3 5"/>
 
-        <!-- Route destination -->
-        <g opacity="0.9">
-          <circle cx="590" cy="82" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
-          <text x="590" y="72" fill="#8da2bb" font-size="9" font-weight="600" text-anchor="middle">${escapeHtml(activeRoute.destinationShort)}</text>
-        </g>
+        <text x="44" y="37" fill="#7f93a5" font-size="10" font-weight="700" letter-spacing="1.4">BULACAN</text>
+        <text x="82" y="193" fill="#cbd5e1" font-size="11" font-weight="600">MALOLOS</text>
+        <text x="211" y="169" fill="#8fa3b5" font-size="9">GUIGUINTO</text>
+        <text x="316" y="166" fill="#8fa3b5" font-size="9">BOCAUE</text>
+        <text x="404" y="128" fill="#8fa3b5" font-size="9">MARILAO</text>
+        <text x="498" y="102" fill="#8fa3b5" font-size="9">MEYCAUAYAN</text>
+        <text x="596" y="62" fill="#cbd5e1" font-size="10" font-weight="600">TRINOMA</text>
+        <text x="432" y="228" fill="#7890a3" font-size="9" font-weight="600" letter-spacing="1">NORTH LUZON EXPRESSWAY</text>
 
-        <!-- Route destination terminal -->
-        <g opacity="1">
-          <circle cx="660" cy="75" r="5" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5"/>
-          <text x="670" y="65" fill="#fbbf24" font-size="9" font-weight="700">${escapeHtml(activeRoute.destination)}</text>
-        </g>
-
-        <!-- BUS 08 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-08" style="cursor: pointer;">
-          <rect x="348" y="70" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="374" y="82.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 08</text>
-        </g>
-
-        <!-- BUS 02 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-02" style="cursor: pointer;">
-          <rect x="494" y="96" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="520" y="108.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 02</text>
-        </g>
-
-        <!-- BUS 06 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-06" style="cursor: pointer;">
-          <rect x="250" y="174" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="276" y="186.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 06</text>
-        </g>
-
-        <!-- BUS 01 (DELAYED) Marker with Sonar Pulse Ring -->
-        <g class="bus-map-marker" data-map-bus="bus-01" style="cursor: pointer;">
-          <circle cx="450" cy="145" r="14" class="radar-ping-ring" stroke="#f59e0b" fill="none" opacity="0.8"/>
-          <circle cx="450" cy="145" r="8" stroke="#f59e0b" stroke-width="1.5" fill="rgba(245, 158, 11, 0.25)"/>
-          <circle cx="450" cy="145" r="3" fill="#f59e0b"/>
-          <rect x="402" y="118" width="96" height="20" rx="10" fill="#241406" stroke="#f59e0b" stroke-width="1.4"/>
-          <text x="450" y="131.5" fill="#fbbf24" font-size="8.5" font-weight="700" text-anchor="middle">BUS 01 (DELAYED)</text>
-        </g>
-
-        <!-- BUS 14 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-14" style="cursor: pointer;">
-          <rect x="534" y="161" width="52" height="18" rx="9" fill="#1e102b" stroke="#a855f7" stroke-width="1.2"/>
-          <text x="560" y="173.5" fill="#c084fc" font-size="8.5" font-weight="700" text-anchor="middle">BUS 14</text>
-        </g>
+        <circle cx="674" cy="79" r="4" fill="#64748b"/>
+        ${mapMarkers}
       </svg>
     `;
   };
@@ -1663,23 +1759,20 @@
 
     ${renderPeakDispatchReadiness()}
 
-    <!-- Active route map keeps its full-width layout while trip management is open. -->
+    <!-- Illustrative vehicle positions are shown on the fleet map. -->
     <section class="admin-radar-map-card">
       <div class="radar-map-toolbar">
         <div class="corridor-filter-group">
-          <span class="corridor-label">Active Route:</span>
-          <strong>${activeRoute.label}</strong>
+          <div>
+            <h2 class="fleet-map-title">Bus Monitoring Map</h2>
+            <p class="fleet-map-subtitle">${escapeHtml(activeRoute.originShort)} to ${escapeHtml(activeRoute.destinationShort)} via NLEX</p>
+          </div>
         </div>
 
         <div class="map-viewport-tools">
           <button class="map-tool-btn" type="button" data-map-zoom="in" title="Zoom In">+</button>
           <div class="map-tool-divider"></div>
           <button class="map-tool-btn" type="button" data-map-zoom="out" title="Zoom Out">-</button>
-          <div class="map-tool-divider"></div>
-          <button class="map-tool-btn" type="button" data-map-layers title="Toggle Layers">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-            <span>Layers</span>
-          </button>
         </div>
       </div>
 
@@ -1688,9 +1781,10 @@
       </div>
 
       <div class="radar-map-legend">
-        <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
-        <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
-        <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
+        <span class="legend-item"><span class="legend-dot-circle mint"></span> On time</span>
+        <span class="legend-item"><span class="legend-dot-circle amber"></span> Delayed</span>
+        <span class="legend-item"><span class="legend-dot-circle purple"></span> At terminal</span>
+        <span class="fleet-map-note"><span class="fleet-map-gps-dot" aria-hidden="true"></span>GPS preview</span>
       </div>
     </section>
 
@@ -1873,41 +1967,165 @@
     }
   ];
 
-  const renderStaffTableRows = () => {
-    const q = staffSearchQuery.toLowerCase().trim();
-    const filtered = adminStaffMembersData.filter((member) => {
-      if (activeStaffRoleFilter === "drivers" && member.roleKey !== "driver") return false;
-      if (activeStaffRoleFilter === "dispatchers" && member.roleKey !== "dispatcher") return false;
-      if (activeStaffRoleFilter === "maintenance" && member.roleKey !== "maintenance") return false;
+  const isStaffOffDuty = (staff) => {
+    const status = String(staff.statusKey || staff.status || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+    return status === "off" || status === "off-duty";
+  };
+
+  const getAssignableStaffDrivers = () => adminStaffMembersData.filter((member) => (
+    member.roleKey === "driver" && !isStaffOffDuty(member)
+  ));
+
+  const renderStaffDriverOptions = (selectedDriverId = "") => `
+    <option value=""${selectedDriverId ? "" : " selected"}>Select an available driver</option>
+    ${getAssignableStaffDrivers().map((driver) => `
+      <option value="${escapeHtml(driver.id)}"${driver.id === selectedDriverId ? " selected" : ""}>${escapeHtml(driver.name)} · ${escapeHtml(driver.status)}</option>
+    `).join("")}
+  `;
+
+  const generatedStaffFirstNames = [
+    "Alex", "Bea", "Carlo", "Dana", "Emil", "Faith", "Gabriel", "Hazel", "Ian", "Jessa",
+    "Kevin", "Lara", "Marco", "Nina", "Oscar", "Paolo", "Queenie", "Rafael", "Sofia", "Tomas",
+    "Ulysses", "Vina", "Warren", "Yana", "Zandro", "Althea", "Bryan", "Celine", "Diego", "Erika",
+    "Francis", "Grace", "Harvey", "Isabel", "Joaquin", "Kyla", "Lorenzo", "Mika", "Nathan", "Olivia",
+    "Patrick", "Rina"
+  ];
+  const generatedStaffLastNames = [
+    "Abad", "Bautista", "Castillo", "Dizon", "Enriquez", "Flores", "Garcia", "Hernandez", "Ignacio", "Jimenez",
+    "Lazaro", "Mendoza", "Navarro", "Ocampo", "Pascual", "Quizon", "Ramos", "Santiago", "Torres", "Uy",
+    "Velasco", "Yap", "Zamora", "Aguilar", "Bernardo", "Cruz", "Domingo", "Estrada", "Fernandez", "Gonzales",
+    "Luna", "Manalo", "Reyes", "Salazar", "Villanueva", "Aquino", "Balagtas", "Cabrera", "David", "Evangelista",
+    "Francisco", "Gutierrez"
+  ];
+  const generatedStaffRoleKeys = [
+    ...Array(26).fill("driver"),
+    ...Array(6).fill("dispatcher"),
+    ...Array(10).fill("maintenance")
+  ];
+  generatedStaffRoleKeys.forEach((roleKey, index) => {
+    const staffNumber = index + 9;
+    const firstName = generatedStaffFirstNames[index];
+    const lastName = generatedStaffLastNames[index];
+    if (!firstName || !lastName) {
+      throw new Error(`USAD could not create sample staff record ${staffNumber}: a sample name is missing.`);
+    }
+    const role = roleKey === "driver" ? "Driver" : roleKey === "dispatcher" ? "Dispatcher" : "Maintenance";
+    const roleCode = roleKey === "driver" ? "DRV" : roleKey === "dispatcher" ? "DSP" : "MNT";
+    const depot = index % 2 === 0 ? "Trinoma Hub" : "Malolos Hub";
+    const status = index % 5 === 0 ? "On Break" : index % 7 === 0 ? "Off" : "On Duty";
+    adminStaffMembersData.push({
+      id: `staff-${String(staffNumber).padStart(2, "0")}`,
+      name: `${firstName} ${lastName}`,
+      staffId: `A${String((index % 8) + 1).padStart(2, "0")}OPS${String(100 + staffNumber)} • ${roleCode}`,
+      initials: `${firstName[0]}${lastName[0]}`,
+      avatarClass: "",
+      role,
+      roleKey,
+      busNo: "-",
+      depot,
+      rate: roleKey === "driver" ? "$4.50" : roleKey === "dispatcher" ? "$3.00" : "$3.50",
+      maxHours: roleKey === "driver" ? "10 hrs" : roleKey === "dispatcher" ? "8 hrs" : "8 hrs",
+      status,
+      statusKey: status.toLowerCase().replace(" ", "-"),
+      statusClass: status === "On Duty" ? "on-duty" : status === "On Break" ? "on-break" : "off"
+    });
+  });
+
+  const getFilteredStaffMembers = () => {
+    const query = staffSearchQuery.toLowerCase().trim();
+    const roleFilterKeys = {
+      drivers: "driver",
+      dispatchers: "dispatcher",
+      maintenance: "maintenance"
+    };
+    return adminStaffMembersData.filter((member) => {
+      if (activeStaffRoleFilter !== "all" && member.roleKey !== roleFilterKeys[activeStaffRoleFilter]) return false;
       if (staffDepotFilter !== "all" && !member.depot.toLowerCase().includes(staffDepotFilter.toLowerCase())) return false;
-      if (!q) return true;
+      if (!query) return true;
       return (
-        member.name.toLowerCase().includes(q) ||
-        member.staffId.toLowerCase().includes(q) ||
-        member.role.toLowerCase().includes(q) ||
-        member.depot.toLowerCase().includes(q) ||
-        member.busNo.toLowerCase().includes(q)
+        member.name.toLowerCase().includes(query) ||
+        member.staffId.toLowerCase().includes(query) ||
+        member.role.toLowerCase().includes(query) ||
+        member.depot.toLowerCase().includes(query) ||
+        member.busNo.toLowerCase().includes(query)
       );
     });
+  };
+
+  const renderStaffRoleTabs = () => {
+    const roles = [
+      { filter: "all", label: "All Staff", roleKey: null },
+      { filter: "drivers", label: "Drivers", roleKey: "driver" },
+      { filter: "dispatchers", label: "Dispatchers", roleKey: "dispatcher" },
+      { filter: "maintenance", label: "Maintenance", roleKey: "maintenance" }
+    ];
+    return roles.map(({ filter, label, roleKey }) => {
+      const count = roleKey
+        ? adminStaffMembersData.filter((member) => member.roleKey === roleKey).length
+        : adminStaffMembersData.length;
+      return `<button class="staff-role-pill${activeStaffRoleFilter === filter ? " is-active" : ""}" type="button" data-staff-role-filter="${filter}">${label} (${count})</button>`;
+    }).join("");
+  };
+
+  const renderStaffPagination = (filteredCount) => {
+    const pageCount = Math.ceil(filteredCount / staffPageSize);
+    if (pageCount === 0) return "";
+    const pageButtons = Array.from({ length: pageCount }, (_, index) => {
+      const page = index + 1;
+      return `<button class="staff-page-btn${staffCurrentPage === page ? " is-active" : ""}" type="button" data-staff-page="${page}" aria-current="${staffCurrentPage === page ? "page" : "false"}">${page}</button>`;
+    }).join("");
+    return `
+      <button class="staff-page-btn" type="button" data-staff-page="prev" aria-label="Previous page"${staffCurrentPage === 1 ? " disabled" : ""}>&lt;</button>
+      ${pageButtons}
+      <button class="staff-page-btn" type="button" data-staff-page="next" aria-label="Next page"${staffCurrentPage === pageCount ? " disabled" : ""}>&gt;</button>
+    `;
+  };
+
+  const updateStaffDirectory = () => {
+    const filtered = getFilteredStaffMembers();
+    const pageCount = Math.ceil(filtered.length / staffPageSize);
+    staffCurrentPage = Math.min(Math.max(staffCurrentPage, 1), Math.max(pageCount, 1));
+    const start = filtered.length === 0 ? 0 : (staffCurrentPage - 1) * staffPageSize + 1;
+    const end = Math.min(staffCurrentPage * staffPageSize, filtered.length);
+    const rangeText = `Showing ${start}-${end} of ${filtered.length} staff`;
+    const visibleCount = filtered.length === 0 ? 0 : end - start + 1;
+    const tableBody = screen.querySelector("#staff-table-tbody");
+    if (tableBody) tableBody.innerHTML = renderStaffTableRows();
+    const tabs = screen.querySelector(".staff-role-tabs");
+    if (tabs) tabs.innerHTML = renderStaffRoleTabs();
+    screen.querySelectorAll("[data-staff-count-summary]").forEach((summary) => {
+      summary.innerHTML = `Showing <strong>${visibleCount}</strong> of <strong>${filtered.length}</strong> matching staff`;
+    });
+    const pagination = screen.querySelector("#staff-pagination-nav");
+    if (pagination) pagination.innerHTML = renderStaffPagination(filtered.length);
+    const paginationCount = screen.querySelector("#staff-pagination-count");
+    if (paginationCount) paginationCount.textContent = rangeText;
+    updateStaffSelectionControls();
+  };
+
+  const renderStaffTableRows = () => {
+    const filtered = getFilteredStaffMembers();
+    const pageCount = Math.ceil(filtered.length / staffPageSize);
+    staffCurrentPage = Math.min(Math.max(staffCurrentPage, 1), Math.max(pageCount, 1));
+    const pageRows = filtered.slice((staffCurrentPage - 1) * staffPageSize, staffCurrentPage * staffPageSize);
 
     if (filtered.length === 0) {
-      return `<tr><td colspan="9" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
+      return `      <tr><td colspan="9" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
     }
 
-    return filtered.map((staff) => {
-      const isChecked = staffSelectedRows.has(staff.id);
+    return pageRows.map((staff) => {
       let statusDot = `<span class="status-dot-mint"></span>`;
       if (staff.statusKey === "on-break") statusDot = `<span class="status-dot-amber"></span>`;
       else if (staff.statusKey === "off") statusDot = `<span class="status-dot-gray"></span>`;
 
       return `
-        <tr data-staff-row="${staff.id}" class="${isChecked ? "is-selected" : ""}">
-          <td>
-            <input type="checkbox" class="staff-checkbox" data-staff-checkbox="${staff.id}" ${isChecked ? "checked" : ""} aria-label="Select ${escapeHtml(staff.name)}">
+        <tr data-staff-row="${staff.id}" class="${staffSelectedRows.has(staff.id) ? "is-selected" : ""}">
+          <td style="width: 32px;">
+            <input type="checkbox" class="staff-checkbox" data-staff-checkbox="${staff.id}" aria-label="Select ${escapeHtml(staff.name)}"${staffSelectedRows.has(staff.id) ? " checked" : ""}>
           </td>
           <td>
             <div class="staff-member-cell">
-              <div class="staff-avatar ${staff.avatarClass}${isChecked ? " is-selected" : ""}">${staff.initials}</div>
+              <div class="staff-avatar ${staff.avatarClass}">${staff.initials}</div>
               <div class="staff-name-wrap">
                 <span class="staff-name-text">${escapeHtml(staff.name)}</span>
                 <span class="staff-id-text">${escapeHtml(staff.staffId)}</span>
@@ -1941,6 +2159,22 @@
         </tr>
       `;
     }).join("");
+  };
+
+  const updateStaffSelectionControls = () => {
+    staffSelectedRows.forEach((id) => {
+      if (!adminStaffMembersData.some((member) => member.id === id)) staffSelectedRows.delete(id);
+    });
+    const selectedCount = staffSelectedRows.size;
+    const deleteButton = screen.querySelector("[data-staff-bulk-delete]");
+    if (deleteButton) {
+      deleteButton.disabled = selectedCount === 0;
+      deleteButton.textContent = `Delete selected (${selectedCount})`;
+    }
+    const checkAll = screen.querySelector("[data-staff-check-all]");
+    if (checkAll) {
+      checkAll.checked = adminStaffMembersData.length > 0 && adminStaffMembersData.every((member) => staffSelectedRows.has(member.id));
+    }
   };
 
   const normalizeStaffBusNo = (busNo) => {
@@ -2014,15 +2248,13 @@
         <div class="staff-directory-title-tabs">
           <h2 class="staff-directory-title">Staff Directory</h2>
           <div class="staff-role-tabs" role="tablist">
-            <button class="staff-role-pill${activeStaffRoleFilter === "all" ? " is-active" : ""}" type="button" data-staff-role-filter="all">All Staff (148)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "drivers" ? " is-active" : ""}" type="button" data-staff-role-filter="drivers">Drivers (96)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "dispatchers" ? " is-active" : ""}" type="button" data-staff-role-filter="dispatchers">Dispatchers (24)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "maintenance" ? " is-active" : ""}" type="button" data-staff-role-filter="maintenance">Maintenance (28)</button>
+            ${renderStaffRoleTabs()}
           </div>
         </div>
 
         <div class="staff-directory-tools-right">
-          <span class="staff-count-summary">Showing <strong>8</strong> of 148 operational members</span>
+          <span class="staff-count-summary" data-staff-count-summary>Showing <strong>${Math.min(staffPageSize, getFilteredStaffMembers().length)}</strong> of <strong>${getFilteredStaffMembers().length}</strong> matching staff</span>
+          <button class="staff-bulk-delete-btn" type="button" data-staff-bulk-delete disabled>Delete selected (0)</button>
           <button class="staff-depot-filter-btn" type="button" data-staff-action="toggle-depot-filter">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
@@ -2058,27 +2290,8 @@
 
       <!-- Pagination Row -->
       <div class="staff-pagination-row">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span>Show</span>
-          <select class="staff-per-page-select" data-staff-per-page aria-label="Records per page">
-            <option value="8" selected>8 records</option>
-            <option value="16">16 records</option>
-            <option value="32">32 records</option>
-          </select>
-          <span>per page</span>
-        </div>
-
-        <div class="staff-pagination-nav">
-          <button class="staff-page-btn" type="button" data-staff-page="prev" aria-label="Previous page">&lt;</button>
-          <button class="staff-page-btn is-active" type="button" data-staff-page="1">1</button>
-          <button class="staff-page-btn" type="button" data-staff-page="2">2</button>
-          <button class="staff-page-btn" type="button" data-staff-page="3">3</button>
-          <span class="staff-page-ellipsis">...</span>
-          <button class="staff-page-btn" type="button" data-staff-page="19">19</button>
-          <button class="staff-page-btn" type="button" data-staff-page="next" aria-label="Next page">&gt;</button>
-        </div>
-
-        <span class="staff-pagination-count">Showing 1-8 of 148 staff</span>
+        <div class="staff-pagination-nav" id="staff-pagination-nav">${renderStaffPagination(getFilteredStaffMembers().length)}</div>
+        <span class="staff-pagination-count" id="staff-pagination-count">Showing 1-${Math.min(staffPageSize, getFilteredStaffMembers().length)} of ${getFilteredStaffMembers().length} staff</span>
       </div>
     </section>
   `;
@@ -2697,141 +2910,89 @@
     }
   ];
 
-  const adminCorridorDistributionData = [
-    {
-      name: activeRoute.label,
-      revenue: "₱1,248,650.00",
-      pct: 100,
-      passengers: "142,880 passengers",
-      otp: "92.8% on time",
-      barClass: "mint"
-    }
-  ];
-
-  const adminScheduledReportsData = [
-    {
-      id: "SCHED-01",
-      title: "Daily Midnight Cash & Fare Reconciliation",
-      frequency: "Daily @ 00:00 PHT",
-      recipient: "saraza.treasury@usad.ph",
-      format: "PDF + CSV",
-      lastRun: "Today, 00:00 PHT"
-    },
-    {
-      id: "SCHED-02",
-      title: "Weekly Bus Schedule Review",
-      frequency: "Mondays @ 06:00 PHT",
-      recipient: "dispatch.ops@usad.ph",
-      format: "PDF",
-      lastRun: "Oct 20, 06:00 PHT"
-    },
-    {
-      id: "SCHED-03",
-      title: "Monthly DOTr Fuel & Mileage Statement",
-      frequency: "1st of Month @ 08:00 PHT",
-      recipient: "compliance@dotr.gov.ph",
-      format: "Excel",
-      lastRun: "Oct 01, 08:00 PHT"
-    }
-  ];
+  const getTripLogDate = (daysAgo) => {
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return getDateInputValue(date);
+  };
+  const tripLogData = [
+    { busNo: "Bus 01", routeId: "malolos-trinoma", departure: "05:40 AM", arrival: "07:18 AM", driver: "Jocky King Garcia", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 31, studentPassengers: 12, daysAgo: 0 },
+    { busNo: "Bus 02", routeId: "trinoma-malolos", departure: "06:05 AM", arrival: "07:42 AM", driver: "Juan Dela Cruz", dispatcher: "Ross Anthony Jobs", regularPassengers: 27, studentPassengers: 16, daysAgo: 0 },
+    { busNo: "Bus 03", routeId: "malolos-trinoma", departure: "06:30 AM", arrival: "08:11 AM", driver: "Cyrhyl Naval", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 35, studentPassengers: 9, daysAgo: 0 },
+    { busNo: "Bus 04", routeId: "trinoma-malolos", departure: "07:00 AM", arrival: "08:39 AM", driver: "Royce Zaldivar", dispatcher: "Ross Anthony Jobs", regularPassengers: 24, studentPassengers: 21, daysAgo: 0 },
+    { busNo: "Bus 05", routeId: "malolos-trinoma", departure: "07:25 AM", arrival: "09:06 AM", driver: "Jericho Rosales", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 32, studentPassengers: 14, daysAgo: 0 },
+    { busNo: "Bus 06", routeId: "trinoma-malolos", departure: "08:10 AM", arrival: "09:49 AM", driver: "Joshua Garcia", dispatcher: "Ross Anthony Jobs", regularPassengers: 29, studentPassengers: 18, daysAgo: 0 },
+    { busNo: "Bus 07", routeId: "malolos-trinoma", departure: "09:00 AM", arrival: "10:43 AM", driver: "Mark Anthony Reyes", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 38, studentPassengers: 11, daysAgo: 0 },
+    { busNo: "Bus 08", routeId: "trinoma-malolos", departure: "09:35 AM", arrival: "11:13 AM", driver: "Paolo Mendoza", dispatcher: "Ross Anthony Jobs", regularPassengers: 26, studentPassengers: 20, daysAgo: 0 },
+    { busNo: "Bus 01", routeId: "trinoma-malolos", departure: "05:45 AM", arrival: "07:25 AM", driver: "Jocky King Garcia", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 30, studentPassengers: 13, daysAgo: 1 },
+    { busNo: "Bus 03", routeId: "trinoma-malolos", departure: "06:20 AM", arrival: "08:02 AM", driver: "Cyrhyl Naval", dispatcher: "Ross Anthony Jobs", regularPassengers: 33, studentPassengers: 17, daysAgo: 2 },
+    { busNo: "Bus 05", routeId: "trinoma-malolos", departure: "07:10 AM", arrival: "08:52 AM", driver: "Jericho Rosales", dispatcher: "Klintroy Suerte Felipe", regularPassengers: 28, studentPassengers: 15, daysAgo: 3 },
+    { busNo: "Bus 07", routeId: "trinoma-malolos", departure: "08:00 AM", arrival: "09:41 AM", driver: "Mark Anthony Reyes", dispatcher: "Ross Anthony Jobs", regularPassengers: 36, studentPassengers: 10, daysAgo: 5 }
+  ].map((trip, index) => ({
+    ...trip,
+    id: `TRIP-${String(index + 1).padStart(3, "0")}`,
+    date: getTripLogDate(trip.daysAgo)
+  }));
 
   const renderReportsTableRows = () => {
-    let list = adminReportsData;
-    if (activeReportsCategoryFilter !== "all") {
-      list = list.filter((r) => r.category === activeReportsCategoryFilter);
+    let list = tripLogData;
+    if (!showAllTripLogs) {
+      list = list.filter((trip) => trip.date === activeTripLogDate);
     }
-    list = list.filter((report) => report.routeId === activeReportsCorridor);
     if (reportsSearchQuery.trim()) {
       const q = reportsSearchQuery.toLowerCase().trim();
-      list = list.filter((r) => r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q) || r.categoryLabel.toLowerCase().includes(q) || r.author.toLowerCase().includes(q));
+      list = list.filter((trip) => [trip.busNo, trip.driver, trip.dispatcher, routes.find((route) => route.id === trip.routeId)?.label ?? ""]
+        .some((value) => value.toLowerCase().includes(q)));
     }
 
     if (list.length === 0) {
-      return `<tr><td colspan="7" style="text-align: center; padding: 28px; color: #64748b;">No operational reports found matching the selected filters.</td></tr>`;
+      return `<tr><td colspan="7" style="text-align: center; padding: 28px; color: #94a3b8;">${showAllTripLogs ? "No trip logs match your search." : `No bus trips found for ${escapeHtml(activeTripLogDate)}. Choose another date or show all trips.`}</td></tr>`;
     }
 
-    return list.map((rep) => `
+    return list.map((trip) => {
+      const route = routes.find((item) => item.id === trip.routeId);
+      if (!route) throw new Error(`Trip log ${trip.id} references an unknown route "${trip.routeId}".`);
+      const passengerCount = trip.regularPassengers + trip.studentPassengers;
+      const revenue = trip.regularPassengers * 120 + trip.studentPassengers * 100;
+      const displayDate = new Date(`${trip.date}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      return `
       <tr class="reports-table-row">
         <td>
-          <div class="reports-id-cell">
-            <span class="reports-id-code">${rep.id}</span>
-            <span class="reports-format-tag">${rep.fileFormat}</span>
-          </div>
+          <span class="reports-period-text">${displayDate}</span>
         </td>
         <td>
           <div class="reports-title-cell">
-            <strong class="reports-item-title">${escapeHtml(rep.title)}</strong>
-            <span class="reports-item-corridor">${rep.corridorLabel}</span>
+            <strong class="reports-item-title">${escapeHtml(trip.busNo)}</strong>
+            <span class="reports-item-corridor">${escapeHtml(route.label)}</span>
           </div>
-        </td>
-        <td>
-          <span class="reports-cat-tag ${rep.category}">${rep.categoryLabel}</span>
-        </td>
-        <td>
-          <span class="reports-period-text">${rep.dateRange}</span>
         </td>
         <td>
           <div class="reports-metric-cell">
-            <span class="reports-metric-primary">${rep.summaryMetric}</span>
-            <span class="reports-metric-secondary">${rep.secondaryMetric}</span>
+            <span class="reports-metric-primary">${trip.departure}</span>
+            <span class="reports-metric-secondary">Arrived ${trip.arrival}</span>
           </div>
         </td>
         <td>
-          <span class="reports-status-pill ${rep.statusClass}"><span class="status-dot"></span>${rep.status}</span>
+          <span>${escapeHtml(trip.driver)}</span>
         </td>
         <td>
-          <div class="reports-row-actions">
-            <button class="reports-btn-view" type="button" data-report-action="view" data-report-id="${rep.id}" title="Inspect full audit ledger">View</button>
-            <button class="reports-btn-download" type="button" data-report-action="download" data-report-id="${rep.id}" title="Download report file">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            </button>
+          <div class="reports-metric-cell">
+            <span class="reports-metric-primary">${passengerCount} passengers</span>
+            <span class="reports-metric-secondary">${trip.regularPassengers} regular · ${trip.studentPassengers} student</span>
+          </div>
+        </td>
+        <td>
+          <span>${escapeHtml(trip.dispatcher)}</span>
+        </td>
+        <td>
+          <div class="reports-metric-cell">
+            <strong class="reports-metric-primary">${formatPhp(revenue)}</strong>
+            <span class="reports-metric-secondary">Regular ₱120 · Student ₱100</span>
           </div>
         </td>
       </tr>
-    `).join("");
-  };
-
-  const renderReportsCorridorDistribution = () => {
-    return adminCorridorDistributionData.map((cor) => `
-      <div class="corridor-dist-row">
-        <div class="corridor-dist-header">
-          <div class="corridor-dist-title-wrap">
-            <span class="corridor-dist-dot ${cor.barClass}"></span>
-            <span class="corridor-dist-name">${cor.name}</span>
-          </div>
-          <div class="corridor-dist-figures">
-            <strong class="corridor-dist-rev">${cor.revenue}</strong>
-            <span class="corridor-dist-pct">(${cor.pct}%)</span>
-          </div>
-        </div>
-        <div class="corridor-dist-bar-track">
-          <div class="corridor-dist-bar-fill ${cor.barClass}" style="width: ${cor.pct}%;"></div>
-        </div>
-        <div class="corridor-dist-footer">
-          <span>${cor.passengers}</span>
-          <span>${cor.otp}</span>
-        </div>
-      </div>
-    `).join("");
-  };
-
-  const renderReportsScheduledAutomations = () => {
-    return adminScheduledReportsData.map((sched) => `
-      <div class="sched-report-item">
-        <div class="sched-report-info">
-          <strong class="sched-report-title">${sched.title}</strong>
-          <div class="sched-report-meta">
-            <span>Frequency: <strong>${sched.frequency}</strong></span>
-            <span>·</span>
-            <span>Target: <strong>${sched.recipient}</strong></span>
-          </div>
-        </div>
-        <div class="sched-report-actions">
-          <span class="reports-format-tag">${sched.format}</span>
-          <button class="sched-run-btn" type="button" data-report-action="run-scheduled" data-sched-id="${sched.id}" title="Trigger instant generation &amp; dispatch">Run Now</button>
-        </div>
-      </div>
-    `).join("");
+    `;
+    }).join("");
   };
 
   const reportsTrendData = {
@@ -2998,33 +3159,9 @@
   <h1 class="admin-header-title">Reports &amp; Decision Support</h1>
       </div>
 
-      <div class="admin-header-actions">
-        <!-- Date Range Filter -->
-        <select class="admin-select-corridor" data-report-date-range aria-label="Select Report Period">
-          <option value="month"${activeReportsDateRange === "month" ? " selected" : ""}>Month to Date (Oct 2026)</option>
-          <option value="today"${activeReportsDateRange === "today" ? " selected" : ""}>Today (Oct 21, 2026)</option>
-          <option value="week"${activeReportsDateRange === "week" ? " selected" : ""}>This Week (Oct 15 - 21)</option>
-          <option value="last-month"${activeReportsDateRange === "last-month" ? " selected" : ""}>Last Month (September 2026)</option>
-          <option value="q3"${activeReportsDateRange === "q3" ? " selected" : ""}>Q3 2026 Finance</option>
-        </select>
-
-        <!-- Corridor Filter -->
-        <select class="admin-select-corridor" data-report-corridor aria-label="Select Route">
-          ${renderRouteOptions(activeReportsCorridor)}
-        </select>
-
-        <!-- Generate Custom Report Button -->
-        <button class="staff-btn-add-member" type="button" data-report-action="generate">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px;">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          <span>Generate Report</span>
-        </button>
-      </div>
     </header>
 
-    <p class="admin-kpi-context">Illustrative sample data · Revenue, passenger and fuel summaries are not connected to live operations.</p>
+    <p class="admin-kpi-context">Illustrative trip logs · Times, passenger counts and revenue are sample data. Fare totals use ₱120 per regular passenger and ₱100 per student passenger.</p>
     <section class="reports-kpi-grid" aria-label="Executive Operational Totals">
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
@@ -3080,68 +3217,33 @@
       <div id="reports-decision-charts">${renderReportsDecisionCharts()}</div>
     </section>
 
-    <!-- Lower 2-Column Split: Corridor Performance & Automated Runs -->
-    <div class="reports-bottom-split">
-      <!-- Left: Corridor Distribution Breakdown -->
-      <section class="reports-subcard">
-        <div class="reports-subcard-header">
-          <div class="reports-subcard-title-group">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #2fd9a8;"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-            <h2 class="reports-subcard-title">Revenue &amp; Passengers by Route</h2>
-          </div>
-          <span style="font-size: 11px; color: #64748b;">Month to Date (Oct 2026)</span>
-        </div>
-
-        <div class="corridor-dist-list">
-          ${renderReportsCorridorDistribution()}
-        </div>
-      </section>
-
-      <!-- Right: Scheduled Automated Audits & Deliveries -->
-      <section class="reports-subcard">
-        <div class="reports-subcard-header">
-          <div class="reports-subcard-title-group">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; color: #2fd9a8;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <h2 class="reports-subcard-title">Scheduled Reports</h2>
-          </div>
-          <span style="font-size: 11px; color: #64748b;">3 Standing Automated Runs</span>
-        </div>
-
-        <div class="sched-reports-list">
-          ${renderReportsScheduledAutomations()}
-        </div>
-      </section>
-    </div>
-
     <!-- Main Reports Hub & Table Card -->
     <section class="reports-table-card" aria-labelledby="reports-library-title">
       <div class="reports-library-heading">
         <h2 class="reports-library-title" id="reports-library-title">Report library</h2>
-        <div class="staff-header-search-wrap reports-search-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="staff-header-search-input" placeholder="Search reports or report IDs..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search reports">
+        <div class="reports-log-controls">
+          <label class="reports-log-date-label" for="reports-trip-date">Trip date
+            <input class="admin-select-corridor reports-log-date" id="reports-trip-date" type="date" value="${activeTripLogDate}" data-trip-log-date aria-label="Filter trips by date">
+          </label>
+          <button class="reports-show-all-btn${showAllTripLogs ? " is-active" : ""}" type="button" data-trip-log-show-all aria-pressed="${showAllTripLogs}">${showAllTripLogs ? "Show selected date" : "Show all"}</button>
+          <div class="staff-header-search-wrap reports-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" class="staff-header-search-input" placeholder="Search bus, driver, dispatcher..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search trip logs">
+          </div>
         </div>
-      </div>
-
-      <div class="reports-filter-tabs" role="tablist" aria-label="Filter reports by domain">
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "all" ? " is-active" : ""}" type="button" data-report-category="all">All Reports (6)</button>
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "financial" ? " is-active" : ""}" type="button" data-report-category="financial">Revenue &amp; Finance (2)</button>
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "otp" ? " is-active" : ""}" type="button" data-report-category="otp">Bus Schedules (2)</button>
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "crew" ? " is-active" : ""}" type="button" data-report-category="crew">Staff (1)</button>
-        <button class="reports-tab-btn${activeReportsCategoryFilter === "fuel" ? " is-active" : ""}" type="button" data-report-category="fuel">Fuel &amp; Maintenance (1)</button>
       </div>
 
       <div class="reports-table-wrap">
         <table class="reports-table">
           <thead>
             <tr>
-              <th>REPORT ID &amp; FORMAT</th>
-              <th>REPORT TITLE &amp; CORRIDOR</th>
-              <th>CATEGORY</th>
-              <th>REPORT PERIOD</th>
-              <th>PRIMARY METRICS</th>
-              <th>STATUS</th>
-              <th>ACTIONS</th>
+              <th>TRIP DATE</th>
+              <th>BUS &amp; ROUTE</th>
+              <th>DEPARTED / ARRIVED</th>
+              <th>DRIVER</th>
+              <th>PASSENGERS</th>
+              <th>DISPATCHER</th>
+              <th>TRIP REVENUE</th>
             </tr>
           </thead>
           <tbody id="reports-table-tbody">
@@ -3301,17 +3403,13 @@
         <form class="admin-login-form" data-admin-assign-form style="margin-top: 14px; text-align: left;">
           <div class="admin-form-field">
             <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Select Vehicle</label>
-            <select class="admin-input" id="assign-bus" style="height: 40px;">
-              <option value="Bus 01">Bus 01 (MLS-042) - Ready</option>
-              <option value="Bus 02">Bus 02 (MLS-018) - On Break</option>
-              <option value="Bus 03">Bus 03 (MLS-105) - Reserve</option>
-              <option value="Bus 04">Bus 04 (TRN-009) - Ready</option>
+            <select class="admin-input" id="assign-bus" required style="height: 40px;">
+              ${renderAssignableBusOptions()}
             </select>
           </div>
           <div class="admin-form-field">
             <label for="assign-driver" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assign Driver</label>
             <select class="admin-input" id="assign-driver" required style="height: 40px;">
-              <option value="" selected>Select a driver</option>
               ${renderStaffDriverOptions()}
             </select>
           </div>
@@ -3344,9 +3442,9 @@
             <strong>${bus.filterCategory === "on-duty" ? "Driver assigned" : "Assign driver"}</strong>
             <span>${bus.filterCategory === "on-duty" ? "Driver changes are unavailable while this vehicle is on duty." : "Update the driver assigned to this vehicle."}</span>
           </button>
-          <button type="button" data-fleet-action="dispatch" data-fleet-id="${bus.id}"${bus.filterCategory === "on-duty" ? " disabled" : ""}>
-            <strong>${bus.filterCategory === "on-duty" ? "Already on duty" : "Dispatch vehicle"}</strong>
-            <span>${bus.filterCategory === "on-duty" ? "This vehicle is currently in service." : "Place this vehicle into active service."}</span>
+          <button type="button" data-fleet-action="dispatch" data-fleet-id="${bus.id}"${bus.filterCategory === "on-duty" || isBusOffDuty(bus) ? " disabled" : ""}>
+            <strong>${bus.filterCategory === "on-duty" ? "Already on duty" : isBusOffDuty(bus) ? "Off-duty vehicle" : "Dispatch vehicle"}</strong>
+            <span>${bus.filterCategory === "on-duty" ? "This vehicle is currently in service." : isBusOffDuty(bus) ? "Change the vehicle status before dispatching it." : "Place this vehicle into active service."}</span>
           </button>
           <p class="fleet-action-prototype-note">Actions update sample data in this prototype only.</p>
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
@@ -3363,8 +3461,10 @@
       customHtml = `
         <form class="admin-login-form" data-fleet-driver-form="${bus.id}" style="margin-top: 14px; text-align: left;">
           <div class="admin-form-field">
-            <label for="fleet-driver-name" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Driver name</label>
-            <input class="admin-input" id="fleet-driver-name" name="driver" value="${escapeHtml(bus.driver)}" required style="height: 40px;">
+            <label for="fleet-driver-name" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Driver</label>
+            <select class="admin-input" id="fleet-driver-name" name="driverId" required style="height: 40px;">
+              ${renderStaffDriverOptions(adminStaffMembersData.find((member) => member.name === bus.driver && !isStaffOffDuty(member))?.id ?? "")}
+            </select>
           </div>
           <div style="display: flex; gap: 10px; margin-top: 8px;">
             <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
@@ -3378,17 +3478,20 @@
       const bus = adminFleetData.find((item) => item.id === busId);
       if (!bus) throw new Error(`Vehicle dispatch could not be opened: vehicle "${busId}" was not found.`);
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h17m-6-6 6 6-6 6"/><path d="M4 5v14"/></svg>`;
-      title = `Dispatch ${bus.busNo}?`;
-      desc = `Place <strong>${bus.busNo}</strong>, currently assigned to <strong>${bus.driver}</strong>, into active service on <strong>${bus.route}</strong>.`;
+      const offDuty = isBusOffDuty(bus);
+      title = offDuty ? `${bus.busNo} is off duty` : `Dispatch ${bus.busNo}?`;
+      desc = offDuty
+        ? `An off-duty vehicle cannot be dispatched. Change <strong>${bus.busNo}</strong>'s status before placing it into service.`
+        : `Place <strong>${bus.busNo}</strong>, currently assigned to <strong>${bus.driver}</strong>, into active service on <strong>${bus.route}</strong>.`;
       customHtml = `
         <p class="fleet-action-prototype-note">This changes the sample fleet status only; it does not send a command to a real vehicle.</p>
         <div class="admin-modal-actions">
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
-          <button class="admin-modal-button-primary" type="button" data-fleet-dispatch-confirm="${bus.id}">Confirm dispatch</button>
+          <button class="admin-modal-button-primary" type="button" data-fleet-dispatch-confirm="${bus.id}"${offDuty ? " disabled" : ""}>${offDuty ? "Dispatch unavailable" : "Confirm dispatch"}</button>
         </div>
       `;
       isInfoOnly = true;
-    } else if (type.startsWith("telemetry-")) {
+    } else if (type.startsWith("telemetry-") && !type.startsWith("telemetry-delete-")) {
       const busId = type.replace("telemetry-", "");
       const bus = adminFleetData.find((b) => b.id === busId) ?? adminFleetData[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
@@ -3427,9 +3530,10 @@
     } else if (type === "export-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
   title = "Export Demand and Surge Report (PDF / CSV)";
-      const peakWeek = predictiveWeeklyForecast.reduce((peak, week) => week.val > peak.val ? week : peak);
-      const peakDemand = Math.round(peakWeek.val * (predictiveTransitLoadScale / 100));
-  desc = `Preparing a sample demand report for <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Peak week: <strong>${peakWeek.week}</strong><br>Projected demand: <strong>${peakDemand.toLocaleString()} commuters/week</strong><br>Expected peak: <strong>1,190 passengers per hour</strong><br>Estimated rain impact: <strong>35% longer stops</strong><br>Forecast Model Convergence: <strong>96.4%</strong>`;
+      const peakPeriod = predictiveDemandForecast.reduce((peak, item) => item.val > peak.val ? item : peak);
+      const peakDemand = Math.round(peakPeriod.val * (predictiveTransitLoadScale / 100));
+      const selectedPeriod = getPredictivePeriod();
+  desc = `Preparing a sample demand report for <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Peak ${selectedPeriod.unit}: <strong>${peakPeriod.periodLabel}</strong><br>Projected demand: <strong>${peakDemand.toLocaleString()} passengers/${selectedPeriod.unit}</strong><br>Forecast model convergence: <strong>96.4%</strong>`;
   primaryBtn = "Download Report";
       isInfoOnly = true;
     } else if (type === "approve-redistribution") {
@@ -3449,7 +3553,7 @@
       const bus = fleetDispatchTelemetryUnits.find((u) => u.id === busId) || fleetDispatchTelemetryUnits[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
       title = `Assignment Saved — Bus ${bus.busNo}`;
-      desc = `Sample assignment for <strong>Bus ${bus.busNo} (${bus.tripName})</strong>.<br><br>Driver: <strong>${bus.driverName}</strong><br>Conductor: <strong>${bus.conductorName}</strong><br>Route: <strong>${bus.routeCorridor}</strong><br><br>This prototype does not send instructions to a real vehicle.`;
+      desc = `Sample assignment for <strong>Bus ${bus.busNo} (${bus.tripName})</strong>.<br><br>Driver: <strong>${bus.driverName}</strong><br>Dispatcher: <strong>${bus.dispatcherName}</strong><br>Route: <strong>${bus.routeCorridor}</strong><br><br>This prototype does not send instructions to a real vehicle.`;
       primaryBtn = "Close";
       isInfoOnly = true;
     } else if (type.startsWith("assign-driver-unit-")) {
@@ -3465,8 +3569,8 @@
             <input class="admin-input" id="reassign-driver-input" value="${escapeHtml(bus.driverName)}" style="height: 38px;">
           </div>
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Conductor</label>
-            <input class="admin-input" id="reassign-conductor-input" value="${escapeHtml(bus.conductorName)}" style="height: 38px;">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Dispatcher</label>
+            <input class="admin-input" id="reassign-dispatcher-input" value="${escapeHtml(bus.dispatcherName)}" style="height: 38px;">
           </div>
           <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
@@ -3576,6 +3680,19 @@
         </form>
       `;
       isInfoOnly = true;
+    } else if (type === "staff-delete-selected") {
+      const selectedStaff = adminStaffMembersData.filter((member) => staffSelectedRows.has(member.id));
+      if (selectedStaff.length === 0) throw new Error("Staff removal could not be opened: no staff members are selected.");
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5m4-5v5"/></svg>`;
+      title = `Delete ${selectedStaff.length} selected staff member${selectedStaff.length === 1 ? "" : "s"}?`;
+      desc = "Selected staff and their matching bus assignments will be removed. This action cannot be undone.";
+      customHtml = `
+        <div class="admin-modal-actions" style="margin-top: 16px;">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+          <button class="admin-modal-button-primary" type="button" data-staff-delete-selected>Delete selected</button>
+        </div>
+      `;
+      isInfoOnly = true;
     } else if (type.startsWith("staff-delete-")) {
       const staffId = type.replace("staff-delete-", "");
       const staff = adminStaffMembersData.find((member) => member.id === staffId);
@@ -3587,6 +3704,20 @@
         <div class="admin-modal-actions" style="margin-top: 16px;">
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
           <button class="admin-modal-button-primary" type="button" data-staff-delete-confirm="${staff.id}">Remove Staff</button>
+        </div>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("telemetry-delete-")) {
+      const busId = type.replace("telemetry-delete-", "");
+      const unit = fleetDispatchTelemetryUnits.find((item) => item.id === busId);
+      if (!unit) throw new Error(`Telemetry removal could not be opened: bus "${busId}" was not found.`);
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5m4-5v5"/></svg>`;
+      title = `Delete Bus ${escapeHtml(unit.busNo)} telemetry?`;
+      desc = "This removes the sample telemetry record from the Fleet table. The fleet vehicle itself will remain in Fleet Management.";
+      customHtml = `
+        <div class="admin-modal-actions" style="margin-top: 16px;">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+          <button class="admin-modal-button-primary" type="button" data-telemetry-delete-confirm="${escapeHtml(unit.id)}">Delete telemetry</button>
         </div>
       `;
       isInfoOnly = true;
@@ -3809,14 +3940,6 @@
       title = `Downloading ${report.id}.${report.format.toLowerCase()}`;
       desc = `Exporting <strong>${report.title}</strong> (${report.fileSize}). Data signed by Saraza TRD Central Control.`;
       primaryBtn = "Done";
-      isInfoOnly = true;
-    } else if (type.startsWith("run-scheduled-")) {
-      const schedId = type.replace("run-scheduled-", "");
-      const sched = adminScheduledReportsData.find((s) => s.id === schedId) || adminScheduledReportsData[0];
-      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-      title = "Audit Job Dispatched";
-      desc = `Instant extraction queued for <strong>${sched.title}</strong>.<br><br>The generated ${sched.format} audit has been packaged and transmitted to <strong>${sched.recipient}</strong>.`;
-      primaryBtn = "Dismiss";
       isInfoOnly = true;
     }
 
@@ -4137,6 +4260,7 @@
             <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
           </div>
+          <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
           <button class="sheet-primary" type="submit">Find Rides <span>→</span></button>
         </form>
       </div>
@@ -4273,6 +4397,7 @@
               <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             </div>
+            <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
             <button class="sheet-primary" type="button" data-action="open-confirmation">Find Rides <span>→</span></button>
           </div>
         </aside>
@@ -4335,6 +4460,7 @@
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
               <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
             </div>
+            <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
           </div>
           <div class="seat-detail-booking-footer"><button class="sheet-primary" type="submit">Find Rides <span>→</span></button></div>
         </form>
@@ -4519,6 +4645,12 @@
                 </div>
               </details>
               <p class="account-message profile-message" data-message role="status" aria-live="polite"></p>
+              <section class="profile-menu-card" aria-label="Account actions">
+                <button class="profile-menu-row account-signout" type="button" data-mobile-action="logout">
+                  <span>Log out</span>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-9h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>
+                </button>
+              </section>
               <button class="profile-support-banner" type="button" data-info="Customer service is not connected in this prototype."><span>Can’t find the topic you are looking for?</span><small>24/7 Live Customer Service</small><i aria-hidden="true">?</i></button>
             </div>`
             : `<div class="faq-page">
@@ -5146,10 +5278,10 @@
       busMarker.click();
       return;
     }
-    const forecastWeek = event.target.closest("[data-chart-week]");
-    if (forecastWeek && (event.key === "Enter" || event.key === " ")) {
+    const forecastPeriod = event.target.closest("[data-chart-period]");
+    if (forecastPeriod && (event.key === "Enter" || event.key === " ")) {
       event.preventDefault();
-      forecastWeek.click();
+      forecastPeriod.click();
       return;
     }
     if (event.key === "Escape" && activeState === "live-map") {
@@ -5202,16 +5334,17 @@
 
     if (event.target.matches("[data-admin-assign-form]")) {
       event.preventDefault();
-      const busVal = screen.querySelector("#assign-bus")?.value;
+      const busId = screen.querySelector("#assign-bus")?.value;
       const driverId = screen.querySelector("#assign-driver")?.value;
-      const assignedDriver = adminStaffMembersData.find((member) => member.id === driverId && member.roleKey === "driver");
-      if (!assignedDriver) throw new Error("USAD could not assign a bus: the selected driver is not in Staff Management.");
-      const routeId = screen.querySelector("#assign-route")?.value || activeRoute.id;
-      if (!busVal) throw new Error("USAD could not assign a bus: no vehicle was selected.");
+      const assignedDriver = adminStaffMembersData.find((member) => member.id === driverId && member.roleKey === "driver" && !isStaffOffDuty(member));
+      if (!assignedDriver) throw new Error("USAD could not assign a bus: select a driver who is not off duty.");
+      const routeId = screen.querySelector("#assign-route")?.value;
+      if (!busId) throw new Error("USAD could not assign a bus: select an available vehicle.");
       const assignedRoute = routes.find((route) => route.id === routeId);
-      if (!assignedRoute) throw new Error(`USAD could not assign a bus: route "${routeId}" is not active.`);
-      const targetBus = adminFleetData.find((b) => b.busNo.toLowerCase() === busVal.toLowerCase() || b.id.toLowerCase() === busVal.toLowerCase().replace(" ", "-"));
-      if (!targetBus) throw new Error(`USAD could not assign a bus: vehicle "${busVal}" was not found.`);
+      if (!assignedRoute) throw new Error(`USAD could not assign a bus: route "${routeId}" is not available.`);
+      const targetBus = adminFleetData.find((bus) => bus.id === busId);
+      if (!targetBus) throw new Error(`USAD could not assign a bus: vehicle "${busId}" was not found.`);
+      if (!isBusAvailableForAssignment(targetBus)) throw new Error(`USAD could not assign ${targetBus.busNo}: it is on duty or off duty.`);
       targetBus.driver = assignedDriver.name;
       targetBus.routeId = assignedRoute.id;
       targetBus.route = assignedRoute.label;
@@ -5224,6 +5357,9 @@
         telemetryUnit.driverName = assignedDriver.name;
         telemetryUnit.routeId = assignedRoute.id;
         telemetryUnit.routeCorridor = assignedRoute.label;
+        telemetryUnit.nextStop = assignedRoute.destination;
+        telemetryUnit.scheduledStop = assignedRoute.destination;
+        telemetryUnit.gpsLocation = assignedRoute.via;
         telemetryUnit.category = "deployed";
         telemetryUnit.statusText = "On Time";
         telemetryUnit.statusType = "on-time";
@@ -5231,6 +5367,7 @@
       }
       activeCorridorFilter = assignedRoute.id;
       activeFleetFilter = "all";
+      screen.querySelector(".admin-modal-backdrop")?.remove();
       renderScreen("admin-dashboard");
       return;
     }
@@ -5239,15 +5376,13 @@
       event.preventDefault();
       const busId = event.target.dataset.fleetDriverForm;
       const bus = adminFleetData.find((item) => item.id === busId);
-      const driverInput = event.target.querySelector('[name="driver"]');
-      const driverName = driverInput?.value.trim();
-      if (!bus || !driverInput || !driverName) {
-        driverInput?.focus();
-        return;
-      }
-      bus.driver = driverName;
+      const driverSelect = event.target.querySelector('[name="driverId"]');
+      const driver = adminStaffMembersData.find((member) => member.id === driverSelect?.value && member.roleKey === "driver" && !isStaffOffDuty(member));
+      if (!bus) throw new Error(`Driver assignment could not be saved: vehicle "${busId}" was not found.`);
+      if (!driverSelect || !driver) throw new Error("Driver assignment could not be saved: select a driver who is not off duty.");
+      bus.driver = driver.name;
       const telemetryUnit = fleetDispatchTelemetryUnits.find((item) => item.id === busId);
-      if (telemetryUnit) telemetryUnit.driverName = driverName;
+      if (telemetryUnit) telemetryUnit.driverName = driver.name;
       screen.querySelector(".admin-modal-backdrop")?.remove();
       const tbody = screen.querySelector("#admin-fleet-tbody");
       if (tbody) tbody.innerHTML = renderAdminFleetRows();
@@ -5359,12 +5494,27 @@
       const origin = formData.get("origin");
       const destination = formData.get("destination");
       const payment = formData.get("payment");
+      const seat = formData.get("seat");
       const passengerText = screen.querySelector("#passenger-count")?.textContent ?? "1";
       const passengers = Number.parseInt(passengerText, 10);
+      const paymentError = event.target.querySelector("[data-payment-error]");
+      if (insufficientUPouchPayment(payment, passengers)) {
+        if (paymentError) paymentError.hidden = false;
+        event.target.querySelector('input[name="payment"][value="U-Pouch"]')?.setAttribute("aria-invalid", "true");
+        return;
+      }
+      if (paymentError) paymentError.hidden = true;
       if (typeof origin !== "string" || !origin.trim() || typeof destination !== "string" || !destination.trim() || !Number.isInteger(passengers) || passengers < 1 || typeof payment !== "string") {
         throw new Error("USAD quick booking could not continue: route, passenger, or payment selection is invalid.");
       }
-      tripData = { ...tripData, origin: origin.trim(), destination: destination.trim(), passengers, payment };
+      tripData = {
+        ...tripData,
+        origin: origin.trim(),
+        destination: destination.trim(),
+        passengers,
+        payment,
+        ...(typeof seat === "string" && seat ? { seat } : {}),
+      };
       bookingConfirmed = false;
       renderScreen("find-rides");
     }
@@ -5385,7 +5535,8 @@
       if (!name || !["-", ...availableBuses.map((bus) => normalizeStaffBusNo(bus.busNo))].includes(selectedBusNo) ||
         !["Driver", "Dispatcher", "Maintenance"].includes(role) ||
         !["Trinoma Hub", "Malolos Hub", "Balintawak Staging"].includes(depot) ||
-        !["On Duty", "On Break", "Off"].includes(status)) {
+        !["On Duty", "On Break", "Off"].includes(status) ||
+        (role === "Driver" && status === "Off" && selectedBusNo !== "-")) {
         throw new Error("Staff information could not be saved: one or more fields are invalid.");
       }
 
@@ -5402,6 +5553,7 @@
       staff.statusKey = status.toLowerCase().replace(" ", "-");
       staff.statusClass = status === "On Duty" ? "on-duty" : status === "On Break" ? "on-break" : "off";
       staff.initials = name.split(/\s+/).map((word) => word[0]).join("").toUpperCase().slice(0, 2);
+      staffCurrentPage = 1;
 
       adminFleetData.forEach((bus) => {
         const busCode = normalizeStaffBusNo(bus.busNo);
@@ -5414,8 +5566,7 @@
         if (busCode === selectedBusNo) unit.driverName = name;
       });
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
       const fleetTbody = screen.querySelector("#admin-fleet-tbody");
       if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
       const dispatchTbody = screen.querySelector("#fleet-telemetry-tbody");
@@ -5459,8 +5610,8 @@
       });
 
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
       return;
     }
 
@@ -5544,14 +5695,8 @@
 
     if (event.target.matches("[data-staff-search]")) {
       staffSearchQuery = event.target.value;
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
-    }
-
-    if (event.target.matches("[data-staff-per-page]")) {
-      staffPerPage = Number(event.target.value);
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
     }
 
     if (event.target.matches("[data-faq-search]")) {
@@ -5627,6 +5772,13 @@
       selectedBusSeatId = event.target.value;
     }
 
+    if (event.target.matches('input[name="payment"]') && event.target.value !== "U-Pouch") {
+      const bookingContainer = event.target.closest("[data-quick-book], .seat-book-card");
+      const paymentError = bookingContainer?.querySelector("[data-payment-error]");
+      if (paymentError) paymentError.hidden = true;
+      bookingContainer?.querySelector('input[name="payment"][value="U-Pouch"]')?.removeAttribute("aria-invalid");
+    }
+
     if (event.target.matches("[data-discount-id-upload]")) {
       const file = event.target.files?.[0];
       const side = event.target.dataset.discountIdUpload;
@@ -5664,20 +5816,41 @@
 
     if (event.target.matches("[data-analytics-profile]")) {
       predictiveOperatingProfile = event.target.value;
+      updatePredictiveView();
+      return;
+    }
+
+    if (event.target.matches("[data-analytics-route]")) {
+      activeAnalyticsRouteId = event.target.value;
+      updatePredictiveView();
+      return;
+    }
+
+    if (event.target.matches("[data-analytics-range]")) {
+      activePredictivePeriod = event.target.value;
+      updatePredictiveView();
+      return;
+    }
+
+    if (event.target.matches("[data-inspect-period]")) {
+      predictiveSelectedBucket = event.target.value;
+      updatePredictiveView();
+      return;
     }
 
     if (event.target.matches("[data-dispatch-note]")) {
       dispatchNoteInput = event.target.value;
     }
 
-    if (event.target.matches("[data-report-date-range]")) {
-      activeReportsDateRange = event.target.value;
-      const tbody = screen.querySelector("#reports-table-tbody");
-      if (tbody) tbody.innerHTML = renderReportsTableRows();
-    }
-
-    if (event.target.matches("[data-report-corridor]")) {
-      activeReportsCorridor = event.target.value;
+    if (event.target.matches("[data-trip-log-date]")) {
+      activeTripLogDate = event.target.value;
+      showAllTripLogs = false;
+      const showAllButton = screen.querySelector("[data-trip-log-show-all]");
+      if (showAllButton) {
+        showAllButton.textContent = "Show all";
+        showAllButton.classList.remove("is-active");
+        showAllButton.setAttribute("aria-pressed", "false");
+      }
       const tbody = screen.querySelector("#reports-table-tbody");
       if (tbody) tbody.innerHTML = renderReportsTableRows();
     }
@@ -5690,12 +5863,12 @@
   });
 
   screen.addEventListener("click", (event) => {
-    const repCatBtn = event.target.closest("[data-report-category]");
-    if (repCatBtn) {
-      activeReportsCategoryFilter = repCatBtn.dataset.reportCategory;
-      screen.querySelectorAll("[data-report-category]").forEach((b) => {
-        b.classList.toggle("is-active", b === repCatBtn);
-      });
+    const showAllTripsButton = event.target.closest("[data-trip-log-show-all]");
+    if (showAllTripsButton) {
+      showAllTripLogs = !showAllTripLogs;
+      showAllTripsButton.textContent = showAllTripLogs ? "Show selected date" : "Show all";
+      showAllTripsButton.classList.toggle("is-active", showAllTripLogs);
+      showAllTripsButton.setAttribute("aria-pressed", String(showAllTripLogs));
       const tbody = screen.querySelector("#reports-table-tbody");
       if (tbody) tbody.innerHTML = renderReportsTableRows();
       return;
@@ -5705,15 +5878,12 @@
     if (repActionBtn) {
       const { reportAction } = repActionBtn.dataset;
       const repId = repActionBtn.dataset.reportId;
-      const schedId = repActionBtn.dataset.schedId;
       if (reportAction === "generate") {
         openAdminModal("generate-report");
       } else if (reportAction === "view") {
         openAdminModal(`view-report-${repId}`);
       } else if (reportAction === "download") {
         openAdminModal(`download-report-${repId}`);
-      } else if (reportAction === "run-scheduled") {
-        openAdminModal(`run-scheduled-${schedId}`);
       }
       return;
     }
@@ -5792,26 +5962,16 @@
       } else if (mobileAction === "toggle-error") {
         mobileLoginShowError = !mobileLoginShowError;
         renderScreen(mobileLoginShowError ? "login-error" : "login");
+      } else if (mobileAction === "logout") {
+        mobileLoginShowError = false;
+        renderScreen("login");
       }
       return;
     }
 
-    const scrubBtn = event.target.closest("[data-scrub-week]");
-    if (scrubBtn) {
-      predictiveSelectedWeek = scrubBtn.dataset.scrubWeek;
-      screen.querySelectorAll("[data-scrub-week]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn.dataset.scrubWeek === predictiveSelectedWeek);
-      });
-      updatePredictiveView();
-      return;
-    }
-
-    const chartCol = event.target.closest("[data-chart-week]");
+    const chartCol = event.target.closest("[data-chart-period]");
     if (chartCol) {
-      predictiveSelectedWeek = chartCol.dataset.chartWeek;
-      screen.querySelectorAll("[data-scrub-week]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn.dataset.scrubWeek === predictiveSelectedWeek);
-      });
+      predictiveSelectedBucket = chartCol.dataset.chartPeriod;
       updatePredictiveView();
       return;
     }
@@ -5859,6 +6019,11 @@
       const bus = adminFleetData.find((item) => item.id === confirmFleetDispatch.dataset.fleetDispatchConfirm);
       if (!bus) {
         throw new Error(`Vehicle dispatch failed: vehicle "${confirmFleetDispatch.dataset.fleetDispatchConfirm}" was not found.`);
+      }
+      if (isBusOffDuty(bus)) {
+        screen.querySelector(".admin-modal-backdrop")?.remove();
+        openAdminModal(`fleet-dispatch-confirm-${bus.id}`);
+        return;
       }
       bus.status = "On Duty";
       bus.statusClass = "on-duty";
@@ -5908,10 +6073,54 @@
       return;
     }
 
+    const telemetryDeleteBtn = event.target.closest("[data-telemetry-delete]");
+    if (telemetryDeleteBtn) {
+      openAdminModal(`telemetry-delete-${telemetryDeleteBtn.dataset.telemetryDelete}`);
+      return;
+    }
+
+    const telemetryDeleteConfirm = event.target.closest("[data-telemetry-delete-confirm]");
+    if (telemetryDeleteConfirm) {
+      const busId = telemetryDeleteConfirm.dataset.telemetryDeleteConfirm;
+      const telemetryIndex = fleetDispatchTelemetryUnits.findIndex((unit) => unit.id === busId);
+      if (telemetryIndex === -1) throw new Error(`Telemetry deletion failed: bus "${busId}" was not found.`);
+      fleetDispatchTelemetryUnits.splice(telemetryIndex, 1);
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+
+      if (selectedDispatchBusId === busId) {
+        selectedDispatchBusId = fleetDispatchTelemetryUnits[0]?.id ?? "";
+        selectedDispatchSeatBooking = null;
+        dispatchPanelOpen = false;
+        const panel = screen.querySelector("#dispatch-panel-container");
+        if (panel) panel.innerHTML = "";
+        const grid = screen.querySelector(".fleet-dispatch-grid");
+        grid?.classList.add("is-panel-closed");
+        grid?.classList.remove("is-assignment-expanded");
+      }
+
+      const tbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      const counts = {
+        all: fleetDispatchTelemetryUnits.length,
+        deployed: fleetDispatchTelemetryUnits.filter((unit) => unit.category === "deployed").length,
+        delayed: fleetDispatchTelemetryUnits.filter((unit) => unit.category === "delayed").length,
+        terminal: fleetDispatchTelemetryUnits.filter((unit) => unit.category === "terminal").length
+      };
+      const labels = { all: "Tracked Sample", deployed: "Deployed", delayed: "Delayed", terminal: "At Terminal" };
+      screen.querySelectorAll("[data-telemetry-tab]").forEach((button) => {
+        const tab = button.dataset.telemetryTab;
+        button.textContent = `${labels[tab]} (${counts[tab]})`;
+      });
+      const mapContainer = screen.querySelector("#radar-viewport-container");
+      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
+      return;
+    }
+
     const dispatchBookingSeat = event.target.closest("[data-dispatch-booking-seat]");
     if (dispatchBookingSeat) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for seat booking details.`);
+      assertSeatMapEditable(bus);
       const seatId = dispatchBookingSeat.dataset.dispatchBookingSeat;
       const booking = getBookingForSeat(bus, seatId);
       if (!booking) {
@@ -5938,6 +6147,9 @@
 
     const startSeatRelease = event.target.closest("[data-start-seat-release]");
     if (startSeatRelease) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to release a seat.`);
+      assertSeatMapEditable(bus);
       if (selectedDispatchSeatBooking?.seatId !== startSeatRelease.dataset.startSeatRelease) {
         throw new Error(`USAD could not confirm the selected booking for seat ${startSeatRelease.dataset.startSeatRelease}.`);
       }
@@ -5949,9 +6161,11 @@
 
     const cancelSeatRelease = event.target.closest("[data-cancel-seat-release]");
     if (cancelSeatRelease) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to cancel a seat release.`);
+      assertSeatMapEditable(bus);
       if (!selectedDispatchSeatBooking?.confirmingRelease) return;
       selectedDispatchSeatBooking.confirmingRelease = false;
-      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
       if (bookingDetails && bus) bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
       return;
@@ -5961,7 +6175,9 @@
     if (confirmSeatRelease) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       const seatId = confirmSeatRelease.dataset.confirmSeatRelease;
-      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || !selectedDispatchSeatBooking.confirmingRelease) {
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to release seat ${seatId}.`);
+      assertSeatMapEditable(bus);
+      if (selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || !selectedDispatchSeatBooking.confirmingRelease) {
         throw new Error(`USAD could not verify the customer departure confirmation for seat ${seatId}.`);
       }
 
@@ -5999,6 +6215,7 @@
     if (availableDispatchSeat) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for walk-in booking.`);
+      assertSeatMapEditable(bus);
       const seatId = availableDispatchSeat.dataset.dispatchAvailableSeat;
       if (getBookingForSeat(bus, seatId)) {
         throw new Error(`USAD cannot book seat ${seatId} on Bus ${bus.busNo} because it is already occupied.`);
@@ -6024,8 +6241,10 @@
     const bookWalkInButton = event.target.closest("[data-book-walk-in-seat]");
     if (bookWalkInButton) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for walk-in booking.`);
+      assertSeatMapEditable(bus);
       const seatId = bookWalkInButton.dataset.bookWalkInSeat;
-      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || selectedDispatchSeatBooking.type !== "available") {
+      if (selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || selectedDispatchSeatBooking.type !== "available") {
         throw new Error(`USAD could not confirm the walk-in booking for seat ${seatId}. Select an available seat and try again.`);
       }
       if (getBookingForSeat(bus, seatId)) {
@@ -6075,13 +6294,6 @@
       const zoom = mapZoomBtn.dataset.mapZoom;
       if (zoom === "in") dispatchMapZoom = Math.min(1.8, Math.round((dispatchMapZoom + 0.15) * 100) / 100);
       else if (zoom === "out") dispatchMapZoom = Math.max(0.7, Math.round((dispatchMapZoom - 0.15) * 100) / 100);
-      const mapContainer = screen.querySelector("#radar-viewport-container");
-      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
-      return;
-    }
-
-    if (event.target.closest("[data-map-layers]")) {
-      dispatchLayersActive = !dispatchLayersActive;
       const mapContainer = screen.querySelector("#radar-viewport-container");
       if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
       return;
@@ -6147,6 +6359,7 @@
         }
 
         unit.tripFinished = true;
+        selectedDispatchSeatBooking = null;
         unit.category = "completed";
         unit.statusText = "Finished";
         unit.statusType = "completed";
@@ -6177,12 +6390,12 @@
       const busId = confirmCrewBtn.dataset.adminConfirmCrew;
       const unit = fleetDispatchTelemetryUnits.find((u) => u.id === busId);
       const driverIn = screen.querySelector("#reassign-driver-input");
-      const conductorIn = screen.querySelector("#reassign-conductor-input");
+      const dispatcherIn = screen.querySelector("#reassign-dispatcher-input");
       if (unit && driverIn && driverIn.value.trim()) {
         unit.driverName = driverIn.value.trim();
       }
-      if (unit && conductorIn && conductorIn.value.trim()) {
-        unit.conductorName = conductorIn.value.trim();
+      if (unit && dispatcherIn && dispatcherIn.value.trim()) {
+        unit.dispatcherName = dispatcherIn.value.trim();
       }
       screen.querySelector(".admin-modal-backdrop")?.remove();
       const panel = screen.querySelector("#dispatch-panel-container");
@@ -6195,11 +6408,8 @@
     const staffRoleFilter = event.target.closest("[data-staff-role-filter]");
     if (staffRoleFilter) {
       activeStaffRoleFilter = staffRoleFilter.dataset.staffRoleFilter;
-      screen.querySelectorAll("[data-staff-role-filter]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn === staffRoleFilter);
-      });
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
       return;
     }
 
@@ -6222,6 +6432,40 @@
       return;
     }
 
+    if (event.target.closest("[data-staff-bulk-delete]")) {
+      if (staffSelectedRows.size === 0) return;
+      openAdminModal("staff-delete-selected");
+      return;
+    }
+
+    const staffBulkDeleteConfirm = event.target.closest("[data-staff-delete-selected]");
+    if (staffBulkDeleteConfirm) {
+      const selectedIds = new Set(staffSelectedRows);
+      const removedStaff = adminStaffMembersData.filter((member) => selectedIds.has(member.id));
+      if (removedStaff.length === 0) throw new Error("Staff removal could not be completed: no selected staff members remain.");
+      for (let index = adminStaffMembersData.length - 1; index >= 0; index -= 1) {
+        if (selectedIds.has(adminStaffMembersData[index].id)) adminStaffMembersData.splice(index, 1);
+      }
+      removedStaff.forEach((member) => {
+        staffSelectedRows.delete(member.id);
+        adminFleetData.forEach((bus) => {
+          if (bus.driver === member.name) bus.driver = "Unassigned";
+        });
+        fleetDispatchTelemetryUnits.forEach((unit) => {
+          if (unit.driverName === member.name) unit.driverName = "Unassigned";
+        });
+      });
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      updateStaffDirectory();
+      const fleetTbody = screen.querySelector("#admin-fleet-tbody");
+      if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
+      const telemetryTbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (telemetryTbody) telemetryTbody.innerHTML = renderFleetTelemetryRows();
+      const dispatchPanel = screen.querySelector("#dispatch-panel-container");
+      if (dispatchPanelOpen && dispatchPanel) dispatchPanel.innerHTML = renderDispatchControlPanel();
+      return;
+    }
+
     const staffEditButton = event.target.closest("[data-staff-edit]");
     if (staffEditButton) {
       openAdminModal(`staff-edit-${staffEditButton.dataset.staffEdit}`);
@@ -6240,7 +6484,6 @@
       const staffIndex = adminStaffMembersData.findIndex((member) => member.id === staffId);
       if (staffIndex === -1) throw new Error(`Staff member could not be removed: "${staffId}" was not found.`);
       const [removedStaff] = adminStaffMembersData.splice(staffIndex, 1);
-      staffSelectedRows.delete(staffId);
       adminFleetData.forEach((bus) => {
         if (bus.driver === removedStaff.name) bus.driver = "Unassigned";
       });
@@ -6248,8 +6491,8 @@
         if (unit.driverName === removedStaff.name) unit.driverName = "Unassigned";
       });
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
+      updateStaffSelectionControls();
       const fleetTbody = screen.querySelector("#admin-fleet-tbody");
       if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
       const dispatchTbody = screen.querySelector("#fleet-telemetry-tbody");
@@ -6267,6 +6510,7 @@
       } else {
         staffSelectedRows.delete(id);
       }
+      updateStaffSelectionControls();
       const row = screen.querySelector(`[data-staff-row="${id}"]`);
       if (row) {
         const isChecked = staffSelectedRows.has(id);
@@ -6291,6 +6535,7 @@
       if (checkbox) checkbox.checked = isChecked;
       const avatar = staffRow.querySelector(".staff-avatar");
       if (avatar) avatar.classList.toggle("is-selected", isChecked);
+      updateStaffSelectionControls();
       return;
     }
 
@@ -6303,6 +6548,7 @@
       });
       const tbody = screen.querySelector("#staff-table-tbody");
       if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffSelectionControls();
       return;
     }
 
@@ -6322,24 +6568,19 @@
         }
       }
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
       return;
     }
 
     const staffPageBtn = event.target.closest("[data-staff-page]");
     if (staffPageBtn) {
+      if (staffPageBtn.disabled) return;
       const pageVal = staffPageBtn.dataset.staffPage;
+      const pageCount = Math.ceil(getFilteredStaffMembers().length / staffPageSize);
       if (pageVal === "prev") staffCurrentPage = Math.max(1, staffCurrentPage - 1);
-      else if (pageVal === "next") staffCurrentPage = Math.min(19, staffCurrentPage + 1);
+      else if (pageVal === "next") staffCurrentPage = Math.min(pageCount, staffCurrentPage + 1);
       else staffCurrentPage = Number(pageVal) || 1;
-      screen.querySelectorAll("[data-staff-page]").forEach((btn) => {
-        if (btn.dataset.staffPage === String(staffCurrentPage)) {
-          btn.classList.add("is-active");
-        } else if (btn.dataset.staffPage !== "prev" && btn.dataset.staffPage !== "next") {
-          btn.classList.remove("is-active");
-        }
-      });
+      updateStaffDirectory();
       return;
     }
 
@@ -6718,12 +6959,56 @@
       if (action === "quick-book") {
         openQuickBookOverlay();
       } else if (action === "open-confirmation") {
+        const seatBookingPanel = screen.querySelector(".seat-book-card");
+        if (seatBookingPanel) {
+          const payment = seatBookingPanel.querySelector('input[name="payment"]:checked')?.value ?? tripData.payment;
+          const passengers = Number.parseInt(seatBookingPanel.querySelector("#seat-passengers")?.textContent ?? "1", 10);
+          const paymentError = seatBookingPanel.querySelector("[data-payment-error]");
+          if (insufficientUPouchPayment(payment, passengers)) {
+            if (paymentError) paymentError.hidden = false;
+            seatBookingPanel.querySelector('input[name="payment"][value="U-Pouch"]')?.setAttribute("aria-invalid", "true");
+            return;
+          }
+          if (paymentError) paymentError.hidden = true;
+          tripData = { ...tripData, payment, passengers, seat: selectedBusSeatId || tripData.seat };
+        }
         renderScreen("booking-confirmation");
       } else if (action === "confirm-booking") {
+        const reference = createBookingReference();
+        const confirmedTrip = {
+          id: reference,
+          receiptId: reference,
+          date: "Just now",
+          status: "upcoming",
+          origin: tripData.origin,
+          originDetail: tripData.origin === activeRoute.origin ? activeRoute.originShort : "Trip origin",
+          destination: tripData.destination,
+          destinationDetail: `Via ${activeRoute.via}`,
+          fare: 80 * tripData.passengers,
+          seat: tripData.seat,
+          passengers: tripData.passengers,
+          payment: tripData.payment,
+          co2Saved: 0,
+          inMonth: true,
+          receiptLabel: "E-Ticket & Receipt",
+          showRateAction: false,
+          rebookLabel: "Rebook",
+        };
+        tripHistory.unshift(confirmedTrip);
+        selectedHistoryTripId = confirmedTrip.id;
         bookingConfirmed = true;
         renderScreen("booking-confirmed");
       } else if (action === "cancel-booking") {
+        const cancelledTrip = tripHistory.find((trip) => trip.id === selectedHistoryTripId);
+        if (cancelledTrip?.status === "upcoming") {
+          cancelledTrip.status = "cancelled";
+          cancelledTrip.originalFare = cancelledTrip.fare;
+          cancelledTrip.fare = 0;
+          cancelledTrip.destinationDetail = "Refunded to " + cancelledTrip.payment;
+          cancelledTrip.seat = "—";
+        }
         bookingConfirmed = false;
+        selectedHistoryTripId = "";
         renderScreen("home");
       } else {
         throw new Error(`Unknown USAD prototype action: ${action}`);
