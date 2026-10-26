@@ -493,6 +493,9 @@
     { id: "1B", role: "Conductor" }
   ];
   const PASSENGER_SEAT_CAPACITY = BUS_TOTAL_SEAT_CAPACITY - EMPLOYEE_RESERVED_SEATS.length;
+  const supportsSeatManagement = (bus) => (
+    new RegExp(`^\\d+\\s*\\/\\s*${PASSENGER_SEAT_CAPACITY}\\s*passenger seats$`, "i").test(bus.occupancySeats)
+  );
 
   const getSeatCounts = (bus) => {
     const match = /^(\d+)\s*\/\s*(\d+)\s*passenger seats$/i.exec(bus.occupancySeats);
@@ -1288,6 +1291,7 @@
       dotClass: "mint"
     }
   ];
+
   const renderFleetTelemetryRows = () => {
     const list = fleetDispatchTelemetryUnits.filter((u) => {
       if (dispatchTelemetryFilter === "deployed") return u.category === "deployed";
@@ -1348,7 +1352,7 @@
 
   const renderDispatchControlPanel = () => {
     const unit = fleetDispatchTelemetryUnits.find((u) => u.id === selectedDispatchBusId) || fleetDispatchTelemetryUnits[0];
-    const seatCounts = getSeatCounts(unit);
+    const seatCounts = supportsSeatManagement(unit) ? getSeatCounts(unit) : null;
     return `
       <div class="dispatch-panel-shell">
       <button class="dispatch-panel-close" type="button" data-close-dispatch-panel aria-label="Close trip management">×</button>
@@ -1396,7 +1400,7 @@
               <span class="status-pill-telemetry ${unit.statusType}"><span class="status-dot"></span>${unit.statusText}</span>
             </span>
           </div>
-          <details class="dispatch-seat-dropdown dispatch-spec-row"${selectedDispatchSeatBooking?.busId === unit.id ? " open" : ""}>
+          ${seatCounts ? `<details class="dispatch-seat-dropdown dispatch-spec-row"${selectedDispatchSeatBooking?.busId === unit.id ? " open" : ""}>
             <summary class="dispatch-seat-dropdown-trigger">
               <span class="spec-key-label">Seats Filled</span>
               <span class="dispatch-seat-trigger-value">
@@ -1419,7 +1423,10 @@
                 <span>1A driver · 1B conductor</span>
               </div>
             </div>
-          </details>
+          </details>` : `<div class="dispatch-spec-row">
+            <span class="spec-key-label">Seats Filled</span>
+            <span class="spec-val-content">${escapeHtml(unit.occupancyPassengers)}</span>
+          </div>`}
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Assigned Driver</span>
             <span class="spec-val-content">${unit.driverName} (Conductor: ${unit.conductorName})</span>
@@ -4073,17 +4080,18 @@
     </div>`;
 
   const bookingConfirmedScreen = () => {
-    const trip = tripHistory.find(({ id }) => id === selectedHistoryTripId) ?? {
-      id: "USAD-7X29-KM41",
-      receiptId: "USAD-7X29-KM41",
-      origin: tripData.origin,
-      destination: tripData.destination,
-      fare: 80 * tripData.passengers,
-      seat: tripData.seat,
-      passengers: tripData.passengers,
-      payment: tripData.payment,
-      status: "upcoming",
-    };
+    const trip = tripHistory.find(({ id }) => id === selectedHistoryTripId)
+      ?? {
+        id: "USAD-7X29-KM41",
+        receiptId: "USAD-7X29-KM41",
+        origin: tripData.origin,
+        destination: tripData.destination,
+        fare: 80 * tripData.passengers,
+        seat: tripData.seat,
+        passengers: tripData.passengers,
+        payment: tripData.payment,
+        status: "upcoming",
+      };
     const isCurrentBooking = bookingConfirmed && trip.status === "upcoming";
     return `
     <div class="booking-confirmed">
@@ -5100,24 +5108,38 @@
 
     if (event.target.matches("[data-admin-assign-form]")) {
       event.preventDefault();
-      const busVal = screen.querySelector("#assign-bus")?.value ?? "Bus 01";
-      const driverVal = screen.querySelector("#assign-driver")?.value?.trim() || "Assigned Driver";
+      const busVal = screen.querySelector("#assign-bus")?.value;
+      const driverVal = screen.querySelector("#assign-driver")?.value?.trim();
       const routeId = screen.querySelector("#assign-route")?.value || activeRoute.id;
+      if (!busVal) throw new Error("USAD could not assign a bus: no vehicle was selected.");
       const assignedRoute = routes.find((route) => route.id === routeId);
       if (!assignedRoute) throw new Error(`USAD could not assign a bus: route "${routeId}" is not active.`);
       const targetBus = adminFleetData.find((b) => b.busNo.toLowerCase() === busVal.toLowerCase() || b.id.toLowerCase() === busVal.toLowerCase().replace(" ", "-"));
-      if (targetBus) {
-        targetBus.driver = driverVal;
-        targetBus.routeId = assignedRoute.id;
-        targetBus.route = assignedRoute.label;
-        targetBus.status = "On Duty";
-        targetBus.statusClass = "on-duty";
-        targetBus.dot = "green";
-        targetBus.filterCategory = "on-duty";
+      if (!targetBus) throw new Error(`USAD could not assign a bus: vehicle "${busVal}" was not found.`);
+      if (!driverVal) {
+        screen.querySelector("#assign-driver")?.focus();
+        return;
       }
-      screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#admin-fleet-tbody");
-      if (tbody) tbody.innerHTML = renderAdminFleetRows();
+      targetBus.driver = driverVal;
+      targetBus.routeId = assignedRoute.id;
+      targetBus.route = assignedRoute.label;
+      targetBus.status = "On Duty";
+      targetBus.statusClass = "on-duty";
+      targetBus.dot = "green";
+      targetBus.filterCategory = "on-duty";
+      const telemetryUnit = fleetDispatchTelemetryUnits.find((unit) => unit.id === targetBus.id);
+      if (telemetryUnit) {
+        telemetryUnit.driverName = driverVal;
+        telemetryUnit.routeId = assignedRoute.id;
+        telemetryUnit.routeCorridor = assignedRoute.label;
+        telemetryUnit.category = "deployed";
+        telemetryUnit.statusText = "On Time";
+        telemetryUnit.statusType = "on-time";
+        telemetryUnit.headwayAlert = "Vehicle dispatched and staged for service";
+      }
+      activeCorridorFilter = assignedRoute.id;
+      activeFleetFilter = "all";
+      renderScreen("admin-dashboard");
       return;
     }
 
@@ -5731,13 +5753,16 @@
     if (manageTripBtn) {
       selectedDispatchBusId = manageTripBtn.dataset.manageTrip;
       dispatchPanelOpen = true;
-      dispatchAssignmentPanelOpen = false;
+      dispatchAssignmentPanelOpen = true;
       selectedDispatchSeatBooking = null;
       screen.querySelectorAll("[data-select-bus]").forEach((row) => {
         row.classList.toggle("is-selected", row.dataset.selectBus === selectedDispatchBusId);
       });
       const grid = screen.querySelector(".fleet-dispatch-grid");
-      if (grid) grid.classList.remove("is-panel-closed");
+      if (grid) {
+        grid.classList.remove("is-panel-closed");
+        grid.classList.add("is-assignment-expanded");
+      }
       const panel = screen.querySelector("#dispatch-panel-container");
       if (panel) panel.innerHTML = renderDispatchControlPanel();
       return;
