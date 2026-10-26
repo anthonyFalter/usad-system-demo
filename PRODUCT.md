@@ -34,7 +34,9 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 - Passenger-demand visibility is intended to inform route and schedule adjustments.
 - The initiative aims to support public utility vehicle modernization by improving the broader commuting experience as well as vehicle operations.
 - The user-side prototype includes login and email validation, registration and verification states, a commuter home dashboard, an illustrative live-map screen, booking/ticket flows, scrollable Account Information settings, and searchable/category-filtered FAQs.
-- The admin-side prototype introduces the dark-themed Admin login with provisioned-only account access (self-registration disabled), error alert states, biometric and RFID smart-card authentication, and the Saraza TRD Operations & Dispatch console. The dispatch console opens on a pre-booking queue with illustrative staged buses and simulated immediate-dispatch actions; dispatch controls appear only when an admin selects a trip to manage. Fleet monitoring row actions open vehicle-specific dialogs for telemetry, driver assignment, and dispatch. Marking a trip finished automatically adds an illustrative remittance entry using a sample fare per passenger. These interactions do not connect to live vehicles, commuter bookings, or remittance services.
+- The admin-side prototype includes the dark-themed, provisioned-account-only login and the Saraza TRD Operations & Dispatch console. It includes a pre-booking queue, staged-bus dispatch actions, vehicle telemetry and driver dialogs, peak-hour readiness, illustrative remittances, Live Operations KPIs, and Reports with revenue and ridership trends, collection mix, fleet deployment, and fuel efficiency. Sample interactions and figures are not connected to live operations or services; fleet analytics model 20 buses.
+- Fleet Management's Bus Assignment panel starts as a tall, narrow tab on the far right and expands leftward to its original panel proportions and content height. Its Seats Filled row supports up to 15 seats per bus: 13 passenger seats and two reserved employee seats (1A driver and 1B conductor). Staff can book a walk-in customer with a masked booking ID and timestamp, or release an occupied seat after confirming the customer has left. Booking details and counts are illustrative, session-only, and contain no passenger PII.
+- The prototype currently represents one active route: Malolos to Trinoma via NLEX. Route selectors and route-specific sample content use the shared route data in `routes.js`; this does not represent live service data.
 
 ## Brand Commitments
 
@@ -47,7 +49,7 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 
 - UI reference image is supplied in the request.
 - Existing image assets are in `assets/3d-images/`.
-- No live transit feed, authentication, booking service, payment processor, or operations dataset is provided for this UI-only prototype. The map, vehicles, availability, ETAs, registration/verification, booking, and tickets are illustrative interactions only; do not claim that services or data are live.
+- No live transit feed, authentication, booking service, payment processor, or operations dataset is provided for this UI-only prototype. The map, vehicles, availability, ETAs, registration/verification, booking, tickets, admin operational KPIs, and reports are illustrative interactions only; do not claim that services or data are live.
 
 ## Product Principles
 
