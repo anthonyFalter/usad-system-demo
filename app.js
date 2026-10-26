@@ -1296,7 +1296,7 @@
       if (dispatchTelemetryFilter === "delayed") return u.category === "delayed";
       if (dispatchTelemetryFilter === "terminal") return u.category === "terminal";
       return true;
-    });
+    }).sort((a, b) => Number(a.busNo) - Number(b.busNo));
 
     if (list.length === 0) {
       return `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No fleet vehicles in this category.</td></tr>`;
