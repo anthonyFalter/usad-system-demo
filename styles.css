@@ -5511,6 +5511,35 @@ input:focus-visible,
   color: #d1fae5;
 }
 
+.dispatch-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dispatch-row-delete,
+.staff-bulk-delete-btn {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 6px;
+  background: rgba(127, 29, 29, 0.16);
+  color: #fca5a5;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dispatch-row-delete {
+  padding: 6px 9px;
+}
+
+.dispatch-row-delete:hover,
+.staff-bulk-delete-btn:not(:disabled):hover {
+  border-color: #f87171;
+  background: rgba(127, 29, 29, 0.32);
+  color: #fecaca;
+}
+
 .dispatch-row-unavailable {
   color: #64748b;
   font-size: 11px;
@@ -6552,6 +6581,15 @@ input:focus-visible,
 
 .staff-count-summary strong {
   color: #f8fafc;
+}
+
+.staff-bulk-delete-btn {
+  padding: 6px 10px;
+}
+
+.staff-bulk-delete-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .staff-depot-filter-btn {
@@ -8006,47 +8044,6 @@ input:focus-visible,
   color: #0b0f17;
 }
 
-/* Lower 2-Column Split: Corridor Performance & Automated Runs */
-.reports-bottom-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 16px;
-}
-
-.reports-subcard {
-  min-width: 0;
-  background: #111827;
-  border: 1px solid #1e293b;
-  border-radius: 12px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.reports-subcard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid #1e293b;
-  padding-bottom: 12px;
-}
-
-.reports-subcard-title-group {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.reports-subcard-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #f8fafc;
-  margin: 0;
-}
-
 .reports-header-row .admin-header-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -8055,184 +8052,6 @@ input:focus-visible,
 .reports-search-wrap {
   flex: 0 1 280px;
   min-width: 200px;
-}
-
-.sched-report-info {
-  min-width: 0;
-}
-
-.sched-report-meta {
-  flex-wrap: wrap;
-}
-
-/* Corridor Distribution Breakdown */
-.corridor-dist-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.corridor-dist-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.corridor-dist-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-}
-
-.corridor-dist-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.corridor-dist-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.corridor-dist-dot.mint {
-  background: #10b981;
-}
-
-.corridor-dist-dot.cyan {
-  background: #3b82f6;
-}
-
-.corridor-dist-dot.gold {
-  background: #f59e0b;
-}
-
-.corridor-dist-dot.purple {
-  background: #a855f7;
-}
-
-.corridor-dist-name {
-  font-weight: 500;
-  color: #f8fafc;
-}
-
-.corridor-dist-figures {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.corridor-dist-rev {
-  color: #f8fafc;
-  font-weight: 600;
-}
-
-.corridor-dist-pct {
-  color: #94a3b8;
-}
-
-.corridor-dist-bar-track {
-  width: 100%;
-  height: 6px;
-  background: #1e293b;
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.corridor-dist-bar-fill {
-  height: 100%;
-  border-radius: 99px;
-  transition: width 0.3s ease;
-}
-
-.corridor-dist-bar-fill.bar-mint {
-  background: #10b981;
-}
-
-.corridor-dist-bar-fill.bar-cyan {
-  background: #3b82f6;
-}
-
-.corridor-dist-bar-fill.bar-gold {
-  background: #f59e0b;
-}
-
-.corridor-dist-bar-fill.bar-purple {
-  background: #a855f7;
-}
-
-.corridor-dist-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-/* Scheduled Automated Audits */
-.sched-reports-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.sched-report-item {
-  background: #0b0f17;
-  border: 1px solid #1e293b;
-  border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.sched-report-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.sched-report-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #f8fafc;
-}
-
-.sched-report-meta {
-  font-size: 12px;
-  color: #94a3b8;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.sched-report-meta strong {
-  color: #f8fafc;
-}
-
-.sched-report-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.sched-run-btn {
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: #f8fafc;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.sched-run-btn:hover {
-  background: #334155;
-  color: #ffffff;
 }
 
 .peak-readiness-card {
@@ -9275,14 +9094,6 @@ input:focus-visible,
     gap: 0 4px;
   }
 
-  .reports-bottom-split {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .sched-report-item {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
 }
 
 @media (max-width: 640px) {
