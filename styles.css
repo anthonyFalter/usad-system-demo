@@ -5637,6 +5637,10 @@ input:focus-visible,
   background: #10b981;
 }
 
+.bus-active-dot.purple {
+  background: #a78bfa;
+}
+
 .bus-number-text {
   font-weight: 600;
   color: #f8fafc;

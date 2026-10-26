@@ -84,6 +84,14 @@
     { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
     { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: activeRoute.destination, originDetail: "Trip cancelled by operator", destination: activeRoute.origin, destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
   ];
+  let bookingReferenceSequence = 1;
+  const createBookingReference = () => {
+    let reference;
+    do {
+      reference = `USAD-${Date.now().toString(36).toUpperCase()}-${String(bookingReferenceSequence++).padStart(3, "0")}`;
+    } while (tripHistory.some((trip) => trip.id === reference || trip.receiptId === reference));
+    return reference;
+  };
   let tripData = {
     origin: activeRoute.origin,
     destination: activeRoute.destinationShort,
@@ -210,6 +218,9 @@
     minimumFractionDigits: 2,
   }).format(amount);
   const sampleFarePerPassenger = 80;
+  const sampleUPouchBalance = 2;
+  const insufficientUPouchPayment = (payment, passengers) =>
+    payment === "U-Pouch" && sampleUPouchBalance < sampleFarePerPassenger * passengers;
   const peakDispatchQueue = [
     { id: "peak-03", busNo: "03", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Eldrei Acero", fuel: "92%", status: "ready" },
     { id: "peak-07", busNo: "07", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Juan Dela Cruz", fuel: "88%", status: "ready" },
@@ -486,13 +497,17 @@
 
   const BUS_TOTAL_SEAT_CAPACITY = 15;
   const EMPLOYEE_RESERVED_SEATS = [
-    { id: "1A", role: "Driver" },
-    { id: "1B", role: "Dispatcher" }
+    { id: "1A", role: "Driver" }
   ];
   const PASSENGER_SEAT_CAPACITY = BUS_TOTAL_SEAT_CAPACITY - EMPLOYEE_RESERVED_SEATS.length;
   const supportsSeatManagement = (bus) => (
     new RegExp(`^\\d+\\s*\\/\\s*${PASSENGER_SEAT_CAPACITY}\\s*passenger seats$`, "i").test(bus.occupancySeats)
   );
+  const assertSeatMapEditable = (bus) => {
+    if (bus.tripFinished) {
+      throw new Error(`Seat assignments for Bus ${bus.busNo} are locked because its trip is finished.`);
+    }
+  };
 
   const getSeatCounts = (bus) => {
     const match = /^(\d+)\s*\/\s*(\d+)\s*passenger seats$/i.exec(bus.occupancySeats);
@@ -578,6 +593,10 @@
   };
 
   const renderDispatchSeatBookingDetails = (bus) => {
+    if (bus.tripFinished) {
+      return `<p class="dispatch-seat-release-success">Trip finished. Seat assignments are locked.</p>`;
+    }
+
     if (!selectedDispatchSeatBooking) {
       return `<p>Select an available seat to book a walk-in customer, or an occupied seat to view its booking.</p>`;
     }
@@ -627,6 +646,7 @@
   };
 
   const renderAdminSeatLayout = ({ occupied }, bookingLookupBus) => {
+    const isReadOnly = bookingLookupBus?.tripFinished === true;
     const seatLetters = ["A", "B"];
     const rowCount = Math.ceil(BUS_TOTAL_SEAT_CAPACITY / seatLetters.length);
     return Array.from({ length: rowCount }, (_, rowIndex) => {
@@ -642,6 +662,9 @@
         }
         const existingBooking = bookingLookupBus ? getBookingForSeat(bookingLookupBus, seatId) : null;
         const seatState = existingBooking ? "is-occupied" : "is-available";
+        if (isReadOnly) {
+          return `<span class="admin-seat ${seatState}" aria-label="Seat ${seatId}, ${seatState === "is-occupied" ? "occupied" : "available"}; trip finished">${seatId}</span>`;
+        }
         if (seatState === "is-occupied" && bookingLookupBus) {
           const booking = existingBooking;
           const isBookingSelected = selectedDispatchSeatBooking?.seatId === seatId;
@@ -1157,9 +1180,9 @@
       headwayAlert: "8 minutes behind schedule",
       nextStop: activeRoute.origin,
       etaText: "23 min ETA (15:08 PHT)",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
       dispatcherName: "Klintroy Suerte Felipe",
@@ -1181,9 +1204,9 @@
       headwayAlert: "On schedule",
       nextStop: activeRoute.origin,
       etaText: "7 min ETA (14:55 PHT)",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Rogers, S.",
       driverId: "#DR-9204",
       dispatcherName: "Ross Anthony Jobs",
@@ -1205,16 +1228,16 @@
       headwayAlert: "At the terminal. Leaves in 19 minutes.",
       nextStop: activeRoute.origin,
       etaText: "Departing in 19 min",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
       dispatcherName: "Unassigned",
       gpsLocation: activeRoute.destination,
       scheduledStop: `${activeRoute.origin} (ETA 16:30 PHT)`,
       progressClass: "purple",
-      dotClass: ""
+      dotClass: "purple"
     },
     {
       id: "bus-08",
@@ -1229,9 +1252,9 @@
       headwayAlert: "1 minute ahead of schedule",
       nextStop: activeRoute.origin,
       etaText: "12 min ETA (15:00 PHT)",
-      occupancyPct: 46,
-      occupancySeats: "6/13 passenger seats",
-      occupancyPassengers: "46% (6 / 13 passenger seats)",
+      occupancyPct: 43,
+      occupancySeats: "6/14 passenger seats",
+      occupancyPassengers: "43% (6 / 14 passenger seats)",
       driverName: "Bautista, M.",
       driverId: "#DR-7711",
       dispatcherName: "Unassigned",
@@ -1254,9 +1277,9 @@
       headwayAlert: "Busy bus. Running on schedule.",
       nextStop: activeRoute.destination,
       etaText: "16 min ETA (15:04 PHT)",
-      occupancyPct: 100,
-      occupancySeats: "13/13 passenger seats",
-      occupancyPassengers: "100% (13 / 13 passenger seats)",
+      occupancyPct: 93,
+      occupancySeats: "13/14 passenger seats",
+      occupancyPassengers: "93% (13 / 14 passenger seats)",
       driverName: "Alcantara, R.",
       driverId: "#DR-3108",
       dispatcherName: "Unassigned",
@@ -1414,8 +1437,8 @@
                 ${renderDispatchSeatBookingDetails(unit)}
               </div>
               <div class="dispatch-seat-dropdown-footer">
-                <span>${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available</span>
-                <span>1A Driver · 1B</span>
+                <span>${unit.tripFinished ? "Trip finished · seat map locked" : `${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available`}</span>
+                <span>1A Driver · 1B Passenger</span>
               </div>
             </div>
           </details>` : `<div class="dispatch-spec-row">
@@ -1507,11 +1530,12 @@
       delayed: "#f59e0b",
       deployed: "#2fd9a8",
       terminal: "#a78bfa",
+      completed: "#94a3b8",
     };
     const mapMarkers = fleetDispatchTelemetryUnits.map((unit) => {
       const position = fallbackPositions[unit.id];
       const color = statusColors[unit.category];
-      const shouldAnimate = unit.category !== "terminal" && !reducedMotion;
+      const shouldAnimate = unit.category !== "terminal" && !unit.tripFinished && !reducedMotion;
       if (!position || !color || (shouldAnimate && (motionStartSeconds[unit.id] === undefined ||
         !["Northbound Bus", "Southbound Bus"].includes(unit.tripName)))) {
         throw new Error(`USAD could not display Bus ${unit.busNo} on the fleet map: its sample position, status color, or route direction is missing.`);
@@ -4232,6 +4256,7 @@
             <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
           </div>
+          <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
           <button class="sheet-primary" type="submit">Find Rides <span>→</span></button>
         </form>
       </div>
@@ -4368,6 +4393,7 @@
               <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             </div>
+            <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
             <button class="sheet-primary" type="button" data-action="open-confirmation">Find Rides <span>→</span></button>
           </div>
         </aside>
@@ -4430,6 +4456,7 @@
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
               <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
             </div>
+            <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
           </div>
           <div class="seat-detail-booking-footer"><button class="sheet-primary" type="submit">Find Rides <span>→</span></button></div>
         </form>
@@ -5456,12 +5483,27 @@
       const origin = formData.get("origin");
       const destination = formData.get("destination");
       const payment = formData.get("payment");
+      const seat = formData.get("seat");
       const passengerText = screen.querySelector("#passenger-count")?.textContent ?? "1";
       const passengers = Number.parseInt(passengerText, 10);
+      const paymentError = event.target.querySelector("[data-payment-error]");
+      if (insufficientUPouchPayment(payment, passengers)) {
+        if (paymentError) paymentError.hidden = false;
+        event.target.querySelector('input[name="payment"][value="U-Pouch"]')?.setAttribute("aria-invalid", "true");
+        return;
+      }
+      if (paymentError) paymentError.hidden = true;
       if (typeof origin !== "string" || !origin.trim() || typeof destination !== "string" || !destination.trim() || !Number.isInteger(passengers) || passengers < 1 || typeof payment !== "string") {
         throw new Error("USAD quick booking could not continue: route, passenger, or payment selection is invalid.");
       }
-      tripData = { ...tripData, origin: origin.trim(), destination: destination.trim(), passengers, payment };
+      tripData = {
+        ...tripData,
+        origin: origin.trim(),
+        destination: destination.trim(),
+        passengers,
+        payment,
+        ...(typeof seat === "string" && seat ? { seat } : {}),
+      };
       bookingConfirmed = false;
       renderScreen("find-rides");
     }
@@ -5716,6 +5758,13 @@
 
     if (event.target.matches("#live-seat-picker")) {
       selectedBusSeatId = event.target.value;
+    }
+
+    if (event.target.matches('input[name="payment"]') && event.target.value !== "U-Pouch") {
+      const bookingContainer = event.target.closest("[data-quick-book], .seat-book-card");
+      const paymentError = bookingContainer?.querySelector("[data-payment-error]");
+      if (paymentError) paymentError.hidden = true;
+      bookingContainer?.querySelector('input[name="payment"][value="U-Pouch"]')?.removeAttribute("aria-invalid");
     }
 
     if (event.target.matches("[data-discount-id-upload]")) {
@@ -6003,6 +6052,7 @@
     if (dispatchBookingSeat) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for seat booking details.`);
+      assertSeatMapEditable(bus);
       const seatId = dispatchBookingSeat.dataset.dispatchBookingSeat;
       const booking = getBookingForSeat(bus, seatId);
       if (!booking) {
@@ -6029,6 +6079,9 @@
 
     const startSeatRelease = event.target.closest("[data-start-seat-release]");
     if (startSeatRelease) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to release a seat.`);
+      assertSeatMapEditable(bus);
       if (selectedDispatchSeatBooking?.seatId !== startSeatRelease.dataset.startSeatRelease) {
         throw new Error(`USAD could not confirm the selected booking for seat ${startSeatRelease.dataset.startSeatRelease}.`);
       }
@@ -6040,9 +6093,11 @@
 
     const cancelSeatRelease = event.target.closest("[data-cancel-seat-release]");
     if (cancelSeatRelease) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to cancel a seat release.`);
+      assertSeatMapEditable(bus);
       if (!selectedDispatchSeatBooking?.confirmingRelease) return;
       selectedDispatchSeatBooking.confirmingRelease = false;
-      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
       if (bookingDetails && bus) bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
       return;
@@ -6052,7 +6107,9 @@
     if (confirmSeatRelease) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       const seatId = confirmSeatRelease.dataset.confirmSeatRelease;
-      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || !selectedDispatchSeatBooking.confirmingRelease) {
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to release seat ${seatId}.`);
+      assertSeatMapEditable(bus);
+      if (selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || !selectedDispatchSeatBooking.confirmingRelease) {
         throw new Error(`USAD could not verify the customer departure confirmation for seat ${seatId}.`);
       }
 
@@ -6090,6 +6147,7 @@
     if (availableDispatchSeat) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for walk-in booking.`);
+      assertSeatMapEditable(bus);
       const seatId = availableDispatchSeat.dataset.dispatchAvailableSeat;
       if (getBookingForSeat(bus, seatId)) {
         throw new Error(`USAD cannot book seat ${seatId} on Bus ${bus.busNo} because it is already occupied.`);
@@ -6115,8 +6173,10 @@
     const bookWalkInButton = event.target.closest("[data-book-walk-in-seat]");
     if (bookWalkInButton) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for walk-in booking.`);
+      assertSeatMapEditable(bus);
       const seatId = bookWalkInButton.dataset.bookWalkInSeat;
-      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || selectedDispatchSeatBooking.type !== "available") {
+      if (selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || selectedDispatchSeatBooking.type !== "available") {
         throw new Error(`USAD could not confirm the walk-in booking for seat ${seatId}. Select an available seat and try again.`);
       }
       if (getBookingForSeat(bus, seatId)) {
@@ -6231,6 +6291,7 @@
         }
 
         unit.tripFinished = true;
+        selectedDispatchSeatBooking = null;
         unit.category = "completed";
         unit.statusText = "Finished";
         unit.statusType = "completed";
@@ -6745,12 +6806,56 @@
       if (action === "quick-book") {
         openQuickBookOverlay();
       } else if (action === "open-confirmation") {
+        const seatBookingPanel = screen.querySelector(".seat-book-card");
+        if (seatBookingPanel) {
+          const payment = seatBookingPanel.querySelector('input[name="payment"]:checked')?.value ?? tripData.payment;
+          const passengers = Number.parseInt(seatBookingPanel.querySelector("#seat-passengers")?.textContent ?? "1", 10);
+          const paymentError = seatBookingPanel.querySelector("[data-payment-error]");
+          if (insufficientUPouchPayment(payment, passengers)) {
+            if (paymentError) paymentError.hidden = false;
+            seatBookingPanel.querySelector('input[name="payment"][value="U-Pouch"]')?.setAttribute("aria-invalid", "true");
+            return;
+          }
+          if (paymentError) paymentError.hidden = true;
+          tripData = { ...tripData, payment, passengers, seat: selectedBusSeatId || tripData.seat };
+        }
         renderScreen("booking-confirmation");
       } else if (action === "confirm-booking") {
+        const reference = createBookingReference();
+        const confirmedTrip = {
+          id: reference,
+          receiptId: reference,
+          date: "Just now",
+          status: "upcoming",
+          origin: tripData.origin,
+          originDetail: tripData.origin === activeRoute.origin ? activeRoute.originShort : "Trip origin",
+          destination: tripData.destination,
+          destinationDetail: `Via ${activeRoute.via}`,
+          fare: 80 * tripData.passengers,
+          seat: tripData.seat,
+          passengers: tripData.passengers,
+          payment: tripData.payment,
+          co2Saved: 0,
+          inMonth: true,
+          receiptLabel: "E-Ticket & Receipt",
+          showRateAction: false,
+          rebookLabel: "Rebook",
+        };
+        tripHistory.unshift(confirmedTrip);
+        selectedHistoryTripId = confirmedTrip.id;
         bookingConfirmed = true;
         renderScreen("booking-confirmed");
       } else if (action === "cancel-booking") {
+        const cancelledTrip = tripHistory.find((trip) => trip.id === selectedHistoryTripId);
+        if (cancelledTrip?.status === "upcoming") {
+          cancelledTrip.status = "cancelled";
+          cancelledTrip.originalFare = cancelledTrip.fare;
+          cancelledTrip.fare = 0;
+          cancelledTrip.destinationDetail = "Refunded to " + cancelledTrip.payment;
+          cancelledTrip.seat = "—";
+        }
         bookingConfirmed = false;
+        selectedHistoryTripId = "";
         renderScreen("home");
       } else {
         throw new Error(`Unknown USAD prototype action: ${action}`);
