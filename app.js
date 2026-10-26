@@ -487,7 +487,7 @@
   const BUS_TOTAL_SEAT_CAPACITY = 15;
   const EMPLOYEE_RESERVED_SEATS = [
     { id: "1A", role: "Driver" },
-    { id: "1B", role: "Conductor" }
+    { id: "1B", role: "Dispatcher" }
   ];
   const PASSENGER_SEAT_CAPACITY = BUS_TOTAL_SEAT_CAPACITY - EMPLOYEE_RESERVED_SEATS.length;
   const supportsSeatManagement = (bus) => (
@@ -636,7 +636,9 @@
         const seatId = `${rowIndex + 1}${letter}`;
         const reservedSeat = EMPLOYEE_RESERVED_SEATS.find((seat) => seat.id === seatId);
         if (reservedSeat) {
-          return `<span class="admin-seat is-reserved" title="Reserved for ${reservedSeat.role.toLowerCase()}" aria-label="Seat ${seatId}, reserved for ${reservedSeat.role.toLowerCase()}">${seatId} · ${reservedSeat.role}</span>`;
+          const seatLabel = reservedSeat.role === "Driver" ? `${seatId} · Driver` : seatId;
+          const seatDescription = reservedSeat.role === "Driver" ? `Seat ${seatId}, reserved for driver` : `Seat ${seatId}, reserved for staff`;
+          return `<span class="admin-seat is-reserved" title="Reserved employee seat" aria-label="${seatDescription}">${seatLabel}</span>`;
         }
         const existingBooking = bookingLookupBus ? getBookingForSeat(bookingLookupBus, seatId) : null;
         const seatState = existingBooking ? "is-occupied" : "is-available";
@@ -1160,7 +1162,7 @@
       occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
-      conductorName: "Santos, M.",
+      dispatcherName: "Klintroy Suerte Felipe",
       gpsLocation: `${activeRoute.via} Northbound`,
       scheduledStop: `${activeRoute.origin} (ETA 15:08 PHT)`,
       progressClass: "amber",
@@ -1184,7 +1186,7 @@
       occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Rogers, S.",
       driverId: "#DR-9204",
-      conductorName: "Barton, C.",
+      dispatcherName: "Ross Anthony Jobs",
       gpsLocation: activeRoute.via,
       scheduledStop: `${activeRoute.origin} (ETA 14:55 PHT)`,
       progressClass: "mint",
@@ -1208,7 +1210,7 @@
       occupancyPassengers: "92% (12 / 13 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
-      conductorName: "Reyes, K.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.destination,
       scheduledStop: `${activeRoute.origin} (ETA 16:30 PHT)`,
       progressClass: "purple",
@@ -1232,7 +1234,7 @@
       occupancyPassengers: "46% (6 / 13 passenger seats)",
       driverName: "Bautista, M.",
       driverId: "#DR-7711",
-      conductorName: "Villanueva, E.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.via,
       scheduledStop: `${activeRoute.origin} (ETA 15:00 PHT)`,
       progressClass: "mint",
@@ -1257,7 +1259,7 @@
       occupancyPassengers: "100% (13 / 13 passenger seats)",
       driverName: "Alcantara, R.",
       driverId: "#DR-3108",
-      conductorName: "Morales, G.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.via,
       scheduledStop: `${activeRoute.destination} (ETA 15:04 PHT)`,
       progressClass: "amber",
@@ -1280,7 +1282,7 @@
       occupancyPassengers: "64% (45 / 70 Passengers)",
       driverName: "Santos, A.",
       driverId: "#DR-6206",
-      conductorName: "Reyes, M.",
+      dispatcherName: "Piolo Pascual",
       gpsLocation: "Malolos Central Loop",
       scheduledStop: "Bocaue Interchange (ETA 15:02 PHT)",
       corridor: "malolos",
@@ -1413,7 +1415,7 @@
               </div>
               <div class="dispatch-seat-dropdown-footer">
                 <span>${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available</span>
-                <span>1A driver · 1B conductor</span>
+                <span>1A Driver · 1B</span>
               </div>
             </div>
           </details>` : `<div class="dispatch-spec-row">
@@ -1422,7 +1424,11 @@
           </div>`}
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Assigned Driver</span>
-            <span class="spec-val-content">${unit.driverName} (Conductor: ${unit.conductorName})</span>
+            <span class="spec-val-content">${unit.driverName}</span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Assigned Dispatcher</span>
+            <span class="spec-val-content">${unit.dispatcherName}</span>
           </div>
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Current Location</span>
@@ -3538,7 +3544,7 @@
       const bus = fleetDispatchTelemetryUnits.find((u) => u.id === busId) || fleetDispatchTelemetryUnits[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
       title = `Assignment Saved — Bus ${bus.busNo}`;
-      desc = `Sample assignment for <strong>Bus ${bus.busNo} (${bus.tripName})</strong>.<br><br>Driver: <strong>${bus.driverName}</strong><br>Conductor: <strong>${bus.conductorName}</strong><br>Route: <strong>${bus.routeCorridor}</strong><br><br>This prototype does not send instructions to a real vehicle.`;
+      desc = `Sample assignment for <strong>Bus ${bus.busNo} (${bus.tripName})</strong>.<br><br>Driver: <strong>${bus.driverName}</strong><br>Dispatcher: <strong>${bus.dispatcherName}</strong><br>Route: <strong>${bus.routeCorridor}</strong><br><br>This prototype does not send instructions to a real vehicle.`;
       primaryBtn = "Close";
       isInfoOnly = true;
     } else if (type.startsWith("assign-driver-unit-")) {
@@ -3554,8 +3560,8 @@
             <input class="admin-input" id="reassign-driver-input" value="${escapeHtml(bus.driverName)}" style="height: 38px;">
           </div>
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Conductor</label>
-            <input class="admin-input" id="reassign-conductor-input" value="${escapeHtml(bus.conductorName)}" style="height: 38px;">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Dispatcher</label>
+            <input class="admin-input" id="reassign-dispatcher-input" value="${escapeHtml(bus.dispatcherName)}" style="height: 38px;">
           </div>
           <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
@@ -6255,12 +6261,12 @@
       const busId = confirmCrewBtn.dataset.adminConfirmCrew;
       const unit = fleetDispatchTelemetryUnits.find((u) => u.id === busId);
       const driverIn = screen.querySelector("#reassign-driver-input");
-      const conductorIn = screen.querySelector("#reassign-conductor-input");
+      const dispatcherIn = screen.querySelector("#reassign-dispatcher-input");
       if (unit && driverIn && driverIn.value.trim()) {
         unit.driverName = driverIn.value.trim();
       }
-      if (unit && conductorIn && conductorIn.value.trim()) {
-        unit.conductorName = conductorIn.value.trim();
+      if (unit && dispatcherIn && dispatcherIn.value.trim()) {
+        unit.dispatcherName = dispatcherIn.value.trim();
       }
       screen.querySelector(".admin-modal-backdrop")?.remove();
       const panel = screen.querySelector("#dispatch-panel-container");
