@@ -522,6 +522,8 @@
     }
   ];
 
+  const isBusOffDuty = (bus) => bus.status.trim().toLowerCase() === "off duty";
+
   const BUS_TOTAL_SEAT_CAPACITY = 15;
   const EMPLOYEE_RESERVED_SEATS = [
     { id: "1A", role: "Driver" },
@@ -1912,6 +1914,22 @@
     }
   ];
 
+  const isStaffOffDuty = (staff) => {
+    const status = String(staff.statusKey || staff.status || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+    return status === "off" || status === "off-duty";
+  };
+
+  const getAssignableStaffDrivers = () => adminStaffMembersData.filter((member) => (
+    member.roleKey === "driver" && !isStaffOffDuty(member)
+  ));
+
+  const renderStaffDriverOptions = (selectedDriverId = "") => `
+    <option value=""${selectedDriverId ? "" : " selected"}>Select an available driver</option>
+    ${getAssignableStaffDrivers().map((driver) => `
+      <option value="${escapeHtml(driver.id)}"${driver.id === selectedDriverId ? " selected" : ""}>${escapeHtml(driver.name)} · ${escapeHtml(driver.status)}</option>
+    `).join("")}
+  `;
+
   const renderStaffTableRows = () => {
     const q = staffSearchQuery.toLowerCase().trim();
     const filtered = adminStaffMembersData.filter((member) => {
@@ -3253,7 +3271,6 @@
           <div class="admin-form-field">
             <label for="assign-driver" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assign Driver</label>
             <select class="admin-input" id="assign-driver" required style="height: 40px;">
-              <option value="" selected>Select a driver</option>
               ${renderStaffDriverOptions()}
             </select>
           </div>
@@ -3286,9 +3303,9 @@
             <strong>${bus.filterCategory === "on-duty" ? "Driver assigned" : "Assign driver"}</strong>
             <span>${bus.filterCategory === "on-duty" ? "Driver changes are unavailable while this vehicle is on duty." : "Update the driver assigned to this vehicle."}</span>
           </button>
-          <button type="button" data-fleet-action="dispatch" data-fleet-id="${bus.id}"${bus.filterCategory === "on-duty" ? " disabled" : ""}>
-            <strong>${bus.filterCategory === "on-duty" ? "Already on duty" : "Dispatch vehicle"}</strong>
-            <span>${bus.filterCategory === "on-duty" ? "This vehicle is currently in service." : "Place this vehicle into active service."}</span>
+          <button type="button" data-fleet-action="dispatch" data-fleet-id="${bus.id}"${bus.filterCategory === "on-duty" || isBusOffDuty(bus) ? " disabled" : ""}>
+            <strong>${bus.filterCategory === "on-duty" ? "Already on duty" : isBusOffDuty(bus) ? "Off-duty vehicle" : "Dispatch vehicle"}</strong>
+            <span>${bus.filterCategory === "on-duty" ? "This vehicle is currently in service." : isBusOffDuty(bus) ? "Change the vehicle status before dispatching it." : "Place this vehicle into active service."}</span>
           </button>
           <p class="fleet-action-prototype-note">Actions update sample data in this prototype only.</p>
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
@@ -3305,8 +3322,10 @@
       customHtml = `
         <form class="admin-login-form" data-fleet-driver-form="${bus.id}" style="margin-top: 14px; text-align: left;">
           <div class="admin-form-field">
-            <label for="fleet-driver-name" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Driver name</label>
-            <input class="admin-input" id="fleet-driver-name" name="driver" value="${escapeHtml(bus.driver)}" required style="height: 40px;">
+            <label for="fleet-driver-name" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Driver</label>
+            <select class="admin-input" id="fleet-driver-name" name="driverId" required style="height: 40px;">
+              ${renderStaffDriverOptions(adminStaffMembersData.find((member) => member.name === bus.driver && !isStaffOffDuty(member))?.id ?? "")}
+            </select>
           </div>
           <div style="display: flex; gap: 10px; margin-top: 8px;">
             <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
@@ -3320,13 +3339,16 @@
       const bus = adminFleetData.find((item) => item.id === busId);
       if (!bus) throw new Error(`Vehicle dispatch could not be opened: vehicle "${busId}" was not found.`);
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h17m-6-6 6 6-6 6"/><path d="M4 5v14"/></svg>`;
-      title = `Dispatch ${bus.busNo}?`;
-      desc = `Place <strong>${bus.busNo}</strong>, currently assigned to <strong>${bus.driver}</strong>, into active service on <strong>${bus.route}</strong>.`;
+      const offDuty = isBusOffDuty(bus);
+      title = offDuty ? `${bus.busNo} is off duty` : `Dispatch ${bus.busNo}?`;
+      desc = offDuty
+        ? `An off-duty vehicle cannot be dispatched. Change <strong>${bus.busNo}</strong>'s status before placing it into service.`
+        : `Place <strong>${bus.busNo}</strong>, currently assigned to <strong>${bus.driver}</strong>, into active service on <strong>${bus.route}</strong>.`;
       customHtml = `
         <p class="fleet-action-prototype-note">This changes the sample fleet status only; it does not send a command to a real vehicle.</p>
         <div class="admin-modal-actions">
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
-          <button class="admin-modal-button-primary" type="button" data-fleet-dispatch-confirm="${bus.id}">Confirm dispatch</button>
+          <button class="admin-modal-button-primary" type="button" data-fleet-dispatch-confirm="${bus.id}"${offDuty ? " disabled" : ""}>${offDuty ? "Dispatch unavailable" : "Confirm dispatch"}</button>
         </div>
       `;
       isInfoOnly = true;
@@ -5165,8 +5187,8 @@
       event.preventDefault();
       const busVal = screen.querySelector("#assign-bus")?.value;
       const driverId = screen.querySelector("#assign-driver")?.value;
-      const assignedDriver = adminStaffMembersData.find((member) => member.id === driverId && member.roleKey === "driver");
-      if (!assignedDriver) throw new Error("USAD could not assign a bus: the selected driver is not in Staff Management.");
+      const assignedDriver = adminStaffMembersData.find((member) => member.id === driverId && member.roleKey === "driver" && !isStaffOffDuty(member));
+      if (!assignedDriver) throw new Error("USAD could not assign a bus: select a driver who is not off duty.");
       const routeId = screen.querySelector("#assign-route")?.value || activeRoute.id;
       if (!busVal) throw new Error("USAD could not assign a bus: no vehicle was selected.");
       const assignedRoute = routes.find((route) => route.id === routeId);
@@ -5200,15 +5222,13 @@
       event.preventDefault();
       const busId = event.target.dataset.fleetDriverForm;
       const bus = adminFleetData.find((item) => item.id === busId);
-      const driverInput = event.target.querySelector('[name="driver"]');
-      const driverName = driverInput?.value.trim();
-      if (!bus || !driverInput || !driverName) {
-        driverInput?.focus();
-        return;
-      }
-      bus.driver = driverName;
+      const driverSelect = event.target.querySelector('[name="driverId"]');
+      const driver = adminStaffMembersData.find((member) => member.id === driverSelect?.value && member.roleKey === "driver" && !isStaffOffDuty(member));
+      if (!bus) throw new Error(`Driver assignment could not be saved: vehicle "${busId}" was not found.`);
+      if (!driverSelect || !driver) throw new Error("Driver assignment could not be saved: select a driver who is not off duty.");
+      bus.driver = driver.name;
       const telemetryUnit = fleetDispatchTelemetryUnits.find((item) => item.id === busId);
-      if (telemetryUnit) telemetryUnit.driverName = driverName;
+      if (telemetryUnit) telemetryUnit.driverName = driver.name;
       screen.querySelector(".admin-modal-backdrop")?.remove();
       const tbody = screen.querySelector("#admin-fleet-tbody");
       if (tbody) tbody.innerHTML = renderAdminFleetRows();
@@ -5346,7 +5366,8 @@
       if (!name || !["-", ...availableBuses.map((bus) => normalizeStaffBusNo(bus.busNo))].includes(selectedBusNo) ||
         !["Driver", "Dispatcher", "Maintenance"].includes(role) ||
         !["Trinoma Hub", "Malolos Hub", "Balintawak Staging"].includes(depot) ||
-        !["On Duty", "On Break", "Off"].includes(status)) {
+        !["On Duty", "On Break", "Off"].includes(status) ||
+        (role === "Driver" && status === "Off" && selectedBusNo !== "-")) {
         throw new Error("Staff information could not be saved: one or more fields are invalid.");
       }
 
@@ -5829,6 +5850,11 @@
       const bus = adminFleetData.find((item) => item.id === confirmFleetDispatch.dataset.fleetDispatchConfirm);
       if (!bus) {
         throw new Error(`Vehicle dispatch failed: vehicle "${confirmFleetDispatch.dataset.fleetDispatchConfirm}" was not found.`);
+      }
+      if (isBusOffDuty(bus)) {
+        screen.querySelector(".admin-modal-backdrop")?.remove();
+        openAdminModal(`fleet-dispatch-confirm-${bus.id}`);
+        return;
       }
       bus.status = "On Duty";
       bus.statusClass = "on-duty";
