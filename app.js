@@ -198,7 +198,6 @@
   let selectedDispatchBusId = "bus-01";
   let dispatchPanelOpen = false;
   let selectedDispatchSeatBooking = null;
-  let dispatchAssignmentPanelOpen = false;
   let nextWalkInBookingNumber = 1;
   const adminFleetSize = 20;
   let dispatchTelemetryFilter = "all";
@@ -1352,16 +1351,12 @@
     return `
       <div class="dispatch-panel-shell">
       <button class="dispatch-panel-close" type="button" data-close-dispatch-panel aria-label="Close trip management">×</button>
-      <details class="dispatch-control-panel-card dispatch-assignment-panel"${dispatchAssignmentPanelOpen ? " open" : ""}>
-        <summary class="dispatch-panel-header" aria-controls="dispatch-assignment-content">
+      <section class="dispatch-control-panel-card dispatch-assignment-panel">
+        <header class="dispatch-panel-header">
           <div class="dispatch-panel-title-wrap">
-            <h2 class="dispatch-panel-title">Bus Assignment</h2>
+            <h2 class="dispatch-panel-title">Bus ${unit.busNo}</h2>
           </div>
-          <span class="dispatch-panel-summary-end">
-            <span class="dispatch-unit-badge">${unit.unitCode}</span>
-            <svg class="dispatch-panel-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
-          </span>
-        </summary>
+        </header>
 
         <div class="dispatch-assignment-panel-content" id="dispatch-assignment-content">
         <!-- Active Selection Box -->
@@ -1475,7 +1470,7 @@
           : `<button class="dispatch-finish-trip-button" type="button" data-dispatch-action="finish-trip">Mark trip finished</button>`}
         </div>
         </div>
-      </details>
+      </section>
       </div>
     `;
   };
@@ -1661,42 +1656,42 @@
 
     ${renderPeakDispatchReadiness()}
 
+    <!-- Active route map keeps its full-width layout while trip management is open. -->
+    <section class="admin-radar-map-card">
+      <div class="radar-map-toolbar">
+        <div class="corridor-filter-group">
+          <span class="corridor-label">Active Route:</span>
+          <strong>${activeRoute.label}</strong>
+        </div>
+
+        <div class="map-viewport-tools">
+          <button class="map-tool-btn" type="button" data-map-zoom="in" title="Zoom In">+</button>
+          <div class="map-tool-divider"></div>
+          <button class="map-tool-btn" type="button" data-map-zoom="out" title="Zoom Out">-</button>
+          <div class="map-tool-divider"></div>
+          <button class="map-tool-btn" type="button" data-map-layers title="Toggle Layers">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <span>Layers</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="radar-map-viewport" id="radar-viewport-container">
+        ${renderRadarMapSvg()}
+      </div>
+
+      <div class="radar-map-legend">
+        <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
+        <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
+        <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
+      </div>
+    </section>
+
     <!-- Main 2-Column Operational Grid -->
-  <div class="fleet-dispatch-grid${dispatchPanelOpen ? "" : " is-panel-closed"}${dispatchAssignmentPanelOpen ? " is-assignment-expanded" : ""}">
-      <!-- Left Column: Map + Table -->
+  <div class="fleet-dispatch-grid${dispatchPanelOpen ? " is-assignment-expanded" : " is-panel-closed"}">
+      <!-- Left Column: Bus Status Table -->
       <div class="fleet-dispatch-left-col">
-        <!-- 1. Radar Map Card -->
-        <section class="admin-radar-map-card">
-          <div class="radar-map-toolbar">
-            <div class="corridor-filter-group">
-                <span class="corridor-label">Active Route:</span>
-                <strong>${activeRoute.label}</strong>
-            </div>
-
-            <div class="map-viewport-tools">
-              <button class="map-tool-btn" type="button" data-map-zoom="in" title="Zoom In">+</button>
-              <div class="map-tool-divider"></div>
-              <button class="map-tool-btn" type="button" data-map-zoom="out" title="Zoom Out">-</button>
-              <div class="map-tool-divider"></div>
-              <button class="map-tool-btn" type="button" data-map-layers title="Toggle Layers">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                <span>Layers</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="radar-map-viewport" id="radar-viewport-container">
-            ${renderRadarMapSvg()}
-          </div>
-
-          <div class="radar-map-legend">
-            <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
-            <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
-            <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
-          </div>
-        </section>
-
-        <!-- 2. Active Fleet Telemetry Table Card -->
+        <!-- Bus Status Table -->
         <section class="admin-telemetry-table-card">
           <div class="telemetry-table-header-row">
             <div class="telemetry-card-title-wrap">
@@ -5676,14 +5671,6 @@
     }
   });
 
-  screen.addEventListener("toggle", (event) => {
-    const assignmentPanel = event.target;
-    if (assignmentPanel instanceof HTMLDetailsElement && assignmentPanel.matches(".dispatch-assignment-panel")) {
-      dispatchAssignmentPanelOpen = assignmentPanel.open;
-      assignmentPanel.closest(".fleet-dispatch-grid")?.classList.toggle("is-assignment-expanded", dispatchAssignmentPanelOpen);
-    }
-  }, true);
-
   screen.addEventListener("click", (event) => {
     const repCatBtn = event.target.closest("[data-report-category]");
     if (repCatBtn) {
@@ -5888,13 +5875,15 @@
     if (manageTripBtn) {
       selectedDispatchBusId = manageTripBtn.dataset.manageTrip;
       dispatchPanelOpen = true;
-      dispatchAssignmentPanelOpen = false;
       selectedDispatchSeatBooking = null;
       screen.querySelectorAll("[data-select-bus]").forEach((row) => {
         row.classList.toggle("is-selected", row.dataset.selectBus === selectedDispatchBusId);
       });
       const grid = screen.querySelector(".fleet-dispatch-grid");
-      if (grid) grid.classList.remove("is-panel-closed");
+      if (grid) {
+        grid.classList.remove("is-panel-closed");
+        grid.classList.add("is-assignment-expanded");
+      }
       const panel = screen.querySelector("#dispatch-panel-container");
       if (panel) panel.innerHTML = renderDispatchControlPanel();
       return;
@@ -5979,7 +5968,6 @@
 
     if (event.target.closest("[data-close-dispatch-panel]")) {
       dispatchPanelOpen = false;
-      dispatchAssignmentPanelOpen = false;
       const panel = screen.querySelector("#dispatch-panel-container");
       if (panel) panel.innerHTML = "";
       const grid = screen.querySelector(".fleet-dispatch-grid");
