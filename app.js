@@ -198,7 +198,6 @@
   let selectedDispatchBusId = "bus-01";
   let dispatchPanelOpen = false;
   let selectedDispatchSeatBooking = null;
-  let dispatchAssignmentPanelOpen = false;
   let nextWalkInBookingNumber = 1;
   const adminFleetSize = 20;
   let dispatchTelemetryFilter = "all";
@@ -1356,16 +1355,12 @@
     return `
       <div class="dispatch-panel-shell">
       <button class="dispatch-panel-close" type="button" data-close-dispatch-panel aria-label="Close trip management">×</button>
-      <details class="dispatch-control-panel-card dispatch-assignment-panel"${dispatchAssignmentPanelOpen ? " open" : ""}>
-        <summary class="dispatch-panel-header" aria-controls="dispatch-assignment-content">
+      <section class="dispatch-control-panel-card dispatch-assignment-panel">
+        <header class="dispatch-panel-header">
           <div class="dispatch-panel-title-wrap">
-            <h2 class="dispatch-panel-title">Bus Assignment</h2>
+            <h2 class="dispatch-panel-title">Bus ${unit.busNo}</h2>
           </div>
-          <span class="dispatch-panel-summary-end">
-            <span class="dispatch-unit-badge">${unit.unitCode}</span>
-            <svg class="dispatch-panel-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
-          </span>
-        </summary>
+        </header>
 
         <div class="dispatch-assignment-panel-content" id="dispatch-assignment-content">
         <!-- Active Selection Box -->
@@ -1482,7 +1477,7 @@
           : `<button class="dispatch-finish-trip-button" type="button" data-dispatch-action="finish-trip">Mark trip finished</button>`}
         </div>
         </div>
-      </details>
+      </section>
       </div>
     `;
   };
@@ -1668,42 +1663,42 @@
 
     ${renderPeakDispatchReadiness()}
 
+    <!-- Active route map keeps its full-width layout while trip management is open. -->
+    <section class="admin-radar-map-card">
+      <div class="radar-map-toolbar">
+        <div class="corridor-filter-group">
+          <span class="corridor-label">Active Route:</span>
+          <strong>${activeRoute.label}</strong>
+        </div>
+
+        <div class="map-viewport-tools">
+          <button class="map-tool-btn" type="button" data-map-zoom="in" title="Zoom In">+</button>
+          <div class="map-tool-divider"></div>
+          <button class="map-tool-btn" type="button" data-map-zoom="out" title="Zoom Out">-</button>
+          <div class="map-tool-divider"></div>
+          <button class="map-tool-btn" type="button" data-map-layers title="Toggle Layers">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <span>Layers</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="radar-map-viewport" id="radar-viewport-container">
+        ${renderRadarMapSvg()}
+      </div>
+
+      <div class="radar-map-legend">
+        <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
+        <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
+        <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
+      </div>
+    </section>
+
     <!-- Main 2-Column Operational Grid -->
-  <div class="fleet-dispatch-grid${dispatchPanelOpen ? "" : " is-panel-closed"}${dispatchAssignmentPanelOpen ? " is-assignment-expanded" : ""}">
-      <!-- Left Column: Map + Table -->
+  <div class="fleet-dispatch-grid${dispatchPanelOpen ? " is-assignment-expanded" : " is-panel-closed"}">
+      <!-- Left Column: Bus Status Table -->
       <div class="fleet-dispatch-left-col">
-        <!-- 1. Radar Map Card -->
-        <section class="admin-radar-map-card">
-          <div class="radar-map-toolbar">
-            <div class="corridor-filter-group">
-                <span class="corridor-label">Active Route:</span>
-                <strong>${activeRoute.label}</strong>
-            </div>
-
-            <div class="map-viewport-tools">
-              <button class="map-tool-btn" type="button" data-map-zoom="in" title="Zoom In">+</button>
-              <div class="map-tool-divider"></div>
-              <button class="map-tool-btn" type="button" data-map-zoom="out" title="Zoom Out">-</button>
-              <div class="map-tool-divider"></div>
-              <button class="map-tool-btn" type="button" data-map-layers title="Toggle Layers">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                <span>Layers</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="radar-map-viewport" id="radar-viewport-container">
-            ${renderRadarMapSvg()}
-          </div>
-
-          <div class="radar-map-legend">
-            <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
-            <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
-            <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
-          </div>
-        </section>
-
-        <!-- 2. Active Fleet Telemetry Table Card -->
+        <!-- Bus Status Table -->
         <section class="admin-telemetry-table-card">
           <div class="telemetry-table-header-row">
             <div class="telemetry-card-title-wrap">
@@ -1947,6 +1942,35 @@
       `;
     }).join("");
   };
+
+  const normalizeStaffBusNo = (busNo) => {
+    const digits = String(busNo ?? "").replace(/\D/g, "");
+    return digits ? digits.padStart(2, "0") : "";
+  };
+
+  const getAvailableStaffBuses = (staff) => {
+    const currentBusNo = normalizeStaffBusNo(staff.busNo);
+    return adminFleetData.filter((bus) => {
+      const busNo = normalizeStaffBusNo(bus.busNo);
+      if (!busNo) return false;
+      if (busNo === currentBusNo) return true;
+
+      const assignedToAnotherStaff = adminStaffMembersData.some((member) =>
+        member.id !== staff.id && normalizeStaffBusNo(member.busNo) === busNo
+      );
+      const driver = bus.driver.trim();
+      const hasAssignedDriver = driver !== "" && driver.toLowerCase() !== "unassigned" && driver !== staff.name;
+      return !assignedToAnotherStaff && !hasAssignedDriver;
+    });
+  };
+
+  const renderStaffBusOptions = (staff) => `
+    <option value="-"${!normalizeStaffBusNo(staff.busNo) ? " selected" : ""}>No bus assigned</option>
+    ${getAvailableStaffBuses(staff).map((bus) => {
+      const busNo = normalizeStaffBusNo(bus.busNo);
+      return `<option value="${escapeHtml(busNo)}"${busNo === normalizeStaffBusNo(staff.busNo) ? " selected" : ""}>${escapeHtml(bus.busNo)}</option>`;
+    }).join("")}
+  `;
 
   const adminStaffResourcesView = () => `
     <!-- Top Title & Action Header -->
@@ -3285,8 +3309,11 @@
             </select>
           </div>
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assign Driver</label>
-            <input class="admin-input" id="assign-driver" value="Jocky King Garcia" placeholder="Enter driver name" style="height: 40px;">
+            <label for="assign-driver" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assign Driver</label>
+            <select class="admin-input" id="assign-driver" required style="height: 40px;">
+              <option value="" selected>Select a driver</option>
+              ${renderStaffDriverOptions()}
+            </select>
           </div>
           <div class="admin-form-field">
             <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Route</label>
@@ -3499,17 +3526,84 @@
       desc = "Generated <strong>usad_staff_roster_2026.csv</strong> containing all 148 registered transport personnel, GPS telematic IDs, active duty hours, and depot assignments.";
       primaryBtn = "Done";
       isInfoOnly = true;
+    } else if (type.startsWith("staff-edit-")) {
+      const staffId = type.replace("staff-edit-", "");
+      const staff = adminStaffMembersData.find((member) => member.id === staffId);
+      if (!staff) throw new Error(`Staff editing could not be opened: staff member "${staffId}" was not found.`);
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>`;
+      title = `Edit ${staff.name}`;
+      desc = "Update this staff member's roster information.";
+      customHtml = `
+        <form class="admin-login-form" data-admin-edit-staff-form="${staff.id}" style="margin-top: 14px; text-align: left;">
+          <div class="admin-form-field">
+            <label for="edit-staff-name" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Full Name</label>
+            <input class="admin-input" id="edit-staff-name" name="name" value="${escapeHtml(staff.name)}" required style="height: 38px;">
+          </div>
+          <div class="admin-form-field">
+            <label for="edit-staff-role" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Role</label>
+            <select class="admin-input" id="edit-staff-role" name="role" style="height: 38px;">
+              <option value="Driver"${staff.role === "Driver" ? " selected" : ""}>Driver</option>
+              <option value="Dispatcher"${staff.role === "Dispatcher" ? " selected" : ""}>Dispatcher</option>
+              <option value="Maintenance"${staff.role === "Maintenance" ? " selected" : ""}>Maintenance</option>
+            </select>
+          </div>
+          <div class="admin-form-field">
+            <label for="edit-staff-depot" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Depot</label>
+            <select class="admin-input" id="edit-staff-depot" name="depot" style="height: 38px;">
+              <option value="Trinoma Hub"${staff.depot === "Trinoma Hub" ? " selected" : ""}>Trinoma Hub</option>
+              <option value="Malolos Hub"${staff.depot === "Malolos Hub" ? " selected" : ""}>Malolos Hub</option>
+              <option value="Balintawak Staging"${staff.depot === "Balintawak Staging" ? " selected" : ""}>Balintawak Staging</option>
+            </select>
+          </div>
+          <div class="admin-form-field">
+            <label for="edit-staff-status" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Status</label>
+            <select class="admin-input" id="edit-staff-status" name="status" style="height: 38px;">
+              <option value="On Duty"${staff.status === "On Duty" ? " selected" : ""}>On Duty</option>
+              <option value="On Break"${staff.status === "On Break" ? " selected" : ""}>On Break</option>
+              <option value="Off"${staff.status === "Off" ? " selected" : ""}>Off</option>
+            </select>
+          </div>
+          <div class="admin-form-field">
+            <label for="edit-staff-bus" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Bus</label>
+            <select class="admin-input" id="edit-staff-bus" name="busNo" style="height: 38px;">
+              ${renderStaffBusOptions(staff)}
+            </select>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="submit">Save Changes</button>
+          </div>
+        </form>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("staff-delete-")) {
+      const staffId = type.replace("staff-delete-", "");
+      const staff = adminStaffMembersData.find((member) => member.id === staffId);
+      if (!staff) throw new Error(`Staff removal could not be opened: staff member "${staffId}" was not found.`);
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5m4-5v5"/></svg>`;
+      title = `Remove ${staff.name}?`;
+      desc = "This will remove the staff member from the roster and clear any matching bus assignments. This action cannot be undone.";
+      customHtml = `
+        <div class="admin-modal-actions" style="margin-top: 16px;">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+          <button class="admin-modal-button-primary" type="button" data-staff-delete-confirm="${staff.id}">Remove Staff</button>
+        </div>
+      `;
+      isInfoOnly = true;
     } else if (type.startsWith("staff-detail-")) {
       const staffId = type.replace("staff-detail-", "");
-      const staff = adminStaffMembersData.find((s) => s.id === staffId) || adminStaffMembersData[0];
+      const staff = adminStaffMembersData.find((s) => s.id === staffId);
+      if (!staff) throw new Error(`Staff details could not be opened: staff member "${staffId}" was not found.`);
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>`;
       title = `${staff.name} (${staff.staffId})`;
       desc = `Role: <strong>${staff.role}</strong><br>Depot: <strong>${staff.depot}</strong> · Bus Assigned: <strong>${staff.busNo}</strong><br>Rate: <strong>${staff.rate}/hr</strong> (Max: ${staff.maxHours})<br>Duty Status: <strong>${staff.status}</strong>`;
       customHtml = `
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+          <button class="admin-modal-button-primary" type="button" data-staff-edit="${staff.id}">Edit Staff Information</button>
           <button class="admin-modal-button-primary" type="button" data-staff-quick-status="${staff.id}">
             Toggle Shift Status (${staff.status === "On Duty" ? "Set On Break" : "Set On Duty"})
           </button>
+          <button class="admin-modal-button-secondary" type="button" data-staff-remove="${staff.id}">Remove Staff</button>
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
         </div>
       `;
@@ -5109,18 +5203,16 @@
     if (event.target.matches("[data-admin-assign-form]")) {
       event.preventDefault();
       const busVal = screen.querySelector("#assign-bus")?.value;
-      const driverVal = screen.querySelector("#assign-driver")?.value?.trim();
+      const driverId = screen.querySelector("#assign-driver")?.value;
+      const assignedDriver = adminStaffMembersData.find((member) => member.id === driverId && member.roleKey === "driver");
+      if (!assignedDriver) throw new Error("USAD could not assign a bus: the selected driver is not in Staff Management.");
       const routeId = screen.querySelector("#assign-route")?.value || activeRoute.id;
       if (!busVal) throw new Error("USAD could not assign a bus: no vehicle was selected.");
       const assignedRoute = routes.find((route) => route.id === routeId);
       if (!assignedRoute) throw new Error(`USAD could not assign a bus: route "${routeId}" is not active.`);
       const targetBus = adminFleetData.find((b) => b.busNo.toLowerCase() === busVal.toLowerCase() || b.id.toLowerCase() === busVal.toLowerCase().replace(" ", "-"));
       if (!targetBus) throw new Error(`USAD could not assign a bus: vehicle "${busVal}" was not found.`);
-      if (!driverVal) {
-        screen.querySelector("#assign-driver")?.focus();
-        return;
-      }
-      targetBus.driver = driverVal;
+      targetBus.driver = assignedDriver.name;
       targetBus.routeId = assignedRoute.id;
       targetBus.route = assignedRoute.label;
       targetBus.status = "On Duty";
@@ -5129,7 +5221,7 @@
       targetBus.filterCategory = "on-duty";
       const telemetryUnit = fleetDispatchTelemetryUnits.find((unit) => unit.id === targetBus.id);
       if (telemetryUnit) {
-        telemetryUnit.driverName = driverVal;
+        telemetryUnit.driverName = assignedDriver.name;
         telemetryUnit.routeId = assignedRoute.id;
         telemetryUnit.routeCorridor = assignedRoute.label;
         telemetryUnit.category = "deployed";
@@ -5275,6 +5367,62 @@
       tripData = { ...tripData, origin: origin.trim(), destination: destination.trim(), passengers, payment };
       bookingConfirmed = false;
       renderScreen("find-rides");
+    }
+
+    if (event.target.matches("[data-admin-edit-staff-form]")) {
+      event.preventDefault();
+      const form = event.target;
+      const staffId = form.dataset.adminEditStaffForm;
+      const staff = adminStaffMembersData.find((member) => member.id === staffId);
+      const formData = new FormData(form);
+      const name = String(formData.get("name") ?? "").trim();
+      const role = String(formData.get("role") ?? "");
+      const depot = String(formData.get("depot") ?? "");
+      const selectedBusNo = String(formData.get("busNo") ?? "").trim();
+      const status = String(formData.get("status") ?? "");
+      if (!staff) throw new Error(`Staff information could not be saved: staff member "${staffId}" was not found.`);
+      const availableBuses = getAvailableStaffBuses(staff);
+      if (!name || !["-", ...availableBuses.map((bus) => normalizeStaffBusNo(bus.busNo))].includes(selectedBusNo) ||
+        !["Driver", "Dispatcher", "Maintenance"].includes(role) ||
+        !["Trinoma Hub", "Malolos Hub", "Balintawak Staging"].includes(depot) ||
+        !["On Duty", "On Break", "Off"].includes(status)) {
+        throw new Error("Staff information could not be saved: one or more fields are invalid.");
+      }
+
+      const roleCode = role === "Driver" ? "DRV" : role === "Dispatcher" ? "DSP" : "MNT";
+      const previousBusNo = normalizeStaffBusNo(staff.busNo);
+      const busNo = selectedBusNo === "-" ? "-" : selectedBusNo;
+      staff.name = name;
+      staff.role = role;
+      staff.roleKey = role.toLowerCase();
+      staff.staffId = staff.staffId.replace(/•\s*(DRV|DSP|MNT)$/, `• ${roleCode}`);
+      staff.busNo = busNo;
+      staff.depot = depot;
+      staff.status = status;
+      staff.statusKey = status.toLowerCase().replace(" ", "-");
+      staff.statusClass = status === "On Duty" ? "on-duty" : status === "On Break" ? "on-break" : "off";
+      staff.initials = name.split(/\s+/).map((word) => word[0]).join("").toUpperCase().slice(0, 2);
+
+      adminFleetData.forEach((bus) => {
+        const busCode = normalizeStaffBusNo(bus.busNo);
+        if (busCode === previousBusNo && busCode !== selectedBusNo) bus.driver = "Unassigned";
+        if (busCode === selectedBusNo) bus.driver = name;
+      });
+      fleetDispatchTelemetryUnits.forEach((unit) => {
+        const busCode = normalizeStaffBusNo(unit.busNo);
+        if (busCode === previousBusNo && busCode !== selectedBusNo) unit.driverName = "Unassigned";
+        if (busCode === selectedBusNo) unit.driverName = name;
+      });
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const tbody = screen.querySelector("#staff-table-tbody");
+      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      const fleetTbody = screen.querySelector("#admin-fleet-tbody");
+      if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
+      const dispatchTbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (dispatchTbody) dispatchTbody.innerHTML = renderFleetTelemetryRows();
+      const dispatchPanel = screen.querySelector("#dispatch-panel-container");
+      if (dispatchPanelOpen && dispatchPanel) dispatchPanel.innerHTML = renderDispatchControlPanel();
+      return;
     }
 
     if (event.target.matches("[data-admin-add-staff-form]")) {
@@ -5540,14 +5688,6 @@
       if (termsError) termsError.hidden = true;
     }
   });
-
-  screen.addEventListener("toggle", (event) => {
-    const assignmentPanel = event.target;
-    if (assignmentPanel instanceof HTMLDetailsElement && assignmentPanel.matches(".dispatch-assignment-panel")) {
-      dispatchAssignmentPanelOpen = assignmentPanel.open;
-      assignmentPanel.closest(".fleet-dispatch-grid")?.classList.toggle("is-assignment-expanded", dispatchAssignmentPanelOpen);
-    }
-  }, true);
 
   screen.addEventListener("click", (event) => {
     const repCatBtn = event.target.closest("[data-report-category]");
@@ -5847,7 +5987,6 @@
 
     if (event.target.closest("[data-close-dispatch-panel]")) {
       dispatchPanelOpen = false;
-      dispatchAssignmentPanelOpen = false;
       const panel = screen.querySelector("#dispatch-panel-container");
       if (panel) panel.innerHTML = "";
       const grid = screen.querySelector(".fleet-dispatch-grid");
@@ -6080,6 +6219,43 @@
         else staffDepotFilter = "all";
         renderScreen("admin-dashboard");
       }
+      return;
+    }
+
+    const staffEditButton = event.target.closest("[data-staff-edit]");
+    if (staffEditButton) {
+      openAdminModal(`staff-edit-${staffEditButton.dataset.staffEdit}`);
+      return;
+    }
+
+    const staffRemoveButton = event.target.closest("[data-staff-remove]");
+    if (staffRemoveButton) {
+      openAdminModal(`staff-delete-${staffRemoveButton.dataset.staffRemove}`);
+      return;
+    }
+
+    const staffDeleteConfirm = event.target.closest("[data-staff-delete-confirm]");
+    if (staffDeleteConfirm) {
+      const staffId = staffDeleteConfirm.dataset.staffDeleteConfirm;
+      const staffIndex = adminStaffMembersData.findIndex((member) => member.id === staffId);
+      if (staffIndex === -1) throw new Error(`Staff member could not be removed: "${staffId}" was not found.`);
+      const [removedStaff] = adminStaffMembersData.splice(staffIndex, 1);
+      staffSelectedRows.delete(staffId);
+      adminFleetData.forEach((bus) => {
+        if (bus.driver === removedStaff.name) bus.driver = "Unassigned";
+      });
+      fleetDispatchTelemetryUnits.forEach((unit) => {
+        if (unit.driverName === removedStaff.name) unit.driverName = "Unassigned";
+      });
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const tbody = screen.querySelector("#staff-table-tbody");
+      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      const fleetTbody = screen.querySelector("#admin-fleet-tbody");
+      if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
+      const dispatchTbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (dispatchTbody) dispatchTbody.innerHTML = renderFleetTelemetryRows();
+      const dispatchPanel = screen.querySelector("#dispatch-panel-container");
+      if (dispatchPanelOpen && dispatchPanel) dispatchPanel.innerHTML = renderDispatchControlPanel();
       return;
     }
 
