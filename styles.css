@@ -5095,6 +5095,12 @@ input:focus-visible,
   border-color: #10b981;
 }
 
+.analytics-profile-hint {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .slider-label-row {
   display: flex;
   align-items: center;

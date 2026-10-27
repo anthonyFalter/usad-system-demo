@@ -1150,11 +1150,12 @@
       <div class="analytics-controls-bar">
         <div class="analytics-ctrl-col">
           <label class="ctrl-label">Operating profile</label>
-          <select class="analytics-ctrl-select" data-analytics-profile>
+          <select class="analytics-ctrl-select" data-analytics-profile aria-describedby="analytics-profile-hint">
             <option value="Standard Service" ${predictiveOperatingProfile === "Standard Service" ? "selected" : ""}>Standard Service</option>
             <option value="Peak Service" ${predictiveOperatingProfile === "Peak Service" ? "selected" : ""}>Peak Service</option>
             <option value="Reduced Service" ${predictiveOperatingProfile === "Reduced Service" ? "selected" : ""}>Reduced Service</option>
           </select>
+          <span class="analytics-profile-hint" id="analytics-profile-hint">Profile adjusts projected demand; load scale can still shift bars between demand levels.</span>
         </div>
 
         <div class="analytics-ctrl-col slider-col">
