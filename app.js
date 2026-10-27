@@ -367,6 +367,11 @@
   const PREDICTIVE_CHART_AXIS_HEIGHT = 165;
   const PREDICTIVE_CHART_X_AXIS_HEIGHT = PREDICTIVE_CHART_AXIS_HEIGHT - PREDICTIVE_CHART_PLOT_HEIGHT;
   const getScaledPredictiveValue = (item) => Math.round(item.val * (predictiveTransitLoadScale / 100));
+  const getPredictiveThresholdBottom = (multiplier) => {
+    const thresholdValue = predictiveDailyPassengerBaseline * getPredictivePeriod().days * multiplier;
+    return PREDICTIVE_CHART_X_AXIS_HEIGHT
+      + (thresholdValue / getPredictiveAxisMaximum()) * PREDICTIVE_CHART_PLOT_HEIGHT;
+  };
   const getPredictiveAxisMaximum = () => {
     const period = getPredictivePeriod();
     const axisUnit = PREDICTIVE_DAILY_AXIS_MAXIMUM * period.days;
@@ -1124,10 +1129,10 @@
 
         <div class="chart-plot-container" style="height: ${PREDICTIVE_CHART_AXIS_HEIGHT}px;">
           <!-- Threshold lines -->
-          <div class="chart-threshold-line line-peak" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.8}px;"></div>
-          <span class="threshold-label threshold-label-peak text-red" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.8}px;">Peak demand</span>
-          <div class="chart-threshold-line line-normal" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.5}px;"></div>
-          <span class="threshold-label threshold-label-normal text-blue" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.5}px;">Normal demand</span>
+          <div class="chart-threshold-line line-peak" style="bottom: ${getPredictiveThresholdBottom(1.1)}px;"></div>
+          <span class="threshold-label threshold-label-peak text-red" style="bottom: ${getPredictiveThresholdBottom(1.1)}px;">Peak demand</span>
+          <div class="chart-threshold-line line-normal" style="bottom: ${getPredictiveThresholdBottom(0.9)}px;"></div>
+          <span class="threshold-label threshold-label-normal text-blue" style="bottom: ${getPredictiveThresholdBottom(0.9)}px;">Normal demand</span>
 
           <!-- Bars row -->
           <div class="chart-bars-row" id="analytics-bars-container">
