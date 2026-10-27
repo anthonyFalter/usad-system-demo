@@ -8,9 +8,11 @@
   const zoomOutput = document.querySelector("#zoom-level");
   const backButton = document.querySelector("#back-button");
   const fitButton = document.querySelector("#fit-button");
+  const fullscreenButton = document.querySelector("#fullscreen-button");
+  const fullscreenStatus = document.querySelector("#fullscreen-status");
   const workspaceRoleLabel = document.querySelector("#workspace-role-label");
 
-  if (!rolePage || !workspacePage || !roleNote || !viewport || !world || !screen || !zoomOutput || !backButton || !fitButton) {
+  if (!rolePage || !workspacePage || !roleNote || !viewport || !world || !screen || !zoomOutput || !backButton || !fitButton || !fullscreenButton || !fullscreenStatus) {
     throw new Error("USAD prototype could not initialize: required interface elements are missing.");
   }
 
@@ -19,6 +21,22 @@
     throw new Error("USAD prototype could not initialize: active route data is missing.");
   }
   const activeRoute = routes[0];
+  const localDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  const updateAdminLocalClock = () => {
+    const clock = screen.querySelector("[data-admin-local-clock]");
+    if (!clock) return;
+    const now = new Date();
+    clock.dateTime = now.toISOString();
+    clock.textContent = localDateTimeFormatter.format(now);
+  };
   const renderRouteOptions = (selectedRouteId = activeRoute.id) => routes.map((route) => `
     <option value="${route.id}"${selectedRouteId === route.id ? " selected" : ""}>${route.label}</option>
   `).join("");
@@ -829,8 +847,15 @@
     return `
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
-      <div class="admin-header-title-box">
+      <div class="admin-header-title-box admin-live-header-title-box">
         <h1 class="admin-header-title">Live Operations</h1>
+        <div class="admin-local-clock" aria-label="Current local date and time">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          <div class="admin-local-clock-copy">
+            <span>LOCAL DATE &amp; TIME</span>
+            <time data-admin-local-clock datetime="${new Date().toISOString()}">${localDateTimeFormatter.format(new Date())}</time>
+          </div>
+        </div>
       </div>
 
       <div class="admin-header-actions">
@@ -1114,61 +1139,7 @@
 
     <!-- Dispatch recommendation -->
     <section class="analytics-bottom-grid">
-      <!-- Card 1: Economic Conditions -->
-      <article class="analytics-bottom-card">
-        <div class="admin-card-header">
-          <div class="admin-card-header-left">
-            <div class="card-icon-badge gold">
-              <span style="font-size: 13px; font-weight: 700;">₱</span>
-            </div>
-            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Economic conditions</div>
-          </div>
-        </div>
-
-        <div class="bento-denested-content">
-          <div class="bento-stat-pair">
-            <span class="bento-stat-label">Diesel Spot Index</span>
-            <strong class="bento-stat-val text-red">₱68.40/L (+4.2%)</strong>
-          </div>
-          <p class="bento-stat-desc">Elevated fuel prices may increase demand for buses serving ${escapeHtml(activeRoute.destinationShort)}.</p>
-        </div>
-
-        <div class="bento-divider-line"></div>
-
-        <div class="analytics-card-footer">
-          <span style="color: #94a3b8; font-size: 11px;">Ridership sensitivity factor:</span>
-          <strong style="color: #10b981; font-size: 11.5px;">0.82 (High Elasticity)</strong>
-        </div>
-      </article>
-
-      <!-- Card 2: Weather & Monsoon Impact -->
-      <article class="analytics-bottom-card">
-        <div class="admin-card-header">
-          <div class="admin-card-header-left">
-            <div class="card-icon-badge cyan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
-            </div>
-            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Weather &amp; monsoon impact</div>
-          </div>
-        </div>
-
-        <div class="bento-denested-content">
-          <div class="bento-stat-pair">
-            <span class="bento-stat-label">Terminal Dwell Surge</span>
-            <strong class="bento-stat-val text-amber">+35% Wait Time</strong>
-          </div>
-          <p class="bento-stat-desc">Monsoon showers projected between 4:30 PM - 8 PM may affect commuters at ${escapeHtml(activeRoute.destinationShort)}.</p>
-        </div>
-
-        <div class="bento-divider-line"></div>
-
-        <div class="analytics-card-footer">
-          <span style="color: #94a3b8; font-size: 11px;">Precipitation probability:</span>
-          <strong style="color: #38bdf8; font-size: 11.5px;">85% at 5:00 PM</strong>
-        </div>
-      </article>
-
-      <!-- Card 3: AI Dispatch Recommendation -->
+      <!-- AI Dispatch Recommendation -->
       <article class="analytics-bottom-card">
         <div class="admin-card-header">
           <div class="admin-card-header-left">
@@ -1964,7 +1935,7 @@
     });
 
     if (filtered.length === 0) {
-      return `<tr><td colspan="9" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
+      return `<tr><td colspan="8" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
     }
 
     return filtered.map((staff) => {
@@ -1995,9 +1966,6 @@
           </td>
           <td>
             <span class="staff-depot-text">${staff.depot}</span>
-          </td>
-          <td>
-            <span class="staff-rate-text">${staff.rate}</span>
           </td>
           <td>
             <span class="staff-max-hours-text">${staff.maxHours}</span>
@@ -2134,7 +2102,6 @@
               <th>ROLE</th>
               <th>BUS NO.</th>
               <th>DESIGNATION / DEPOT</th>
-              <th>HOURLY RATE</th>
               <th>MAX HOURS</th>
               <th>STATUS</th>
               <th>ACTION</th>
@@ -5109,6 +5076,31 @@
 
   fitButton.addEventListener("click", resetCanvas);
 
+  const updateFullscreenButton = () => {
+    const isFullscreen = document.fullscreenElement === workspacePage;
+    const label = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";
+    fullscreenButton.setAttribute("aria-label", label);
+    fullscreenButton.title = label;
+    fullscreenStatus.textContent = "";
+  };
+
+  fullscreenButton.addEventListener("click", async () => {
+    try {
+      if (document.fullscreenElement === workspacePage) {
+        await document.exitFullscreen();
+      } else if (workspacePage.requestFullscreen) {
+        await workspacePage.requestFullscreen();
+      } else {
+        fullscreenStatus.textContent = "Fullscreen is unavailable in this browser.";
+      }
+    } catch (error) {
+      const details = error instanceof Error ? ` ${error.message}` : "";
+      fullscreenStatus.textContent = `Fullscreen could not be enabled.${details}`;
+    }
+  });
+
+  document.addEventListener("fullscreenchange", updateFullscreenButton);
+
   viewport.addEventListener("wheel", (event) => {
     if (event.target.closest("#phone-screen")) return;
     event.preventDefault();
@@ -7035,4 +7027,5 @@
 
   renderScreen(activeState);
   resetCanvas();
+  window.setInterval(updateAdminLocalClock, 1000);
 })();
