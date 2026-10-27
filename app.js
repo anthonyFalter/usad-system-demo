@@ -3480,7 +3480,6 @@
               <select class="admin-input" id="new-staff-depot" style="height: 38px;">
                 <option value="Trinoma Hub">Trinoma Hub</option>
                 <option value="Malolos Hub">Malolos Hub</option>
-                <option value="Balintawak Staging">Balintawak Staging</option>
               </select>
             </div>
           </div>
@@ -4091,7 +4090,7 @@
             ${concessionTypes.map((type) => `<button type="button" class="verification-type${discountVerificationType === type.id ? " is-selected" : ""}" data-concession-type="${type.id}" aria-pressed="${discountVerificationType === type.id}"><span class="verification-type-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${type.icon}</svg></span><strong>${type.label}</strong><small>${type.id === discountVerificationType ? "Selected" : type.detail}</small></button>`).join("")}
           </div>
           <div class="verification-section-label verification-upload-heading"><strong>Document Upload</strong><span>JPG, PNG or PDF</span></div>
-          <div class="verification-upload-list">${uploadCard("front", "Upload Front of School ID")}${uploadCard("back", "Upload Back of School ID")}</div>
+          <div class="verification-upload-list">${uploadCard("front", "Upload Front of ID")}${uploadCard("back", "Upload Back of School ID")}</div>
           <p class="verification-note">Automated ID verification usually takes 1-2 minutes once submitted.</p>
           ${discountVerificationMessage ? `<p class="verification-message" data-verification-message role="status" aria-live="polite">${escapeHtml(discountVerificationMessage)}</p>` : ""}
           <button class="verification-primary" type="button" data-verification-action="review">Continue to Verification <span aria-hidden="true">→</span></button>`
