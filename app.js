@@ -21,22 +21,6 @@
     throw new Error("USAD prototype could not initialize: active route data is missing.");
   }
   const activeRoute = routes[0];
-  const localDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit"
-  });
-  const updateAdminLocalClock = () => {
-    const clock = screen.querySelector("[data-admin-local-clock]");
-    if (!clock) return;
-    const now = new Date();
-    clock.dateTime = now.toISOString();
-    clock.textContent = localDateTimeFormatter.format(now);
-  };
   const renderRouteOptions = (selectedRouteId = activeRoute.id) => routes.map((route) => `
     <option value="${route.id}"${selectedRouteId === route.id ? " selected" : ""}>${route.label}</option>
   `).join("");
@@ -882,15 +866,8 @@
     return `
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
-      <div class="admin-header-title-box admin-live-header-title-box">
+      <div class="admin-header-title-box">
         <h1 class="admin-header-title">Live Operations</h1>
-        <div class="admin-local-clock" aria-label="Current local date and time">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
-          <div class="admin-local-clock-copy">
-            <span>LOCAL DATE &amp; TIME</span>
-            <time data-admin-local-clock datetime="${new Date().toISOString()}">${localDateTimeFormatter.format(new Date())}</time>
-          </div>
-        </div>
       </div>
 
       <div class="admin-header-actions">
@@ -7398,5 +7375,4 @@
 
   renderScreen(activeState);
   resetCanvas();
-  window.setInterval(updateAdminLocalClock, 1000);
 })();
