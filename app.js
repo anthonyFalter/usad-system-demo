@@ -1129,9 +1129,9 @@
 
         <div class="chart-plot-container" style="height: ${PREDICTIVE_CHART_AXIS_HEIGHT}px;">
           <!-- Threshold lines -->
-          <div class="chart-threshold-line line-peak" style="bottom: ${getPredictiveThresholdBottom(1.1)}px;"></div>
+          <div class="chart-threshold-line line-peak" tabindex="0" role="img" aria-label="Peak demand threshold" style="bottom: ${getPredictiveThresholdBottom(1.1)}px;"></div>
           <span class="threshold-label threshold-label-peak text-red" style="bottom: ${getPredictiveThresholdBottom(1.1)}px;">Peak demand</span>
-          <div class="chart-threshold-line line-normal" style="bottom: ${getPredictiveThresholdBottom(0.9)}px;"></div>
+          <div class="chart-threshold-line line-normal" tabindex="0" role="img" aria-label="Normal demand threshold" style="bottom: ${getPredictiveThresholdBottom(0.9)}px;"></div>
           <span class="threshold-label threshold-label-normal text-blue" style="bottom: ${getPredictiveThresholdBottom(0.9)}px;">Normal demand</span>
 
           <!-- Bars row -->

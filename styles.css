@@ -4798,8 +4798,17 @@ input:focus-visible,
   left: 0;
   right: 0;
   border-bottom: 1px dashed;
-  pointer-events: none;
-  z-index: 1;
+  pointer-events: auto;
+  z-index: 4;
+}
+
+.chart-threshold-line::before {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  left: 0;
+  height: 12px;
+  content: "";
 }
 
 .chart-threshold-line.line-peak {
@@ -4813,6 +4822,9 @@ input:focus-visible,
 .threshold-label {
   position: absolute;
   right: 6px;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -4821,6 +4833,14 @@ input:focus-visible,
   border-radius: 3px;
   z-index: 5;
   transform: translateY(-3px);
+}
+
+.chart-threshold-line:hover + .threshold-label,
+.chart-threshold-line:focus-visible + .threshold-label,
+.threshold-label:hover {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .threshold-label.text-red {
