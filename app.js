@@ -421,12 +421,10 @@
     const period = getPredictivePeriod();
     const selectedItem = predictiveDemandForecast.find((item) => item.id === predictiveSelectedBucket) ?? predictiveDemandForecast[7];
     const scaledVal = Math.round(selectedItem.val * (predictiveTransitLoadScale / 100));
-    const peakPeriod = predictiveDemandForecast.reduce((peak, item) => item.val > peak.val ? item : peak);
-    const peakVolume = Math.round(peakPeriod.val * (predictiveTransitLoadScale / 100));
     const demandLabel = selectedItem.state === "surge" ? "Peak surge" : selectedItem.state === "normal" ? "Normal" : "Low";
 
     let stateClass = "text-low";
-    let stateText = `${scaledVal.toLocaleString()} (${demandLabel})`;
+    let stateText = demandLabel;
     if (selectedItem.state === "surge") {
       stateClass = "text-surge";
     } else if (selectedItem.state === "normal") {
@@ -435,17 +433,17 @@
 
     return `
       <div class="analytics-metric-box">
-        <span class="metric-box-label">Peak demand period</span>
-        <strong class="metric-box-val">${peakPeriod.periodLabel}</strong>
+        <span class="metric-box-label">Selected demand period</span>
+        <strong class="metric-box-val">${selectedItem.periodLabel}</strong>
       </div>
       <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
-        <span class="metric-box-label">Peak projected ridership</span>
-        <strong class="metric-box-val">${peakVolume.toLocaleString()} / ${period.unit}</strong>
+        <span class="metric-box-label">Selected projected ridership</span>
+        <strong class="metric-box-val">${scaledVal.toLocaleString()} / ${period.unit}</strong>
       </div>
       <div class="analytics-metric-divider"></div>
       <div class="analytics-metric-box">
-        <span class="metric-box-label">${selectedItem.periodLabel} projected ridership</span>
+        <span class="metric-box-label">Demand outlook</span>
         <strong class="metric-box-val ${stateClass}">${stateText}</strong>
       </div>
     `;
