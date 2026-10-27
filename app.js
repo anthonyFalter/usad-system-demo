@@ -67,6 +67,8 @@
     { id: "fare-offer", type: "promo", title: "A little more in your U-Pouch", body: "Explore the sample offers shown in the app. No offer is active.", time: "Oct 12", unread: false },
   ];
   let notificationFilter = "all";
+  const regularUserFarePerPassenger = 120;
+  const discountedUserFarePerPassenger = 100;
   let welcomeTimeout = 0;
   let activeFaqCategory = "all";
   let tripHistoryFilter = "all";
@@ -79,10 +81,10 @@
   let discountVerificationStatus = "unverified";
   let discountVerificationMessage = "";
   let tripHistory = [
-    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: 80, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true, receiptLabel: "E-Ticket & Receipt", showRateAction: true, rebookLabel: "Rebook" },
-    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: activeRoute.destination, originDetail: activeRoute.destinationShort, destination: activeRoute.origin, destinationDetail: `Via ${activeRoute.via}`, fare: 80, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true, receiptLabel: "Receipt", rebookLabel: "Rebook Route" },
-    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
-    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: activeRoute.destination, originDetail: "Trip cancelled by operator", destination: activeRoute.origin, destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
+    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: regularUserFarePerPassenger, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true, receiptLabel: "E-Ticket & Receipt", showRateAction: true, rebookLabel: "Rebook" },
+    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: activeRoute.destination, originDetail: activeRoute.destinationShort, destination: activeRoute.origin, destinationDetail: `Via ${activeRoute.via}`, fare: regularUserFarePerPassenger, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true, receiptLabel: "Receipt", rebookLabel: "Rebook Route" },
+    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: discountedUserFarePerPassenger, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
+    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: activeRoute.destination, originDetail: "Trip cancelled by operator", destination: activeRoute.origin, destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: regularUserFarePerPassenger, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
   ];
   let tripData = {
     origin: activeRoute.origin,
@@ -95,8 +97,8 @@
   let topUpReturnFocus = null;
   let passwordUpdatedReturnFocus = null;
   const liveBusDetails = [
-    { name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: "₱80.00", status: "On time" },
-    { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: "₱80.00", status: "On time" },
+    { name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
+    { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
   ];
   let selectedLiveBus = 0;
   let selectedBusSeatId = "";
@@ -4060,7 +4062,7 @@
 
   const accountVerificationScreen = () => {
     const concessionTypes = [
-      { id: "student", label: "Student", detail: "20% Discount", icon: '<path d="M3 9 12 4l9 5-9 5-9-5Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5m3-2v6"/>' },
+      { id: "student", label: "Student", detail: "₱20 Discount", icon: '<path d="M3 9 12 4l9 5-9 5-9-5Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5m3-2v6"/>' },
       { id: "senior", label: "Senior", detail: "60+ y/o", icon: '<circle cx="12" cy="7" r="3"/><path d="M6 21v-2a6 6 0 0 1 12 0v2m-2-4 4 4m-4 0h4"/>' },
       { id: "pwd", label: "PWD", detail: "Valid ID", icon: '<circle cx="12" cy="5" r="2"/><path d="M10 9h5l2 4h-4l-1 3m-2-7-2 5h4l2 4m-3-2-3 4"/>' },
     ];
@@ -4084,7 +4086,7 @@
       </article>`;
     };
     const stepContent = discountVerificationStep === 1
-      ? `<div class="verification-section-label"><strong>Select Concession Type</strong><span>${discountVerificationType === "student" ? "20% Discount" : "Discount ID"}</span></div>
+      ? `<div class="verification-section-label"><strong>Select Concession Type</strong><span>${discountVerificationType === "student" ? "₱20 Discount" : "Discount ID"}</span></div>
           <div class="verification-types" role="group" aria-label="Concession type">
             ${concessionTypes.map((type) => `<button type="button" class="verification-type${discountVerificationType === type.id ? " is-selected" : ""}" data-concession-type="${type.id}" aria-pressed="${discountVerificationType === type.id}"><span class="verification-type-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${type.icon}</svg></span><strong>${type.label}</strong><small>${type.id === discountVerificationType ? "Selected" : type.detail}</small></button>`).join("")}
           </div>
@@ -4156,9 +4158,9 @@
       <div class="result-filter"><button class="filter-selected" type="button">Fastest</button><button type="button" data-info="Showing the fastest available seats.">More Seats</button></div>
       <div class="discount-note"><span>✓</span> Student Discount Applied</div>
       <section class="ride-list">
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱80.00</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱80.00</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>0 seats · ₱80.00</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
+        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>0 seats · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
       </section>
       <p class="prototype-stamp">Sample ride options · Not live availability</p>
     </div>`;
@@ -4171,7 +4173,7 @@
           <button class="modal-close" type="button" aria-label="Close confirmation" data-screen="find-rides">×</button>
           <h2 id="booking-dialog-title">Booking Confirmation</h2><p class="sheet-subtitle">Ride Details</p>
           <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>8 seats available</span></div></div>
-          <dl class="fare-breakdown"><div><dt>Regular Fare</dt><dd>₱${(100 * tripData.passengers).toFixed(2)}</dd></div><div><dt>Student Discount</dt><dd>-₱${(20 * tripData.passengers).toFixed(2)}</dd></div><div class="fare-total"><dt>Total Fare</dt><dd>₱${(80 * tripData.passengers).toFixed(2)}</dd></div></dl>
+          <dl class="fare-breakdown"><div><dt>Regular Fare</dt><dd>₱${(regularUserFarePerPassenger * tripData.passengers).toFixed(2)}</dd></div><div><dt>Student Discount</dt><dd>-₱${((regularUserFarePerPassenger - discountedUserFarePerPassenger) * tripData.passengers).toFixed(2)}</dd></div><div class="fare-total"><dt>Total Fare</dt><dd>₱${(discountedUserFarePerPassenger * tripData.passengers).toFixed(2)}</dd></div></dl>
           <div class="dialog-actions"><button type="button" data-screen="find-rides">Cancel</button><button type="button" class="confirm-action" data-action="confirm-booking">Confirm</button></div>
         </section>
       </div>
@@ -4184,7 +4186,7 @@
         receiptId: "USAD-7X29-KM41",
         origin: tripData.origin,
         destination: tripData.destination,
-        fare: 80 * tripData.passengers,
+        fare: discountedUserFarePerPassenger * tripData.passengers,
         seat: tripData.seat,
         passengers: tripData.passengers,
         payment: tripData.payment,
@@ -4399,7 +4401,7 @@
     const tripHistoryScreen = () => {
       const completedTrips = tripHistory.filter((trip) => trip.status === "completed");
       const cancelledTrips = tripHistory.filter((trip) => trip.status === "cancelled");
-      const monthlySummary = { month: "October 2024", totalSpent: 960, rides: 12, co2Saved: 18.4 };
+      const monthlySummary = { month: "October 2026", totalSpent: 1200, rides: 12, co2Saved: 18.4 };
       const filters = `<div class="home-shortcuts trip-history-filters" role="group" aria-label="Filter trips">
         <button type="button" data-trip-filter="all" class="is-active" aria-pressed="true">All Trips</button>
         <button type="button" data-trip-filter="completed" aria-pressed="false">Completed (${completedTrips.length})</button>
@@ -4418,7 +4420,7 @@
             </div>
             <div class="trip-history-fare"><strong>₱${trip.fare.toFixed(2)}</strong><span>Seat ${escapeHtml(trip.seat)}</span><small>${fareDetail}</small></div>
           </div>
-          ${trip.studentDiscount ? '<p class="trip-history-discount">Student Discount Applied (20% Off)</p>' : ""}
+          ${trip.studentDiscount ? '<p class="trip-history-discount">Student Discount Applied</p>' : ""}
           <footer class="trip-history-actions">
             <button type="button" class="trip-receipt-link" data-view-trip="${trip.id}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.75h5l3 3v9.5H4zM9 2v3h3M6 8h4m-4 2.5h4"/></svg>${escapeHtml(trip.receiptLabel)}</button>
             ${trip.showRateAction ? '<button type="button" class="trip-rate-button" data-info="Trip rating is a prototype-only action.">Rate Trip</button>' : ""}
@@ -4605,7 +4607,7 @@
             <div class="passenger-stepper bus-capacity-stepper"><span>Seat capacity</span><strong data-bus-seats>8</strong><small data-bus-eta>3 min away</small></div>
             <label class="sheet-label">Bus Information</label>
             <div class="payment-options bus-info-list">
-              <div class="payment-option"><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Estimated Fare</strong><small data-bus-fare>₱80.00</small></span></div>
+              <div class="payment-option"><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Estimated Fare</strong><small data-bus-fare>₱${discountedUserFarePerPassenger.toFixed(2)}</small></span></div>
             </div>
             <label class="sheet-label">Seat Layout</label>
             <div class="bus-seat-front"><span>FRONT</span><strong>Driver</strong></div>
@@ -4727,9 +4729,9 @@
     if (!summary) return;
     const filterSummaries = {
       all: "12 trips · 2 buses on this corridor",
-      completed: "11 completed trips · October 2024",
+      completed: "11 completed trips · October 2026",
       cancelled: "1 cancelled trip · no active bus shown",
-      month: "October 2024 · 12 trips · 18.4 kg CO₂ saved",
+      month: "October 2026 · 12 trips · 18.4 kg CO₂ saved",
     };
     summary.textContent = showLiveFleet && query
       ? visibleBusCount
