@@ -27,8 +27,6 @@
 
   let currentRole = "user";
   const savedRouteIds = new Set();
-  let fareEstimateType = "regular";
-  let fareEstimatePassengers = 1;
   let homeShortcutReturnFocus = null;
   let adminShowError = false;
   let mobileLoginShowError = false;
@@ -4117,8 +4115,6 @@
       </div>`;
   };
 
-  const formatFareAmount = (amount) => `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
   const homeShortcutOverlayMarkup = (shortcut) => {
     let title;
     let subtitle;
@@ -4141,26 +4137,40 @@
           }).join("")}
         </div>
         <p class="home-shortcut-note" data-home-shortcut-status role="status" aria-live="polite">Saved routes are kept for this session only.</p>`;
-    } else if (shortcut === "fare-estimator") {
-      title = "Fare Estimator";
-      subtitle = "Estimate a sample fare before you book.";
-      const fare = fareEstimateType === "discounted" ? discountedUserFarePerPassenger : regularUserFarePerPassenger;
-      content = `
-        <div class="home-fare-fields">
-          <label>Fare type
-            <select data-fare-estimate-type>
-              <option value="regular"${fareEstimateType === "regular" ? " selected" : ""}>Standard fare · ${formatFareAmount(regularUserFarePerPassenger)}</option>
-              <option value="discounted"${fareEstimateType === "discounted" ? " selected" : ""}>Discounted sample fare · ${formatFareAmount(discountedUserFarePerPassenger)}</option>
-            </select>
-          </label>
-          <label for="fare-estimate-passengers">Passengers
-            <select id="fare-estimate-passengers" data-fare-estimate-passengers>
-              ${Array.from({ length: 6 }, (_, index) => index + 1).map((count) => `<option value="${count}"${fareEstimatePassengers === count ? " selected" : ""}>${count} ${count === 1 ? "passenger" : "passengers"}</option>`).join("")}
-            </select>
-          </label>
-        </div>
-        <div class="home-fare-total" aria-live="polite"><span>Estimated total</span><strong data-fare-estimate-total>${formatFareAmount(fare * fareEstimatePassengers)}</strong></div>
-        <p class="home-shortcut-note">Illustrative fare only. Discount eligibility is not verified, and no payment is made.</p>`;
+    } else if (shortcut === "trip-readiness") {
+      title = "Trip Readiness";
+      const nextTrip = tripHistory
+        .filter((trip) => trip.status === "upcoming")
+        .sort((first, second) => new Date(`${first.travelDate}T${first.departureTime}`).getTime() - new Date(`${second.travelDate}T${second.departureTime}`).getTime())[0];
+      subtitle = nextTrip ? "Your next booked trip, all in one place." : "Get ready for your next ride.";
+      content = nextTrip
+        ? `
+          <article class="home-trip-readiness">
+            <div class="home-trip-readiness-heading">
+              <span class="home-trip-readiness-status"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3.2 3.2L15.5 6"/></svg>Booking confirmed</span>
+              <strong>${escapeHtml(nextTrip.origin)} → ${escapeHtml(nextTrip.destination)}</strong>
+              <small>${escapeHtml(nextTrip.destinationDetail || `Via ${activeRoute.via}`)}</small>
+            </div>
+            <dl class="home-trip-readiness-facts">
+              <div><dt>Departure</dt><dd>${escapeHtml(nextTrip.travelDate && nextTrip.departureTime ? formatDeparture(nextTrip.travelDate, nextTrip.departureTime) : nextTrip.date || "Not set")}</dd></div>
+              <div><dt>Seat</dt><dd>${escapeHtml(nextTrip.seat || "Not assigned")}</dd></div>
+              <div><dt>Passengers</dt><dd>${nextTrip.passengers || 1}</dd></div>
+              <div><dt>Reference</dt><dd>${escapeHtml(nextTrip.receiptId || nextTrip.id)}</dd></div>
+            </dl>
+            <div class="home-trip-readiness-actions">
+              <button type="button" class="home-trip-readiness-primary" data-view-trip="${escapeHtml(nextTrip.id)}">View ticket</button>
+              <button type="button" class="home-trip-readiness-secondary" data-screen="live-map">Open map</button>
+            </div>
+          </article>
+          <p class="home-shortcut-note">Booking details are saved for this session. Ticket codes and map locations are illustrative.</p>`
+        : `
+          <div class="home-trip-readiness-empty">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V6Z"/><path d="M13 8v2m0 2v2m0 2v1"/></svg>
+            <h3>No upcoming trip</h3>
+            <p>Your confirmed bookings will appear here with their departure, seat, and ticket reference.</p>
+            <button type="button" class="home-trip-readiness-primary" data-action="quick-book">Book a trip</button>
+          </div>
+          <p class="home-shortcut-note">Bookings are kept for this session only. Schedules and ticket codes are illustrative.</p>`;
     } else if (shortcut === "nearby-stops") {
       title = "Nearby Stops";
       subtitle = `Around ${escapeHtml(activeRoute.origin)}`;
@@ -4211,7 +4221,7 @@
       </form>
       ${footerMarkup ?? `<div class="home-shortcuts">
         <button type="button" data-home-shortcut="saved-routes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
-        <button type="button" data-home-shortcut="fare-estimator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Fare Estimator</button>
+        <button type="button" data-home-shortcut="trip-readiness"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V6Z"/><path d="m9 12 2 2 4-4"/></svg>Trip Readiness</button>
         <button type="button" data-home-shortcut="nearby-stops"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Nearby Stops</button>
       </div>`}
     </div>`;
@@ -4229,7 +4239,6 @@
         </section>
         <section class="home-map-section" aria-label="Nearby vehicles map">
           ${mapMarkup()}
-          <span class="live-chip"><i></i> Demo map</span>
           <button class="expand-map" type="button" data-screen="live-map" aria-label="Open live map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/></svg></button>
         </section>
         <div class="home-stats" aria-label="Ride summary">
@@ -5293,12 +5302,6 @@
     homeShortcutReturnFocus = null;
   };
 
-  const updateFareEstimate = () => {
-    const fare = fareEstimateType === "discounted" ? discountedUserFarePerPassenger : regularUserFarePerPassenger;
-    const total = screen.querySelector("[data-fare-estimate-total]");
-    if (total) total.textContent = formatFareAmount(fare * fareEstimatePassengers);
-  };
-
   const closeSeatBookingOverlay = (overlay) => {
     closeBottomSheet(overlay, () => {
       if (activeState === "live-map") {
@@ -6151,25 +6154,6 @@
   });
 
   screen.addEventListener("change", (event) => {
-    if (event.target.matches("[data-fare-estimate-type]")) {
-      if (event.target.value !== "regular" && event.target.value !== "discounted") {
-        throw new Error(`Unknown fare estimate type: "${event.target.value}".`);
-      }
-      fareEstimateType = event.target.value;
-      updateFareEstimate();
-      return;
-    }
-
-    if (event.target.matches("[data-fare-estimate-passengers]")) {
-      const passengers = Number(event.target.value);
-      if (!Number.isInteger(passengers) || passengers < 1 || passengers > 6) {
-        throw new Error(`Invalid fare estimate passenger count: "${event.target.value}".`);
-      }
-      fareEstimatePassengers = passengers;
-      updateFareEstimate();
-      return;
-    }
-
     if (event.target.matches("[data-revenue-period]")) {
       activeRevenueChartPeriod = event.target.value;
       const charts = screen.querySelector("#reports-decision-charts");
