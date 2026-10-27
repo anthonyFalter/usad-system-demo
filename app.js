@@ -26,6 +26,10 @@
   `).join("");
 
   let currentRole = "user";
+  const savedRouteIds = new Set();
+  let fareEstimateType = "regular";
+  let fareEstimatePassengers = 1;
+  let homeShortcutReturnFocus = null;
   let adminShowError = false;
   let mobileLoginShowError = false;
 
@@ -4113,6 +4117,87 @@
       </div>`;
   };
 
+  const formatFareAmount = (amount) => `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const homeShortcutOverlayMarkup = (shortcut) => {
+    let title;
+    let subtitle;
+    let content;
+    if (shortcut === "saved-routes") {
+      title = "Saved Routes";
+      subtitle = "Keep your frequent routes close at hand.";
+      content = `
+        <div class="home-shortcut-route-list">
+          ${routes.map((route) => {
+            const isSaved = savedRouteIds.has(route.id);
+            return `
+              <article class="home-shortcut-route">
+                <div><strong>${escapeHtml(route.label)}</strong><small>${escapeHtml(route.origin)} → ${escapeHtml(route.destination)}</small></div>
+                <div class="home-shortcut-route-actions">
+                  <button type="button" class="home-route-toggle${isSaved ? " is-saved" : ""}" data-home-route-toggle="${escapeHtml(route.id)}" aria-pressed="${isSaved}">${isSaved ? "Remove" : "Save route"}</button>
+                  <button type="button" class="home-route-use" data-home-route-use="${escapeHtml(route.id)}">Find rides</button>
+                </div>
+              </article>`;
+          }).join("")}
+        </div>
+        <p class="home-shortcut-note" data-home-shortcut-status role="status" aria-live="polite">Saved routes are kept for this session only.</p>`;
+    } else if (shortcut === "fare-estimator") {
+      title = "Fare Estimator";
+      subtitle = "Estimate a sample fare before you book.";
+      const fare = fareEstimateType === "discounted" ? discountedUserFarePerPassenger : regularUserFarePerPassenger;
+      content = `
+        <div class="home-fare-fields">
+          <label>Fare type
+            <select data-fare-estimate-type>
+              <option value="regular"${fareEstimateType === "regular" ? " selected" : ""}>Standard fare · ${formatFareAmount(regularUserFarePerPassenger)}</option>
+              <option value="discounted"${fareEstimateType === "discounted" ? " selected" : ""}>Discounted sample fare · ${formatFareAmount(discountedUserFarePerPassenger)}</option>
+            </select>
+          </label>
+          <label for="fare-estimate-passengers">Passengers
+            <select id="fare-estimate-passengers" data-fare-estimate-passengers>
+              ${Array.from({ length: 6 }, (_, index) => index + 1).map((count) => `<option value="${count}"${fareEstimatePassengers === count ? " selected" : ""}>${count} ${count === 1 ? "passenger" : "passengers"}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+        <div class="home-fare-total" aria-live="polite"><span>Estimated total</span><strong data-fare-estimate-total>${formatFareAmount(fare * fareEstimatePassengers)}</strong></div>
+        <p class="home-shortcut-note">Illustrative fare only. Discount eligibility is not verified, and no payment is made.</p>`;
+    } else if (shortcut === "nearby-stops") {
+      title = "Nearby Stops";
+      subtitle = `Around ${escapeHtml(activeRoute.origin)}`;
+      content = `
+        <p class="home-shortcut-note">Showing the sample terminal and buses for this route. Location and ETAs are illustrative—not live GPS data.</p>
+        <div class="home-nearby-stop-list">
+          <article class="home-nearby-route">
+            <span class="home-stop-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg></span>
+            <div><small>Sample boarding terminal</small><strong>${escapeHtml(activeRoute.origin)}</strong><small>${escapeHtml(activeRoute.label)}</small></div>
+            <button type="button" class="home-route-use" data-home-route-use="${escapeHtml(activeRoute.id)}">View route</button>
+          </article>
+        </div>
+        <h3 class="home-nearby-section-title">Vehicles serving this terminal</h3>
+        <div class="home-nearby-vehicle-list">
+          ${liveBusDetails.map((bus) => `
+            <article class="home-nearby-vehicle">
+              <span><strong>${escapeHtml(bus.name)}</strong><small>${escapeHtml(bus.fleetId)} · ${bus.seats} seats</small></span>
+              <span class="home-nearby-eta">${escapeHtml(bus.eta)} away</span>
+              <button type="button" data-action="quick-book">Book</button>
+            </article>`).join("")}
+        </div>`;
+    } else {
+      throw new Error(`Unknown home shortcut: ${shortcut}`);
+    }
+
+    return `
+      <div class="modal-scrim home-shortcut-overlay" data-home-shortcut-overlay>
+        <section class="bottom-sheet quick-book-sheet home-shortcut-sheet" role="dialog" aria-modal="true" aria-labelledby="home-shortcut-title" tabindex="-1">
+          <span class="sheet-handle"></span>
+          <button class="modal-close" type="button" aria-label="Close" data-home-shortcut-close>×</button>
+          <h2 id="home-shortcut-title">${title}</h2>
+          <p class="sheet-subtitle">${subtitle}</p>
+          ${content}
+        </section>
+      </div>`;
+  };
+
   const homeHeaderContent = ({ searchPlaceholder = "Where are you heading?", searchMode = "route", footerMarkup = null } = {}) => `
     <div class="home-header-content">
       <div class="home-greeting-row">
@@ -4125,9 +4210,9 @@
         <button type="submit" aria-label="Search rides"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
       </form>
       ${footerMarkup ?? `<div class="home-shortcuts">
-        <button type="button" data-info="Your saved routes will appear here."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
-        <button type="button" data-info="Fare estimates are shown with ride results."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Fare Estimator</button>
-        <button type="button" data-info="Home location updated for this demo."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Set Home</button>
+        <button type="button" data-home-shortcut="saved-routes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
+        <button type="button" data-home-shortcut="fare-estimator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Fare Estimator</button>
+        <button type="button" data-home-shortcut="nearby-stops"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Nearby Stops</button>
       </div>`}
     </div>`;
 
@@ -5189,6 +5274,31 @@
     });
   };
 
+  const openHomeShortcut = (shortcut) => {
+    const currentPage = screen.firstElementChild;
+    if (!currentPage || screen.querySelector("[data-home-shortcut-overlay]")) return;
+    const template = document.createElement("template");
+    template.innerHTML = homeShortcutOverlayMarkup(shortcut);
+    const overlay = template.content.querySelector("[data-home-shortcut-overlay]");
+    if (!overlay) throw new Error(`USAD could not open the ${shortcut} shortcut.`);
+    homeShortcutReturnFocus = document.activeElement;
+    currentPage.append(overlay);
+    overlay.querySelector(".bottom-sheet")?.focus();
+  };
+
+  const closeHomeShortcut = (overlay) => {
+    if (!overlay.isConnected) return;
+    overlay.remove();
+    if (homeShortcutReturnFocus?.isConnected) homeShortcutReturnFocus.focus();
+    homeShortcutReturnFocus = null;
+  };
+
+  const updateFareEstimate = () => {
+    const fare = fareEstimateType === "discounted" ? discountedUserFarePerPassenger : regularUserFarePerPassenger;
+    const total = screen.querySelector("[data-fare-estimate-total]");
+    if (total) total.textContent = formatFareAmount(fare * fareEstimatePassengers);
+  };
+
   const closeSeatBookingOverlay = (overlay) => {
     closeBottomSheet(overlay, () => {
       if (activeState === "live-map") {
@@ -5439,6 +5549,11 @@
       const quickBookOverlay = screen.querySelector("[data-quick-book-overlay]");
       if (quickBookOverlay) {
         closeQuickBookOverlay(quickBookOverlay);
+        return;
+      }
+      const homeShortcutOverlay = screen.querySelector("[data-home-shortcut-overlay]");
+      if (homeShortcutOverlay) {
+        closeHomeShortcut(homeShortcutOverlay);
         return;
       }
     }
@@ -6036,6 +6151,25 @@
   });
 
   screen.addEventListener("change", (event) => {
+    if (event.target.matches("[data-fare-estimate-type]")) {
+      if (event.target.value !== "regular" && event.target.value !== "discounted") {
+        throw new Error(`Unknown fare estimate type: "${event.target.value}".`);
+      }
+      fareEstimateType = event.target.value;
+      updateFareEstimate();
+      return;
+    }
+
+    if (event.target.matches("[data-fare-estimate-passengers]")) {
+      const passengers = Number(event.target.value);
+      if (!Number.isInteger(passengers) || passengers < 1 || passengers > 6) {
+        throw new Error(`Invalid fare estimate passenger count: "${event.target.value}".`);
+      }
+      fareEstimatePassengers = passengers;
+      updateFareEstimate();
+      return;
+    }
+
     if (event.target.matches("[data-revenue-period]")) {
       activeRevenueChartPeriod = event.target.value;
       const charts = screen.querySelector("#reports-decision-charts");
@@ -6139,6 +6273,12 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const homeShortcutButton = event.target.closest("[data-home-shortcut]");
+    if (homeShortcutButton) {
+      openHomeShortcut(homeShortcutButton.dataset.homeShortcut);
+      return;
+    }
+
     const passwordToggle = event.target.closest("[data-password-toggle]");
     if (passwordToggle) {
       const passwordInput = screen.querySelector(`#${passwordToggle.dataset.passwordToggle}`);
@@ -6181,6 +6321,38 @@
     const topUpModal = event.target.closest("[data-top-up-modal]");
     if (topUpModal && event.target === topUpModal) {
       closeTopUpModal();
+      return;
+    }
+
+    const homeShortcutOverlay = event.target.closest("[data-home-shortcut-overlay]");
+    if (event.target.closest("[data-home-shortcut-close]") || (homeShortcutOverlay && event.target === homeShortcutOverlay)) {
+      if (homeShortcutOverlay) closeHomeShortcut(homeShortcutOverlay);
+      return;
+    }
+
+    const routeToggle = event.target.closest("[data-home-route-toggle]");
+    if (routeToggle) {
+      const routeId = routeToggle.dataset.homeRouteToggle;
+      if (!routes.some((route) => route.id === routeId)) {
+        throw new Error(`Unknown saved route: "${routeId}".`);
+      }
+      const isSaved = savedRouteIds.has(routeId);
+      if (isSaved) savedRouteIds.delete(routeId);
+      else savedRouteIds.add(routeId);
+      routeToggle.classList.toggle("is-saved", !isSaved);
+      routeToggle.setAttribute("aria-pressed", String(!isSaved));
+      routeToggle.textContent = isSaved ? "Save route" : "Remove";
+      const status = screen.querySelector("[data-home-shortcut-status]");
+      if (status) status.textContent = isSaved ? "Route removed from your saved routes." : "Route saved for this session.";
+      return;
+    }
+
+    const homeRouteUse = event.target.closest("[data-home-route-use]");
+    if (homeRouteUse) {
+      const route = routes.find(({ id }) => id === homeRouteUse.dataset.homeRouteUse);
+      if (!route) throw new Error(`Unknown route selected from a home shortcut: "${homeRouteUse.dataset.homeRouteUse}".`);
+      tripData = { ...tripData, origin: route.origin, destination: route.destinationShort };
+      renderScreen("find-rides");
       return;
     }
 
