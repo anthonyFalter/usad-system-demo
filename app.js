@@ -4239,7 +4239,6 @@
         </section>
         <section class="home-map-section" aria-label="Nearby vehicles map">
           ${mapMarkup()}
-          <span class="live-chip"><i></i> Demo map</span>
           <button class="expand-map" type="button" data-screen="live-map" aria-label="Open live map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/></svg></button>
         </section>
         <div class="home-stats" aria-label="Ride summary">

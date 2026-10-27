@@ -1595,28 +1595,6 @@ input:focus-visible,
   to { translate: 9px -7px; }
 }
 
-.live-chip {
-  position: absolute;
-  top: 9px;
-  right: 9px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 8px;
-  border-radius: 12px;
-  background: rgba(255,255,255,.95);
-  color: #245b49;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.live-chip i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #14815f;
-}
-
 .expand-map {
   position: absolute;
   right: 9px;
@@ -1625,6 +1603,7 @@ input:focus-visible,
   width: 25px;
   height: 25px;
   place-items: center;
+  padding: 0;
   border: 1px solid #d8dfdc;
   border-radius: var(--home-radius-icon);
   background: #fff;
