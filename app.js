@@ -369,9 +369,16 @@
   const getScaledPredictiveValue = (item) => Math.round(item.val * (predictiveTransitLoadScale / 100));
   const getPredictiveAxisMaximum = () => {
     const period = getPredictivePeriod();
-    const axisUnit = PREDICTIVE_DAILY_AXIS_MAXIMUM * period.days * predictiveTransitLoadScale / 100;
-    const peak = Math.max(...predictiveDemandForecast.map(getScaledPredictiveValue));
-    return Math.max(axisUnit, Math.ceil(peak / (axisUnit / 4)) * (axisUnit / 4));
+    const axisUnit = PREDICTIVE_DAILY_AXIS_MAXIMUM * period.days;
+    const peakAtMaxCapacity = predictiveDemandPeriodBase.reduce((peak, item, index) => {
+      const maximumRouteFactor = Math.max(...routes.map((route) => route.demandFactors[index]));
+      const maximumProfileFactor = Math.max(...Object.values(predictiveOperatingProfileFactors).map((factors) => factors[index]));
+      return Math.max(
+        peak,
+        predictiveDailyPassengerBaseline * period.days * item.multiplier * maximumRouteFactor * maximumProfileFactor * 1.5
+      );
+    }, axisUnit);
+    return Math.ceil(peakAtMaxCapacity / (axisUnit / 4)) * (axisUnit / 4);
   };
 
   const renderPredictiveYAxis = () => {
@@ -382,17 +389,19 @@
     return `<div class="chart-y-axis-ticks" aria-hidden="true">${ticks}</div>`;
   };
 
-  const renderForecastBars = () => {
+  const renderForecastBars = (previousHeights = new Map()) => {
     const axisMaximum = getPredictiveAxisMaximum();
     const period = getPredictivePeriod();
     return predictiveDemandForecast.map((item) => {
       const scaledVal = getScaledPredictiveValue(item);
       const heightPx = Math.round((scaledVal / axisMaximum) * PREDICTIVE_CHART_PLOT_HEIGHT);
+      const startHeight = previousHeights.get(item.id) ?? heightPx;
+      const startScale = heightPx > 0 ? startHeight / heightPx : 1;
       const isSelected = item.id === predictiveSelectedBucket;
       return `
         <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-period="${item.id}" role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${item.periodLabel}: ${scaledVal.toLocaleString()} projected passengers per ${period.unit}" aria-describedby="demand-${item.id}-tooltip" style="--bar-height: ${heightPx}px">
           ${isSelected ? `<div class="bar-selected-badge">${scaledVal.toLocaleString()}</div>` : ""}
-          <div class="chart-bar-fill ${item.state}" style="height: ${heightPx}px;"></div>
+          <div class="chart-bar-fill ${item.state}" style="height: ${heightPx}px; transform: scaleY(${startScale});"></div>
           <span class="chart-bar-tooltip" id="demand-${item.id}-tooltip" role="tooltip">${item.periodLabel} · ${scaledVal.toLocaleString()} projected passengers per ${period.unit}</span>
           <div class="bar-heat-pill ${item.heat}"></div>
           <span class="bar-time-label">${item.label}</span>
@@ -436,9 +445,21 @@
   const updatePredictiveView = () => {
     const selectedForecastRoute = routes.find((route) => route.id === activeAnalyticsRouteId);
     if (!selectedForecastRoute) throw new Error(`Passenger demand forecast could not find route "${activeAnalyticsRouteId}".`);
-    updatePredictiveForecastData();
     const barsContainer = screen.querySelector("#analytics-bars-container");
-    if (barsContainer) barsContainer.innerHTML = renderForecastBars();
+    const previousHeights = new Map();
+    barsContainer?.querySelectorAll(".chart-bar-fill").forEach((bar) => {
+      const periodId = bar.closest("[data-chart-period]")?.dataset.chartPeriod;
+      if (periodId) previousHeights.set(periodId, Number.parseFloat(window.getComputedStyle(bar).height));
+    });
+    updatePredictiveForecastData();
+    if (barsContainer) {
+      barsContainer.innerHTML = renderForecastBars(previousHeights);
+      window.requestAnimationFrame(() => {
+        barsContainer.querySelectorAll(".chart-bar-fill").forEach((bar) => {
+          bar.style.removeProperty("transform");
+        });
+      });
+    }
     const metricsContainer = screen.querySelector("#analytics-metrics-container");
     if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
     const yAxis = screen.querySelector(".chart-y-axis");
@@ -1103,12 +1124,10 @@
 
         <div class="chart-plot-container" style="height: ${PREDICTIVE_CHART_AXIS_HEIGHT}px;">
           <!-- Threshold lines -->
-          <div class="chart-threshold-line line-peak" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.8}px;">
-            <span class="threshold-label text-red">Peak demand</span>
-          </div>
-          <div class="chart-threshold-line line-normal" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.5}px;">
-            <span class="threshold-label text-blue">Normal demand</span>
-          </div>
+          <div class="chart-threshold-line line-peak" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.8}px;"></div>
+          <span class="threshold-label threshold-label-peak text-red" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.8}px;">Peak demand</span>
+          <div class="chart-threshold-line line-normal" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.5}px;"></div>
+          <span class="threshold-label threshold-label-normal text-blue" style="bottom: ${PREDICTIVE_CHART_X_AXIS_HEIGHT + PREDICTIVE_CHART_PLOT_HEIGHT * 0.5}px;">Normal demand</span>
 
           <!-- Bars row -->
           <div class="chart-bars-row" id="analytics-bars-container">

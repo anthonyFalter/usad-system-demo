@@ -4764,15 +4764,15 @@ input:focus-visible,
 
 .threshold-label {
   position: absolute;
-  left: 6px;
-  bottom: 3px;
+  right: 6px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
   background: rgba(17, 24, 39, 0.9);
   padding: 1px 5px;
   border-radius: 3px;
-  z-index: 4;
+  z-index: 5;
+  transform: translateY(-3px);
 }
 
 .threshold-label.text-red {
@@ -4807,16 +4807,18 @@ input:focus-visible,
   min-width: 0;
 }
 
+.chart-bar-col:hover,
 .chart-bar-col:focus-visible {
   z-index: 4;
 }
 
 .chart-bar-fill {
+  flex: 0 0 auto;
   width: 100%;
   max-width: 28px;
   border-radius: 3px 3px 0 0;
   transform-origin: center bottom;
-  transition: height 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s, transform 180ms ease, filter 180ms ease;
+  transition: background-color 0.15s, transform 250ms cubic-bezier(0.16, 1, 0.3, 1), filter 180ms ease;
   position: relative;
 }
 
@@ -4834,7 +4836,6 @@ input:focus-visible,
 
 /* Selected Bar Styling */
 .chart-bar-col.is-selected .chart-bar-fill {
-  background: #ef4444;
   outline: 2px solid #ffffff;
   outline-offset: -1px;
 }
