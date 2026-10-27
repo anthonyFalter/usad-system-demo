@@ -43,6 +43,7 @@
 
   let currentRole = "user";
   let adminShowError = false;
+  let dispatcherShowError = false;
   let mobileLoginShowError = false;
 
   const mark = `
@@ -202,11 +203,14 @@
       <path d="M13.5 13h3.5"/>
     </svg>`;
 
-  const adminLoginScreen = (showError = false) => `
+  const adminLoginScreen = (role, showError = false) => {
+    const isDispatcher = role === "dispatcher";
+    const demoEmail = isDispatcher ? "dispatcher@saraza.com" : "admin@saraza.com";
+    return `
     <div class="admin-auth-screen" data-admin-screen="login">
       <div class="admin-auth-card">
         ${adminAppMark}
-        <h1 class="admin-auth-title">Introducing, <span>USAD</span></h1>
+        <h1 class="admin-auth-title">${isDispatcher ? "Dispatcher Access" : "Introducing,"} <span>USAD</span></h1>
         ${showError ? '<div class="admin-auth-alert" id="admin-auth-alert" role="alert">Invalid Email or Password</div>' : ""}
         <form class="admin-login-form" data-admin-login-form novalidate>
           <div class="admin-form-field">
@@ -227,14 +231,17 @@
           </button>
         </div>
         <p class="admin-security-note">
-          Admin side can only log in by us when we give them an account. And they cannot register for one.
+          ${isDispatcher
+    ? "Dispatcher accounts are provisioned by an administrator. Dispatchers cannot register for an account."
+    : "Admin side can only log in by us when we give them an account. And they cannot register for one."}
         </p>
       </div>
       <div class="admin-helper-bar">
-        <button class="admin-helper-chip" type="button" data-admin-action="autofill-demo" title="Auto-fill with admin@saraza.com">Auto-fill Demo Account</button>
+        <button class="admin-helper-chip" type="button" data-admin-action="autofill-demo" title="Auto-fill with ${demoEmail}">${isDispatcher ? "Auto-fill Dispatcher Demo" : "Auto-fill Demo Account"}</button>
         <button class="admin-helper-chip" type="button" data-admin-action="toggle-error" title="Toggle error alert banner">${showError ? "Hide Error Banner" : "Show Error Banner"}</button>
       </div>
     </div>`;
+  };
 
   let activeFleetFilter = "all";
   let fleetSearchQuery = "";
@@ -3259,6 +3266,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               <span>Fleet</span>
             </button>
+            ${currentRole === "dispatcher" ? "" : `
             <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources" aria-current="${activeAdminSidebarTab === "staff-resources" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               <span>Staff Management</span>
@@ -3271,14 +3279,15 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               <span>Reports</span>
             </button>
+            `}
           </nav>
         </div>
 
         <button class="admin-sidebar-user" type="button" data-admin-action="user-menu" title="Click to view administrator profile or sign out">
-          <div class="admin-user-avatar">JC</div>
+          <div class="admin-user-avatar">${currentRole === "dispatcher" ? "DP" : "JC"}</div>
           <div class="admin-user-details">
-            <span class="admin-user-name">Jocky King Cabataña</span>
-            <span class="admin-user-role">Administrator</span>
+            <span class="admin-user-name">${currentRole === "dispatcher" ? "Dispatcher Demo" : "Jocky King Cabataña"}</span>
+            <span class="admin-user-role">${currentRole === "dispatcher" ? "Dispatcher" : "Administrator"}</span>
           </div>
           <svg class="admin-user-logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -3307,6 +3316,7 @@
   const openAdminModal = (type) => {
     const existing = screen.querySelector(".admin-modal-backdrop");
     if (existing) existing.remove();
+    const accountRole = currentRole === "dispatcher" ? "dispatcher" : "administrator";
     const modal = document.createElement("div");
     modal.className = "admin-modal-backdrop";
     modal.setAttribute("role", "dialog");
@@ -3314,7 +3324,7 @@
 
     let icon = fingerprintIcon;
     let title = "Biometric Verification";
-    let desc = "Place administrator finger on hardware biometric scanner to authenticate.";
+    let desc = `Place ${accountRole} finger on hardware biometric scanner to authenticate.`;
     let primaryBtn = "Simulate Scan &amp; Login";
     let isInfoOnly = false;
     let customHtml = "";
@@ -3322,7 +3332,7 @@
     if (type === "smartcard") {
       icon = idCardIcon;
       title = "Staff RFID / Smart Badge";
-      desc = "Hold Saraza TRD Operations NFC Badge (#SRZ-ADM-042) near the reader.";
+      desc = `Hold Saraza TRD Operations NFC Badge (${currentRole === "dispatcher" ? "#SRZ-DSP-017" : "#SRZ-ADM-042"}) near the reader.`;
       primaryBtn = "Simulate Badge Tap &amp; Login";
     } else if (type === "key") {
       icon = fingerprintIcon;
@@ -3331,19 +3341,21 @@
       primaryBtn = "Simulate Scan &amp; Login";
     } else if (type === "forgot-password") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>`;
-      title = "Administrator Password Assistance";
-      desc = "For regulatory and operational security, administrator passwords cannot be reset online.<br><br>Please contact the <strong>Saraza TRD Systems Administrator</strong> or your <strong>Operations Supervisor</strong> to reissue your credentials.";
+      title = `${currentRole === "dispatcher" ? "Dispatcher" : "Administrator"} Password Assistance`;
+      desc = `For regulatory and operational security, ${accountRole} passwords cannot be reset online.<br><br>Please contact the <strong>Saraza TRD Systems Administrator</strong> or your <strong>Operations Supervisor</strong> to reissue your credentials.`;
       primaryBtn = "Understood";
       isInfoOnly = true;
     } else if (type === "user-menu") {
-      icon = `<div class="admin-user-avatar admin-user-avatar-modal">JC</div>`;
-      title = "Jocky King Cabataña";
-      desc = `<span class="admin-profile-badge">Active · Super Administrator</span>`;
+      const isDispatcher = currentRole === "dispatcher";
+      const userInitials = isDispatcher ? "DP" : "JC";
+      icon = `<div class="admin-user-avatar admin-user-avatar-modal">${userInitials}</div>`;
+      title = isDispatcher ? "Dispatcher Demo" : "Jocky King Cabataña";
+      desc = `<span class="admin-profile-badge">Active · ${isDispatcher ? "Dispatcher" : "Super Administrator"}</span>`;
       customHtml = `
         <div class="admin-profile-details">
           <div class="admin-profile-row">
-            <span class="admin-profile-label">Administrator ID</span>
-            <span class="admin-profile-value">SRZ-ADM-042</span>
+            <span class="admin-profile-label">${isDispatcher ? "Dispatcher" : "Administrator"} ID</span>
+            <span class="admin-profile-value">${isDispatcher ? "SRZ-DSP-017" : "SRZ-ADM-042"}</span>
           </div>
           <div class="admin-profile-row">
             <span class="admin-profile-label">Assigned Station</span>
@@ -3351,11 +3363,11 @@
           </div>
           <div class="admin-profile-row">
             <span class="admin-profile-label">System Access</span>
-            <span class="admin-profile-value">Vehicle tracking, bus assignments, schedules</span>
+            <span class="admin-profile-value">${isDispatcher ? "Dashboard, passenger demand, fleet" : "Vehicle tracking, bus assignments, schedules"}</span>
           </div>
           <div class="admin-profile-row">
-            <span class="admin-profile-label">Security Clearance</span>
-            <span class="admin-profile-value" style="color: #2FD9A8;">Biometric &amp; Smartcard Verified</span>
+            <span class="admin-profile-label">${isDispatcher ? "Account Type" : "Security Clearance"}</span>
+            <span class="admin-profile-value" style="color: #2FD9A8;">${isDispatcher ? "Provisioned dispatcher account" : "Biometric &amp; Smartcard Verified"}</span>
           </div>
         </div>
         <div class="admin-modal-actions" style="margin-top: 18px;">
@@ -5001,7 +5013,7 @@
     liveMapDrag = null;
     screen.replaceChildren();
     if (state === "admin-login") {
-      screen.innerHTML = adminLoginScreen(adminShowError);
+      screen.innerHTML = adminLoginScreen(currentRole, currentRole === "dispatcher" ? dispatcherShowError : adminShowError);
     } else if (state === "admin-dashboard") {
       screen.innerHTML = adminDashboardScreen();
     } else if (state === "login") {
@@ -5205,7 +5217,7 @@
 
   const updateCanvas = () => {
     world.style.zoom = String(zoom);
-    if (currentRole === "admin") {
+    if (currentRole === "admin" || currentRole === "dispatcher") {
       world.style.left = `calc(50% - 690px + ${panX / zoom}px)`;
       world.style.top = `calc(50% - 435px + ${panY / zoom}px)`;
     } else {
@@ -5217,7 +5229,7 @@
   };
 
   const resetCanvas = () => {
-    if (currentRole === "admin") {
+    if (currentRole === "admin" || currentRole === "dispatcher") {
       const availW = Math.max(320, viewport.clientWidth - 48);
       const availH = Math.max(320, viewport.clientHeight - 48);
       const fitZoom = Math.min(1, Math.max(0.35, Math.min(availW / 1380, availH / 870)));
@@ -5238,12 +5250,14 @@
     workspacePage.hidden = false;
     roleNote.textContent = "";
     if (workspaceRoleLabel) {
-      workspaceRoleLabel.textContent = role === "admin" ? "Admin" : "User";
+      workspaceRoleLabel.textContent = role === "dispatcher" ? "Dispatcher" : role === "admin" ? "Admin" : "User";
     }
-    if (role === "admin") {
+    if (role === "admin" || role === "dispatcher") {
       world.classList.add("is-admin");
       screen.classList.add("is-admin");
-      adminShowError = false;
+      activeAdminSidebarTab = "live-operations";
+      if (role === "dispatcher") dispatcherShowError = false;
+      else adminShowError = false;
       renderScreen("admin-login");
     } else {
       world.classList.remove("is-admin");
@@ -5487,12 +5501,14 @@
       const email = emailInput.value.trim();
       const password = passwordInput.value;
       if (!email || !password) {
-        adminShowError = true;
+        if (currentRole === "dispatcher") dispatcherShowError = true;
+        else adminShowError = true;
         renderScreen("admin-login");
         screen.querySelector("#admin-email")?.focus();
         return;
       }
-      adminShowError = false;
+      if (currentRole === "dispatcher") dispatcherShowError = false;
+      else adminShowError = false;
       renderScreen("admin-dashboard");
       return;
     }
@@ -6153,23 +6169,28 @@
       } else if (adminAction === "autofill-demo") {
         const emailInput = screen.querySelector("#admin-email");
         const passwordInput = screen.querySelector("#admin-password");
+        const demoEmail = currentRole === "dispatcher" ? "dispatcher@saraza.com" : "admin@saraza.com";
+        const demoPassword = currentRole === "dispatcher" ? "DispatcherPass123!" : "AdminPass123!";
         if (emailInput) {
-          emailInput.value = "admin@saraza.com";
+          emailInput.value = demoEmail;
           emailInput.removeAttribute("aria-invalid");
         }
         if (passwordInput) {
-          passwordInput.value = "AdminPass123!";
+          passwordInput.value = demoPassword;
           passwordInput.removeAttribute("aria-invalid");
         }
-        adminShowError = false;
+        if (currentRole === "dispatcher") dispatcherShowError = false;
+        else adminShowError = false;
         const alert = screen.querySelector("#admin-auth-alert");
         if (alert) alert.hidden = true;
       } else if (adminAction === "toggle-error") {
-        adminShowError = !adminShowError;
+        if (currentRole === "dispatcher") dispatcherShowError = !dispatcherShowError;
+        else adminShowError = !adminShowError;
         renderScreen("admin-login");
       } else if (adminAction === "sign-out") {
         screen.querySelector(".admin-modal-backdrop")?.remove();
-        adminShowError = false;
+        if (currentRole === "dispatcher") dispatcherShowError = false;
+        else adminShowError = false;
         renderScreen("admin-login");
       } else if (adminAction === "open-assign") {
         openAdminModal("assign-dispatch");
@@ -6936,6 +6957,8 @@
 
     const navItem = event.target.closest("[data-admin-nav]");
     if (navItem) {
+      const allowedDispatcherTabs = ["live-operations", "predictive-analytics", "fleet-dispatch"];
+      if (currentRole === "dispatcher" && !allowedDispatcherTabs.includes(navItem.dataset.adminNav)) return;
       activeAdminSidebarTab = navItem.dataset.adminNav;
       renderScreen("admin-dashboard");
       return;
@@ -6954,7 +6977,8 @@
 
     if (event.target.closest("[data-admin-modal-auth]")) {
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      adminShowError = false;
+      if (currentRole === "dispatcher") dispatcherShowError = false;
+      else adminShowError = false;
       renderScreen("admin-dashboard");
       return;
     }
