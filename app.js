@@ -93,6 +93,7 @@
   };
   let bookingConfirmed = false;
   let topUpReturnFocus = null;
+  let passwordUpdatedReturnFocus = null;
   const liveBusDetails = [
     { name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: "₱80.00", status: "On time" },
     { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: "₱80.00", status: "On time" },
@@ -3902,12 +3903,18 @@
         </div>
         <div class="form-field">
           <label for="register-password">Password</label>
-          <input id="register-password" name="password" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
+          <div class="password-input-wrap">
+            <input id="register-password" name="password" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
+            <button class="password-visibility-toggle" type="button" data-password-toggle="register-password" aria-controls="register-password" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
           <span class="field-error" id="register-password-error" role="alert" hidden>Include at least one number or special character.</span>
         </div>
         <div class="form-field">
           <label for="register-confirm-password">Confirm Password</label>
-          <input id="register-confirm-password" name="confirmPassword" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
+          <div class="password-input-wrap">
+            <input id="register-confirm-password" name="confirmPassword" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
+            <button class="password-visibility-toggle" type="button" data-password-toggle="register-confirm-password" aria-controls="register-confirm-password" aria-label="Show confirm password" aria-pressed="false">Show</button>
+          </div>
           <span class="field-error" id="register-confirm-password-error" role="alert" hidden>Passwords do not match.</span>
         </div>
         <div class="terms-consent">
@@ -4478,8 +4485,25 @@
                 <details class="profile-detail-inline">
                   <summary class="profile-menu-row">Change Password <span aria-hidden="true">›</span></summary>
                   <div class="account-section-content">
-                    ${profileField("password", "Password", "password")}
-                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
+                    <form class="account-password-form" data-change-password-form novalidate>
+                      <div class="account-edit-field">
+                        <label for="profile-new-password">New Password</label>
+                        <div class="password-input-wrap">
+                          <input id="profile-new-password" name="newPassword" type="password" autocomplete="new-password" data-change-password-field aria-describedby="profile-new-password-error">
+                          <button class="password-visibility-toggle" type="button" data-password-toggle="profile-new-password" data-password-label="new password" aria-controls="profile-new-password" aria-label="Show new password" aria-pressed="false">Show</button>
+                        </div>
+                        <span class="field-error" id="profile-new-password-error" role="alert" hidden>Enter a new password.</span>
+                      </div>
+                      <div class="account-edit-field">
+                        <label for="profile-confirm-password">Confirm New Password</label>
+                        <div class="password-input-wrap">
+                          <input id="profile-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" data-change-password-field aria-describedby="profile-confirm-password-error">
+                          <button class="password-visibility-toggle" type="button" data-password-toggle="profile-confirm-password" data-password-label="confirm password" aria-controls="profile-confirm-password" aria-label="Show confirm password" aria-pressed="false">Show</button>
+                        </div>
+                        <span class="field-error" id="profile-confirm-password-error" role="alert" hidden>Passwords do not match.</span>
+                      </div>
+                      <button class="account-password-submit" type="submit">Update Password</button>
+                    </form>
                   </div>
                 </details>
                 <button class="profile-menu-row profile-toggle-row is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Two-factor authentication">Two-Factor Authentication</button>
@@ -4926,6 +4950,36 @@
     topUpReturnFocus = null;
   };
 
+  const openPasswordUpdatedModal = () => {
+    if (screen.querySelector("[data-password-updated-modal]")) return;
+    passwordUpdatedReturnFocus = document.activeElement;
+    const template = document.createElement("template");
+    template.innerHTML = `
+      <div class="modal-scrim top-up-modal-scrim" data-password-updated-modal>
+        <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="password-updated-dialog-title">
+          <button class="modal-close" type="button" aria-label="Close password updated message" data-password-updated-close>×</button>
+          <div class="top-up-message">
+            <span class="top-up-icon password-updated-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="m5 12 4.5 4.5L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h2 id="password-updated-dialog-title">Password updated</h2>
+          </div>
+        </section>
+      </div>`;
+    const modal = template.content.firstElementChild;
+    if (!modal) throw new Error("USAD could not open the password updated message.");
+    screen.append(modal);
+    modal.querySelector("[data-password-updated-close]")?.focus();
+  };
+
+  const closePasswordUpdatedModal = () => {
+    const modal = screen.querySelector("[data-password-updated-modal]");
+    if (!modal) return;
+    modal.remove();
+    if (passwordUpdatedReturnFocus?.isConnected) passwordUpdatedReturnFocus.focus();
+    passwordUpdatedReturnFocus = null;
+  };
+
   const openQuickBookOverlay = () => {
     const currentPage = screen.firstElementChild;
     if (!currentPage || screen.querySelector("[data-quick-book-overlay]")) return;
@@ -5154,6 +5208,10 @@
 
   screen.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (screen.querySelector("[data-password-updated-modal]")) {
+        closePasswordUpdatedModal();
+        return;
+      }
       if (screen.querySelector("[data-top-up-modal]")) {
         closeTopUpModal();
         return;
@@ -5345,11 +5403,16 @@
         const restoredEmail = screen.querySelector("#register-email");
         const restoredPassword = screen.querySelector("#register-password");
         const restoredConfirmPassword = screen.querySelector("#register-confirm-password");
+        const restoredConfirmPasswordError = screen.querySelector("#register-confirm-password-error");
         const restoredTermsAccepted = screen.querySelector("#terms-accepted");
         if (restoredUsername) restoredUsername.value = username.value;
         if (restoredEmail) restoredEmail.value = email.value;
         if (restoredPassword) restoredPassword.value = password.value;
         if (restoredConfirmPassword) restoredConfirmPassword.value = confirmPassword.value;
+        if (restoredConfirmPassword && restoredConfirmPasswordError && (!confirmPassword.value || mismatch)) {
+          restoredConfirmPassword.setAttribute("aria-invalid", "true");
+          restoredConfirmPasswordError.hidden = false;
+        }
         if (restoredTermsAccepted) restoredTermsAccepted.checked = termsAccepted.checked;
         screen.querySelector(".form-alert")?.focus({ preventScroll: true });
         return;
@@ -5362,6 +5425,35 @@
       accountProfile.email = registrationData.email;
 
       renderScreen("verification");
+    }
+
+    if (event.target.matches("[data-change-password-form]")) {
+      event.preventDefault();
+      const newPassword = event.target.querySelector("#profile-new-password");
+      const confirmPassword = event.target.querySelector("#profile-confirm-password");
+      const newPasswordError = event.target.querySelector("#profile-new-password-error");
+      const confirmPasswordError = event.target.querySelector("#profile-confirm-password-error");
+      if (!newPassword || !confirmPassword || !newPasswordError || !confirmPasswordError) {
+        throw new Error("USAD could not update the password: a required field or error message is missing.");
+      }
+
+      const missingPassword = !newPassword.value;
+      const missingConfirmation = !confirmPassword.value;
+      const passwordsMismatch = !missingPassword && !missingConfirmation && newPassword.value !== confirmPassword.value;
+      newPasswordError.hidden = !missingPassword;
+      confirmPasswordError.hidden = !(missingConfirmation || passwordsMismatch);
+      newPassword.toggleAttribute("aria-invalid", missingPassword);
+      confirmPassword.toggleAttribute("aria-invalid", missingConfirmation || passwordsMismatch);
+
+      if (missingPassword || missingConfirmation || passwordsMismatch) {
+        (missingPassword ? newPassword : confirmPassword).focus();
+        return;
+      }
+
+      accountProfile.password = newPassword.value;
+      event.target.reset();
+      openPasswordUpdatedModal();
+      return;
     }
 
     if (event.target.matches("[data-verification-form]")) {
@@ -5648,6 +5740,12 @@
       const message = event.target.closest(".account-section")?.querySelector("[data-profile-message]");
       if (message) message.textContent = "";
     }
+
+    if (event.target.matches("[data-change-password-field]")) {
+      event.target.removeAttribute("aria-invalid");
+      const fieldError = screen.querySelector(`#${event.target.id}-error`);
+      if (fieldError) fieldError.hidden = true;
+    }
   });
 
   screen.addEventListener("change", (event) => {
@@ -5759,6 +5857,22 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const passwordToggle = event.target.closest("[data-password-toggle]");
+    if (passwordToggle) {
+      const passwordInput = screen.querySelector(`#${passwordToggle.dataset.passwordToggle}`);
+      if (!passwordInput) {
+        throw new Error(`Password visibility control could not find its input: ${passwordToggle.dataset.passwordToggle}.`);
+      }
+      const showPassword = passwordInput.type === "password";
+      passwordInput.type = showPassword ? "text" : "password";
+      passwordToggle.textContent = showPassword ? "Hide" : "Show";
+      const passwordLabel = passwordToggle.dataset.passwordLabel
+        ?? (passwordInput.id === "register-confirm-password" ? "confirm password" : "password");
+      passwordToggle.setAttribute("aria-label", `${showPassword ? "Hide" : "Show"} ${passwordLabel}`);
+      passwordToggle.setAttribute("aria-pressed", String(showPassword));
+      return;
+    }
+
     const topUpButton = event.target.closest("[data-top-up]");
     if (topUpButton) {
       event.preventDefault();
@@ -5768,6 +5882,17 @@
 
     if (event.target.closest("[data-top-up-close]")) {
       closeTopUpModal();
+      return;
+    }
+
+    if (event.target.closest("[data-password-updated-close]")) {
+      closePasswordUpdatedModal();
+      return;
+    }
+
+    const passwordUpdatedModal = event.target.closest("[data-password-updated-modal]");
+    if (passwordUpdatedModal && event.target === passwordUpdatedModal) {
+      closePasswordUpdatedModal();
       return;
     }
 
