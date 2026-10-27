@@ -1891,11 +1891,25 @@ input:focus-visible,
 .home-route-toggle.is-saved,
 .home-route-use { border-color: #148161; background: #148161; color: #fff; }
 .home-shortcut-note { margin: 12px 0 0; color: #77827d; font-size: 10px; line-height: 1.5; }
-.home-fare-fields { display: grid; gap: 14px; }
-.home-fare-fields label { display: grid; gap: 6px; color: #68766e; font-size: 11px; }
-.home-fare-fields select { width: 100%; height: 40px; padding: 0 10px; border: 1px solid #d9dfdc; border-radius: 8px; background: #fff; color: #29332f; font: inherit; font-size: 12px; }
-.home-fare-total { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 13px 12px; border-radius: 9px; background: #effaf6; color: #47564f; font-size: 12px; }
-.home-fare-total strong { color: #117a5c; font-size: 20px; font-variant-numeric: tabular-nums; }
+.home-trip-readiness { display: grid; gap: 14px; }
+.home-trip-readiness-heading { display: grid; gap: 6px; }
+.home-trip-readiness-heading > strong { color: #29332f; font-size: 14px; line-height: 1.4; }
+.home-trip-readiness-heading > small { color: #74817b; font-size: 10px; line-height: 1.4; }
+.home-trip-readiness-status { display: inline-flex; width: fit-content; align-items: center; gap: 5px; color: #117a5c; font-size: 10px; font-weight: 700; }
+.home-trip-readiness-status svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.home-trip-readiness-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; margin: 0; padding: 12px 0; border-top: 1px solid #e1e7e4; border-bottom: 1px solid #e1e7e4; }
+.home-trip-readiness-facts div { display: grid; min-width: 0; gap: 4px; }
+.home-trip-readiness-facts dt { color: #74817b; font-size: 10px; }
+.home-trip-readiness-facts dd { overflow-wrap: anywhere; margin: 0; color: #29332f; font-size: 11px; font-weight: 650; line-height: 1.4; }
+.home-trip-readiness-actions { display: flex; gap: 8px; }
+.home-trip-readiness-primary,
+.home-trip-readiness-secondary { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; padding: 0 13px; border: 1px solid #148161; border-radius: 7px; cursor: pointer; font: inherit; font-size: 11px; font-weight: 650; }
+.home-trip-readiness-primary { background: #148161; color: #fff; }
+.home-trip-readiness-secondary { background: #fff; color: #148161; }
+.home-trip-readiness-empty { display: grid; justify-items: center; gap: 9px; padding: 12px 4px 2px; text-align: center; }
+.home-trip-readiness-empty > svg { width: 30px; height: 30px; fill: none; stroke: #148161; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.home-trip-readiness-empty h3 { margin: 0; color: #29332f; font-size: 14px; }
+.home-trip-readiness-empty p { max-width: 250px; margin: 0; color: #68766e; font-size: 11px; line-height: 1.5; }
 .home-nearby-section-title { margin: 16px 0 8px; color: #536159; font-size: 11px; font-weight: 650; }
 .home-nearby-vehicle-list { display: grid; gap: 7px; }
 .home-nearby-vehicle { display: flex; align-items: center; gap: 8px; padding: 9px; border: 1px solid #e1e7e4; border-radius: 9px; }
