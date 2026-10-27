@@ -8,9 +8,11 @@
   const zoomOutput = document.querySelector("#zoom-level");
   const backButton = document.querySelector("#back-button");
   const fitButton = document.querySelector("#fit-button");
+  const fullscreenButton = document.querySelector("#fullscreen-button");
+  const fullscreenStatus = document.querySelector("#fullscreen-status");
   const workspaceRoleLabel = document.querySelector("#workspace-role-label");
 
-  if (!rolePage || !workspacePage || !roleNote || !viewport || !world || !screen || !zoomOutput || !backButton || !fitButton) {
+  if (!rolePage || !workspacePage || !roleNote || !viewport || !world || !screen || !zoomOutput || !backButton || !fitButton || !fullscreenButton || !fullscreenStatus) {
     throw new Error("USAD prototype could not initialize: required interface elements are missing.");
   }
 
@@ -19,6 +21,22 @@
     throw new Error("USAD prototype could not initialize: active route data is missing.");
   }
   const activeRoute = routes[0];
+  const localDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  const updateAdminLocalClock = () => {
+    const clock = screen.querySelector("[data-admin-local-clock]");
+    if (!clock) return;
+    const now = new Date();
+    clock.dateTime = now.toISOString();
+    clock.textContent = localDateTimeFormatter.format(now);
+  };
   const renderRouteOptions = (selectedRouteId = activeRoute.id) => routes.map((route) => `
     <option value="${route.id}"${selectedRouteId === route.id ? " selected" : ""}>${route.label}</option>
   `).join("");
@@ -67,6 +85,8 @@
     { id: "fare-offer", type: "promo", title: "A little more in your U-Pouch", body: "Explore the sample offers shown in the app. No offer is active.", time: "Oct 12", unread: false },
   ];
   let notificationFilter = "all";
+  const regularUserFarePerPassenger = 120;
+  const discountedUserFarePerPassenger = 100;
   let welcomeTimeout = 0;
   let activeFaqCategory = "all";
   let tripHistoryFilter = "all";
@@ -79,10 +99,10 @@
   let discountVerificationStatus = "unverified";
   let discountVerificationMessage = "";
   let tripHistory = [
-    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: 80, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true, receiptLabel: "E-Ticket & Receipt", showRateAction: true, rebookLabel: "Rebook" },
-    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: activeRoute.destination, originDetail: activeRoute.destinationShort, destination: activeRoute.origin, destinationDetail: `Via ${activeRoute.via}`, fare: 80, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true, receiptLabel: "Receipt", rebookLabel: "Rebook Route" },
-    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: 64, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
-    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: activeRoute.destination, originDetail: "Trip cancelled by operator", destination: activeRoute.origin, destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: 80, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
+    { id: "MLS-042", date: "Today · 8:15 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: regularUserFarePerPassenger, seat: "1A", payment: "GCash", co2Saved: 6.2, receiptId: "USAD-7X29-KM41", inMonth: true, receiptLabel: "E-Ticket & Receipt", showRateAction: true, rebookLabel: "Rebook" },
+    { id: "TRN-018", date: "Yesterday · 5:45 PM", status: "completed", origin: activeRoute.destination, originDetail: activeRoute.destinationShort, destination: activeRoute.origin, destinationDetail: `Via ${activeRoute.via}`, fare: regularUserFarePerPassenger, seat: "4B", payment: "U-Pouch", co2Saved: 6.1, receiptId: "USAD-4P18-TR62", inMonth: true, receiptLabel: "Receipt", rebookLabel: "Rebook Route" },
+    { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: discountedUserFarePerPassenger, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
+    { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: activeRoute.destination, originDetail: "Trip cancelled by operator", destination: activeRoute.origin, destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: regularUserFarePerPassenger, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
   ];
   let bookingReferenceSequence = 1;
   const createBookingReference = () => {
@@ -100,9 +120,11 @@
     seat: "1A",
   };
   let bookingConfirmed = false;
+  let topUpReturnFocus = null;
+  let passwordUpdatedReturnFocus = null;
   const liveBusDetails = [
-    { name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: "₱80.00", status: "On time" },
-    { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: "₱80.00", status: "On time" },
+    { name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
+    { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
   ];
   let selectedLiveBus = 0;
   let selectedBusSeatId = "";
@@ -849,8 +871,15 @@
     return `
     <!-- Top Title & Action Header -->
     <header class="admin-header-row">
-      <div class="admin-header-title-box">
+      <div class="admin-header-title-box admin-live-header-title-box">
         <h1 class="admin-header-title">Live Operations</h1>
+        <div class="admin-local-clock" aria-label="Current local date and time">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          <div class="admin-local-clock-copy">
+            <span>LOCAL DATE &amp; TIME</span>
+            <time data-admin-local-clock datetime="${new Date().toISOString()}">${localDateTimeFormatter.format(new Date())}</time>
+          </div>
+        </div>
       </div>
 
       <div class="admin-header-actions">
@@ -1134,61 +1163,7 @@
 
     <!-- Dispatch recommendation -->
     <section class="analytics-bottom-grid">
-      <!-- Card 1: Economic Conditions -->
-      <article class="analytics-bottom-card">
-        <div class="admin-card-header">
-          <div class="admin-card-header-left">
-            <div class="card-icon-badge gold">
-              <span style="font-size: 13px; font-weight: 700;">₱</span>
-            </div>
-            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Economic conditions</div>
-          </div>
-        </div>
-
-        <div class="bento-denested-content">
-          <div class="bento-stat-pair">
-            <span class="bento-stat-label">Diesel Spot Index</span>
-            <strong class="bento-stat-val text-red">₱68.40/L (+4.2%)</strong>
-          </div>
-          <p class="bento-stat-desc">Elevated fuel prices may increase demand for buses serving ${escapeHtml(activeRoute.destinationShort)}.</p>
-        </div>
-
-        <div class="bento-divider-line"></div>
-
-        <div class="analytics-card-footer">
-          <span style="color: #94a3b8; font-size: 11px;">Ridership sensitivity factor:</span>
-          <strong style="color: #10b981; font-size: 11.5px;">0.82 (High Elasticity)</strong>
-        </div>
-      </article>
-
-      <!-- Card 2: Weather & Monsoon Impact -->
-      <article class="analytics-bottom-card">
-        <div class="admin-card-header">
-          <div class="admin-card-header-left">
-            <div class="card-icon-badge cyan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
-            </div>
-            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Weather &amp; monsoon impact</div>
-          </div>
-        </div>
-
-        <div class="bento-denested-content">
-          <div class="bento-stat-pair">
-            <span class="bento-stat-label">Terminal Dwell Surge</span>
-            <strong class="bento-stat-val text-amber">+35% Wait Time</strong>
-          </div>
-          <p class="bento-stat-desc">Monsoon showers projected between 4:30 PM - 8 PM may affect commuters at ${escapeHtml(activeRoute.destinationShort)}.</p>
-        </div>
-
-        <div class="bento-divider-line"></div>
-
-        <div class="analytics-card-footer">
-          <span style="color: #94a3b8; font-size: 11px;">Precipitation probability:</span>
-          <strong style="color: #38bdf8; font-size: 11.5px;">85% at 5:00 PM</strong>
-        </div>
-      </article>
-
-      <!-- Card 3: AI Dispatch Recommendation -->
+      <!-- AI Dispatch Recommendation -->
       <article class="analytics-bottom-card">
         <div class="admin-card-header">
           <div class="admin-card-header-left">
@@ -2110,7 +2085,7 @@
     const pageRows = filtered.slice((staffCurrentPage - 1) * staffPageSize, staffCurrentPage * staffPageSize);
 
     if (filtered.length === 0) {
-      return `      <tr><td colspan="9" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
+      return `<tr><td colspan="8" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
     }
 
     return pageRows.map((staff) => {
@@ -2140,9 +2115,6 @@
           </td>
           <td>
             <span class="staff-depot-text">${staff.depot}</span>
-          </td>
-          <td>
-            <span class="staff-rate-text">${staff.rate}</span>
           </td>
           <td>
             <span class="staff-max-hours-text">${staff.maxHours}</span>
@@ -2276,7 +2248,6 @@
               <th>ROLE</th>
               <th>BUS NO.</th>
               <th>DESIGNATION / DEPOT</th>
-              <th>HOURLY RATE</th>
               <th>MAX HOURS</th>
               <th>STATUS</th>
               <th>ACTION</th>
@@ -3603,7 +3574,6 @@
               <select class="admin-input" id="new-staff-depot" style="height: 38px;">
                 <option value="Trinoma Hub">Trinoma Hub</option>
                 <option value="Malolos Hub">Malolos Hub</option>
-                <option value="Balintawak Staging">Balintawak Staging</option>
               </select>
             </div>
           </div>
@@ -4028,12 +3998,18 @@
         </div>
         <div class="form-field">
           <label for="register-password">Password</label>
-          <input id="register-password" name="password" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
+          <div class="password-input-wrap">
+            <input id="register-password" name="password" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
+            <button class="password-visibility-toggle" type="button" data-password-toggle="register-password" aria-controls="register-password" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
           <span class="field-error" id="register-password-error" role="alert" hidden>Include at least one number or special character.</span>
         </div>
         <div class="form-field">
           <label for="register-confirm-password">Confirm Password</label>
-          <input id="register-confirm-password" name="confirmPassword" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
+          <div class="password-input-wrap">
+            <input id="register-confirm-password" name="confirmPassword" type="password" placeholder="••••••••" autocomplete="new-password"${showError ? ' aria-invalid="true"' : ""}>
+            <button class="password-visibility-toggle" type="button" data-password-toggle="register-confirm-password" aria-controls="register-confirm-password" aria-label="Show confirm password" aria-pressed="false">Show</button>
+          </div>
           <span class="field-error" id="register-confirm-password-error" role="alert" hidden>Passwords do not match.</span>
         </div>
         <div class="terms-consent">
@@ -4146,7 +4122,7 @@
         </header>
         <section class="pouch-panel" aria-label="U-Pouch balance">
           <div><span>Current U-Pouch Balance:</span><strong>₱2.00</strong></div>
-          <button type="button" data-info="Top up is a visual demo only."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Top Up</span></button>
+          <button type="button" data-top-up><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Top Up</span></button>
           <span class="pouch-icon" aria-hidden="true"><svg viewBox="0 0 40 36"><defs><linearGradient id="pouch-gradient" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#19bd91"/><stop offset="1" stop-color="#109b78"/></linearGradient></defs><path fill="url(#pouch-gradient)" d="M8 3h24a4 4 0 0 1 4 4v4h-7V8H8a4 4 0 0 0 0 8h27a4 4 0 0 1 4 4v11a4 4 0 0 1-4 4H8a8 8 0 0 1-8-8V11a8 8 0 0 1 8-8Z"/><path fill="#fff" d="M8 7h21a2 2 0 0 1 2 2v2H8a2 2 0 1 1 0-4Zm24 15h4v8h-4z"/></svg></span>
         </section>
         <section class="home-map-section" aria-label="Nearby vehicles map">
@@ -4179,7 +4155,7 @@
 
   const accountVerificationScreen = () => {
     const concessionTypes = [
-      { id: "student", label: "Student", detail: "20% Discount", icon: '<path d="M3 9 12 4l9 5-9 5-9-5Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5m3-2v6"/>' },
+      { id: "student", label: "Student", detail: "₱20 Discount", icon: '<path d="M3 9 12 4l9 5-9 5-9-5Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5m3-2v6"/>' },
       { id: "senior", label: "Senior", detail: "60+ y/o", icon: '<circle cx="12" cy="7" r="3"/><path d="M6 21v-2a6 6 0 0 1 12 0v2m-2-4 4 4m-4 0h4"/>' },
       { id: "pwd", label: "PWD", detail: "Valid ID", icon: '<circle cx="12" cy="5" r="2"/><path d="M10 9h5l2 4h-4l-1 3m-2-7-2 5h4l2 4m-3-2-3 4"/>' },
     ];
@@ -4203,12 +4179,12 @@
       </article>`;
     };
     const stepContent = discountVerificationStep === 1
-      ? `<div class="verification-section-label"><strong>Select Concession Type</strong><span>${discountVerificationType === "student" ? "20% Discount" : "Discount ID"}</span></div>
+      ? `<div class="verification-section-label"><strong>Select Concession Type</strong><span>${discountVerificationType === "student" ? "₱20 Discount" : "Discount ID"}</span></div>
           <div class="verification-types" role="group" aria-label="Concession type">
             ${concessionTypes.map((type) => `<button type="button" class="verification-type${discountVerificationType === type.id ? " is-selected" : ""}" data-concession-type="${type.id}" aria-pressed="${discountVerificationType === type.id}"><span class="verification-type-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${type.icon}</svg></span><strong>${type.label}</strong><small>${type.id === discountVerificationType ? "Selected" : type.detail}</small></button>`).join("")}
           </div>
           <div class="verification-section-label verification-upload-heading"><strong>Document Upload</strong><span>JPG, PNG or PDF</span></div>
-          <div class="verification-upload-list">${uploadCard("front", "Upload Front of School ID")}${uploadCard("back", "Upload Back of School ID")}</div>
+          <div class="verification-upload-list">${uploadCard("front", "Upload Front of ID")}${uploadCard("back", "Upload Back of School ID")}</div>
           <p class="verification-note">Automated ID verification usually takes 1-2 minutes once submitted.</p>
           ${discountVerificationMessage ? `<p class="verification-message" data-verification-message role="status" aria-live="polite">${escapeHtml(discountVerificationMessage)}</p>` : ""}
           <button class="verification-primary" type="button" data-verification-action="review">Continue to Verification <span aria-hidden="true">→</span></button>`
@@ -4256,7 +4232,7 @@
           <div class="passenger-stepper"><span id="passenger-count">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
           <label class="sheet-label">Payment Method</label>
           <div class="payment-options">
-            <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
+            <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-top-up>＋ Top Up</button></label>
             <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
           </div>
@@ -4276,9 +4252,9 @@
       <div class="result-filter"><button class="filter-selected" type="button">Fastest</button><button type="button" data-info="Showing the fastest available seats.">More Seats</button></div>
       <div class="discount-note"><span>✓</span> Student Discount Applied</div>
       <section class="ride-list">
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱80.00</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱80.00</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>0 seats · ₱80.00</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
+        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>0 seats · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
       </section>
       <p class="prototype-stamp">Sample ride options · Not live availability</p>
     </div>`;
@@ -4291,7 +4267,7 @@
           <button class="modal-close" type="button" aria-label="Close confirmation" data-screen="find-rides">×</button>
           <h2 id="booking-dialog-title">Booking Confirmation</h2><p class="sheet-subtitle">Ride Details</p>
           <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>8 seats available</span></div></div>
-          <dl class="fare-breakdown"><div><dt>Regular Fare</dt><dd>₱${(100 * tripData.passengers).toFixed(2)}</dd></div><div><dt>Student Discount</dt><dd>-₱${(20 * tripData.passengers).toFixed(2)}</dd></div><div class="fare-total"><dt>Total Fare</dt><dd>₱${(80 * tripData.passengers).toFixed(2)}</dd></div></dl>
+          <dl class="fare-breakdown"><div><dt>Regular Fare</dt><dd>₱${(regularUserFarePerPassenger * tripData.passengers).toFixed(2)}</dd></div><div><dt>Student Discount</dt><dd>-₱${((regularUserFarePerPassenger - discountedUserFarePerPassenger) * tripData.passengers).toFixed(2)}</dd></div><div class="fare-total"><dt>Total Fare</dt><dd>₱${(discountedUserFarePerPassenger * tripData.passengers).toFixed(2)}</dd></div></dl>
           <div class="dialog-actions"><button type="button" data-screen="find-rides">Cancel</button><button type="button" class="confirm-action" data-action="confirm-booking">Confirm</button></div>
         </section>
       </div>
@@ -4304,7 +4280,7 @@
         receiptId: "USAD-7X29-KM41",
         origin: tripData.origin,
         destination: tripData.destination,
-        fare: 80 * tripData.passengers,
+        fare: discountedUserFarePerPassenger * tripData.passengers,
         seat: tripData.seat,
         passengers: tripData.passengers,
         payment: tripData.payment,
@@ -4394,7 +4370,7 @@
             <div class="passenger-stepper"><span id="seat-passengers">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
             <label class="sheet-label">Payment Method</label>
             <div class="payment-options">
-              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
+              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-top-up>＋ Top Up</button></label>
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             </div>
             <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
@@ -4456,7 +4432,7 @@
             <select id="live-seat-picker" class="seat-picker" name="seat" aria-label="Select a seat">${seatOptions}</select>
             <label class="sheet-label">Payment Method</label>
             <div class="payment-options">
-              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
+              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-top-up>＋ Top Up</button></label>
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
               <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
             </div>
@@ -4492,7 +4468,7 @@
         </div>
         <section class="notification-list" aria-label="Notifications" data-notification-list>
           ${notifications.map((notification) => `
-            <button type="button" class="notification-item${notification.unread ? " is-unread" : ""}" data-notification-id="${notification.id}" aria-label="${notification.unread ? "Mark as read: " : "Mark as unread: "}${escapeHtml(notification.title)}">
+            <button type="button" class="notification-item${notification.unread ? " is-unread" : ""}" data-notification-id="${notification.id}" aria-label="${notification.unread ? "Unread notification: " : "Read notification: "}${escapeHtml(notification.title)}">
               <span class="notification-item-icon is-${notification.type}">${notificationIcon(notification.type)}</span>
               <span class="notification-item-copy"><strong>${escapeHtml(notification.title)}</strong><span>${escapeHtml(notification.body)}</span><small>${escapeHtml(notification.time)}</small></span>
               <span class="notification-unread-dot" aria-hidden="true"${notification.unread ? "" : " hidden"}></span>
@@ -4521,7 +4497,7 @@
     const tripHistoryScreen = () => {
       const completedTrips = tripHistory.filter((trip) => trip.status === "completed");
       const cancelledTrips = tripHistory.filter((trip) => trip.status === "cancelled");
-      const monthlySummary = { month: "October 2024", totalSpent: 960, rides: 12, co2Saved: 18.4 };
+      const monthlySummary = { month: "October 2026", totalSpent: 1200, rides: 12, co2Saved: 18.4 };
       const filters = `<div class="home-shortcuts trip-history-filters" role="group" aria-label="Filter trips">
         <button type="button" data-trip-filter="all" class="is-active" aria-pressed="true">All Trips</button>
         <button type="button" data-trip-filter="completed" aria-pressed="false">Completed (${completedTrips.length})</button>
@@ -4540,7 +4516,7 @@
             </div>
             <div class="trip-history-fare"><strong>₱${trip.fare.toFixed(2)}</strong><span>Seat ${escapeHtml(trip.seat)}</span><small>${fareDetail}</small></div>
           </div>
-          ${trip.studentDiscount ? '<p class="trip-history-discount">Student Discount Applied (20% Off)</p>' : ""}
+          ${trip.studentDiscount ? '<p class="trip-history-discount">Student Discount Applied</p>' : ""}
           <footer class="trip-history-actions">
             <button type="button" class="trip-receipt-link" data-view-trip="${trip.id}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.75h5l3 3v9.5H4zM9 2v3h3M6 8h4m-4 2.5h4"/></svg>${escapeHtml(trip.receiptLabel)}</button>
             ${trip.showRateAction ? '<button type="button" class="trip-rate-button" data-info="Trip rating is a prototype-only action.">Rate Trip</button>' : ""}
@@ -4607,8 +4583,25 @@
                 <details class="profile-detail-inline">
                   <summary class="profile-menu-row">Change Password <span aria-hidden="true">›</span></summary>
                   <div class="account-section-content">
-                    ${profileField("password", "Password", "password")}
-                    <p class="account-message account-inline-message" data-profile-message role="status" aria-live="polite"></p>
+                    <form class="account-password-form" data-change-password-form novalidate>
+                      <div class="account-edit-field">
+                        <label for="profile-new-password">New Password</label>
+                        <div class="password-input-wrap">
+                          <input id="profile-new-password" name="newPassword" type="password" autocomplete="new-password" data-change-password-field aria-describedby="profile-new-password-error">
+                          <button class="password-visibility-toggle" type="button" data-password-toggle="profile-new-password" data-password-label="new password" aria-controls="profile-new-password" aria-label="Show new password" aria-pressed="false">Show</button>
+                        </div>
+                        <span class="field-error" id="profile-new-password-error" role="alert" hidden>Enter a new password.</span>
+                      </div>
+                      <div class="account-edit-field">
+                        <label for="profile-confirm-password">Confirm New Password</label>
+                        <div class="password-input-wrap">
+                          <input id="profile-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" data-change-password-field aria-describedby="profile-confirm-password-error">
+                          <button class="password-visibility-toggle" type="button" data-password-toggle="profile-confirm-password" data-password-label="confirm password" aria-controls="profile-confirm-password" aria-label="Show confirm password" aria-pressed="false">Show</button>
+                        </div>
+                        <span class="field-error" id="profile-confirm-password-error" role="alert" hidden>Passwords do not match.</span>
+                      </div>
+                      <button class="account-password-submit" type="submit">Update Password</button>
+                    </form>
                   </div>
                 </details>
                 <button class="profile-menu-row profile-toggle-row is-on" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Two-factor authentication">Two-Factor Authentication</button>
@@ -4716,7 +4709,7 @@
             <div class="passenger-stepper bus-capacity-stepper"><span>Seat capacity</span><strong data-bus-seats>8</strong><small data-bus-eta>3 min away</small></div>
             <label class="sheet-label">Bus Information</label>
             <div class="payment-options bus-info-list">
-              <div class="payment-option"><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Estimated Fare</strong><small data-bus-fare>₱80.00</small></span></div>
+              <div class="payment-option"><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Estimated Fare</strong><small data-bus-fare>₱${discountedUserFarePerPassenger.toFixed(2)}</small></span></div>
             </div>
             <label class="sheet-label">Seat Layout</label>
             <div class="bus-seat-front"><span>FRONT</span><strong>Driver</strong></div>
@@ -4788,7 +4781,7 @@
       button.hidden = hidden;
       if (!hidden) visibleCount += 1;
       button.classList.toggle("is-unread", notification.unread);
-      button.setAttribute("aria-label", `${notification.unread ? "Mark as read: " : "Mark as unread: "}${notification.title}`);
+      button.setAttribute("aria-label", `${notification.unread ? "Unread notification: " : "Read notification: "}${notification.title}`);
       const unreadDot = button.querySelector(".notification-unread-dot");
       if (unreadDot) unreadDot.hidden = !notification.unread;
     });
@@ -4838,9 +4831,9 @@
     if (!summary) return;
     const filterSummaries = {
       all: "12 trips · 2 buses on this corridor",
-      completed: "11 completed trips · October 2024",
+      completed: "11 completed trips · October 2026",
       cancelled: "1 cancelled trip · no active bus shown",
-      month: "October 2024 · 12 trips · 18.4 kg CO₂ saved",
+      month: "October 2026 · 12 trips · 18.4 kg CO₂ saved",
     };
     summary.textContent = showLiveFleet && query
       ? visibleBusCount
@@ -5031,6 +5024,66 @@
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) finishClose();
   };
 
+  const openTopUpModal = () => {
+    if (screen.querySelector("[data-top-up-modal]")) return;
+    topUpReturnFocus = document.activeElement;
+    const template = document.createElement("template");
+    template.innerHTML = `
+      <div class="modal-scrim top-up-modal-scrim" data-top-up-modal>
+        <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="top-up-dialog-title">
+          <button class="modal-close" type="button" aria-label="Close top-up message" data-top-up-close>×</button>
+          <div class="top-up-message">
+            <span class="top-up-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M14 4h6v6m-.5-5.5L11 13m-2-7H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h2 id="top-up-dialog-title">Redirecting you to merchant</h2>
+          </div>
+        </section>
+      </div>`;
+    const modal = template.content.firstElementChild;
+    if (!modal) throw new Error("USAD could not open the top-up message.");
+    screen.append(modal);
+    modal.querySelector("[data-top-up-close]")?.focus();
+  };
+
+  const closeTopUpModal = () => {
+    const modal = screen.querySelector("[data-top-up-modal]");
+    if (!modal) return;
+    modal.remove();
+    if (topUpReturnFocus?.isConnected) topUpReturnFocus.focus();
+    topUpReturnFocus = null;
+  };
+
+  const openPasswordUpdatedModal = () => {
+    if (screen.querySelector("[data-password-updated-modal]")) return;
+    passwordUpdatedReturnFocus = document.activeElement;
+    const template = document.createElement("template");
+    template.innerHTML = `
+      <div class="modal-scrim top-up-modal-scrim" data-password-updated-modal>
+        <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="password-updated-dialog-title">
+          <button class="modal-close" type="button" aria-label="Close password updated message" data-password-updated-close>×</button>
+          <div class="top-up-message">
+            <span class="top-up-icon password-updated-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="m5 12 4.5 4.5L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h2 id="password-updated-dialog-title">Password updated</h2>
+          </div>
+        </section>
+      </div>`;
+    const modal = template.content.firstElementChild;
+    if (!modal) throw new Error("USAD could not open the password updated message.");
+    screen.append(modal);
+    modal.querySelector("[data-password-updated-close]")?.focus();
+  };
+
+  const closePasswordUpdatedModal = () => {
+    const modal = screen.querySelector("[data-password-updated-modal]");
+    if (!modal) return;
+    modal.remove();
+    if (passwordUpdatedReturnFocus?.isConnected) passwordUpdatedReturnFocus.focus();
+    passwordUpdatedReturnFocus = null;
+  };
+
   const openQuickBookOverlay = () => {
     const currentPage = screen.firstElementChild;
     if (!currentPage || screen.querySelector("[data-quick-book-overlay]")) return;
@@ -5159,6 +5212,31 @@
 
   fitButton.addEventListener("click", resetCanvas);
 
+  const updateFullscreenButton = () => {
+    const isFullscreen = document.fullscreenElement === workspacePage;
+    const label = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";
+    fullscreenButton.setAttribute("aria-label", label);
+    fullscreenButton.title = label;
+    fullscreenStatus.textContent = "";
+  };
+
+  fullscreenButton.addEventListener("click", async () => {
+    try {
+      if (document.fullscreenElement === workspacePage) {
+        await document.exitFullscreen();
+      } else if (workspacePage.requestFullscreen) {
+        await workspacePage.requestFullscreen();
+      } else {
+        fullscreenStatus.textContent = "Fullscreen is unavailable in this browser.";
+      }
+    } catch (error) {
+      const details = error instanceof Error ? ` ${error.message}` : "";
+      fullscreenStatus.textContent = `Fullscreen could not be enabled.${details}`;
+    }
+  });
+
+  document.addEventListener("fullscreenchange", updateFullscreenButton);
+
   viewport.addEventListener("wheel", (event) => {
     if (event.target.closest("#phone-screen")) return;
     event.preventDefault();
@@ -5259,6 +5337,14 @@
 
   screen.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (screen.querySelector("[data-password-updated-modal]")) {
+        closePasswordUpdatedModal();
+        return;
+      }
+      if (screen.querySelector("[data-top-up-modal]")) {
+        closeTopUpModal();
+        return;
+      }
       const quickBookOverlay = screen.querySelector("[data-quick-book-overlay]");
       if (quickBookOverlay) {
         closeQuickBookOverlay(quickBookOverlay);
@@ -5446,11 +5532,16 @@
         const restoredEmail = screen.querySelector("#register-email");
         const restoredPassword = screen.querySelector("#register-password");
         const restoredConfirmPassword = screen.querySelector("#register-confirm-password");
+        const restoredConfirmPasswordError = screen.querySelector("#register-confirm-password-error");
         const restoredTermsAccepted = screen.querySelector("#terms-accepted");
         if (restoredUsername) restoredUsername.value = username.value;
         if (restoredEmail) restoredEmail.value = email.value;
         if (restoredPassword) restoredPassword.value = password.value;
         if (restoredConfirmPassword) restoredConfirmPassword.value = confirmPassword.value;
+        if (restoredConfirmPassword && restoredConfirmPasswordError && (!confirmPassword.value || mismatch)) {
+          restoredConfirmPassword.setAttribute("aria-invalid", "true");
+          restoredConfirmPasswordError.hidden = false;
+        }
         if (restoredTermsAccepted) restoredTermsAccepted.checked = termsAccepted.checked;
         screen.querySelector(".form-alert")?.focus({ preventScroll: true });
         return;
@@ -5463,6 +5554,35 @@
       accountProfile.email = registrationData.email;
 
       renderScreen("verification");
+    }
+
+    if (event.target.matches("[data-change-password-form]")) {
+      event.preventDefault();
+      const newPassword = event.target.querySelector("#profile-new-password");
+      const confirmPassword = event.target.querySelector("#profile-confirm-password");
+      const newPasswordError = event.target.querySelector("#profile-new-password-error");
+      const confirmPasswordError = event.target.querySelector("#profile-confirm-password-error");
+      if (!newPassword || !confirmPassword || !newPasswordError || !confirmPasswordError) {
+        throw new Error("USAD could not update the password: a required field or error message is missing.");
+      }
+
+      const missingPassword = !newPassword.value;
+      const missingConfirmation = !confirmPassword.value;
+      const passwordsMismatch = !missingPassword && !missingConfirmation && newPassword.value !== confirmPassword.value;
+      newPasswordError.hidden = !missingPassword;
+      confirmPasswordError.hidden = !(missingConfirmation || passwordsMismatch);
+      newPassword.toggleAttribute("aria-invalid", missingPassword);
+      confirmPassword.toggleAttribute("aria-invalid", missingConfirmation || passwordsMismatch);
+
+      if (missingPassword || missingConfirmation || passwordsMismatch) {
+        (missingPassword ? newPassword : confirmPassword).focus();
+        return;
+      }
+
+      accountProfile.password = newPassword.value;
+      event.target.reset();
+      openPasswordUpdatedModal();
+      return;
     }
 
     if (event.target.matches("[data-verification-form]")) {
@@ -5758,6 +5878,12 @@
       const message = event.target.closest(".account-section")?.querySelector("[data-profile-message]");
       if (message) message.textContent = "";
     }
+
+    if (event.target.matches("[data-change-password-field]")) {
+      event.target.removeAttribute("aria-invalid");
+      const fieldError = screen.querySelector(`#${event.target.id}-error`);
+      if (fieldError) fieldError.hidden = true;
+    }
   });
 
   screen.addEventListener("change", (event) => {
@@ -5772,11 +5898,17 @@
       selectedBusSeatId = event.target.value;
     }
 
-    if (event.target.matches('input[name="payment"]') && event.target.value !== "U-Pouch") {
+    if (event.target.matches('input[name="payment"]')) {
       const bookingContainer = event.target.closest("[data-quick-book], .seat-book-card");
-      const paymentError = bookingContainer?.querySelector("[data-payment-error]");
-      if (paymentError) paymentError.hidden = true;
-      bookingContainer?.querySelector('input[name="payment"][value="U-Pouch"]')?.removeAttribute("aria-invalid");
+      tripData.payment = event.target.value;
+      bookingContainer?.querySelectorAll(".payment-option").forEach((option) => {
+        option.classList.toggle("selected", option.querySelector('input[name="payment"]') === event.target);
+      });
+      if (event.target.value !== "U-Pouch") {
+        const paymentError = bookingContainer?.querySelector("[data-payment-error]");
+        if (paymentError) paymentError.hidden = true;
+        bookingContainer?.querySelector('input[name="payment"][value="U-Pouch"]')?.removeAttribute("aria-invalid");
+      }
     }
 
     if (event.target.matches("[data-discount-id-upload]")) {
@@ -5863,6 +5995,51 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const passwordToggle = event.target.closest("[data-password-toggle]");
+    if (passwordToggle) {
+      const passwordInput = screen.querySelector(`#${passwordToggle.dataset.passwordToggle}`);
+      if (!passwordInput) {
+        throw new Error(`Password visibility control could not find its input: ${passwordToggle.dataset.passwordToggle}.`);
+      }
+      const showPassword = passwordInput.type === "password";
+      passwordInput.type = showPassword ? "text" : "password";
+      passwordToggle.textContent = showPassword ? "Hide" : "Show";
+      const passwordLabel = passwordToggle.dataset.passwordLabel
+        ?? (passwordInput.id === "register-confirm-password" ? "confirm password" : "password");
+      passwordToggle.setAttribute("aria-label", `${showPassword ? "Hide" : "Show"} ${passwordLabel}`);
+      passwordToggle.setAttribute("aria-pressed", String(showPassword));
+      return;
+    }
+
+    const topUpButton = event.target.closest("[data-top-up]");
+    if (topUpButton) {
+      event.preventDefault();
+      openTopUpModal();
+      return;
+    }
+
+    if (event.target.closest("[data-top-up-close]")) {
+      closeTopUpModal();
+      return;
+    }
+
+    if (event.target.closest("[data-password-updated-close]")) {
+      closePasswordUpdatedModal();
+      return;
+    }
+
+    const passwordUpdatedModal = event.target.closest("[data-password-updated-modal]");
+    if (passwordUpdatedModal && event.target === passwordUpdatedModal) {
+      closePasswordUpdatedModal();
+      return;
+    }
+
+    const topUpModal = event.target.closest("[data-top-up-modal]");
+    if (topUpModal && event.target === topUpModal) {
+      closeTopUpModal();
+      return;
+    }
+
     const showAllTripsButton = event.target.closest("[data-trip-log-show-all]");
     if (showAllTripsButton) {
       showAllTripLogs = !showAllTripLogs;
@@ -6810,7 +6987,7 @@
     if (notificationButton) {
       const notification = notifications.find(({ id }) => id === notificationButton.dataset.notificationId);
       if (!notification) throw new Error(`Unknown notification in the inbox: ${notificationButton.dataset.notificationId}.`);
-      notification.unread = !notification.unread;
+      notification.unread = false;
       updateNotificationView();
       return;
     }
@@ -7035,4 +7212,5 @@
 
   renderScreen(activeState);
   resetCanvas();
+  window.setInterval(updateAdminLocalClock, 1000);
 })();
