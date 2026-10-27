@@ -203,14 +203,11 @@
       <path d="M13.5 13h3.5"/>
     </svg>`;
 
-  const adminLoginScreen = (role, showError = false) => {
-    const isDispatcher = role === "dispatcher";
-    const demoEmail = isDispatcher ? "dispatcher@saraza.com" : "admin@saraza.com";
-    return `
+  const adminLoginScreen = (showError = false) => `
     <div class="admin-auth-screen" data-admin-screen="login">
       <div class="admin-auth-card">
         ${adminAppMark}
-        <h1 class="admin-auth-title">${isDispatcher ? "Dispatcher Access" : "Introducing,"} <span>USAD</span></h1>
+        <h1 class="admin-auth-title">Introducing, <span>USAD</span></h1>
         ${showError ? '<div class="admin-auth-alert" id="admin-auth-alert" role="alert">Invalid Email or Password</div>' : ""}
         <form class="admin-login-form" data-admin-login-form novalidate>
           <div class="admin-form-field">
@@ -231,17 +228,15 @@
           </button>
         </div>
         <p class="admin-security-note">
-          ${isDispatcher
-    ? "Dispatcher accounts are provisioned by an administrator. Dispatchers cannot register for an account."
-    : "Admin side can only log in by us when we give them an account. And they cannot register for one."}
+          Admin and dispatcher accounts are provisioned by an administrator. They cannot register for an account.
         </p>
       </div>
       <div class="admin-helper-bar">
-        <button class="admin-helper-chip" type="button" data-admin-action="autofill-demo" title="Auto-fill with ${demoEmail}">${isDispatcher ? "Auto-fill Dispatcher Demo" : "Auto-fill Demo Account"}</button>
+        <button class="admin-helper-chip" type="button" data-admin-action="autofill-demo" data-demo-role="admin" title="Auto-fill Admin demo credentials">Auto-fill Admin Demo</button>
+        <button class="admin-helper-chip" type="button" data-admin-action="autofill-demo" data-demo-role="dispatcher" title="Auto-fill Dispatcher demo credentials">Auto-fill Dispatcher Demo</button>
         <button class="admin-helper-chip" type="button" data-admin-action="toggle-error" title="Toggle error alert banner">${showError ? "Hide Error Banner" : "Show Error Banner"}</button>
       </div>
     </div>`;
-  };
 
   let activeFleetFilter = "all";
   let fleetSearchQuery = "";
@@ -5013,7 +5008,7 @@
     liveMapDrag = null;
     screen.replaceChildren();
     if (state === "admin-login") {
-      screen.innerHTML = adminLoginScreen(currentRole, currentRole === "dispatcher" ? dispatcherShowError : adminShowError);
+      screen.innerHTML = adminLoginScreen(currentRole === "dispatcher" ? dispatcherShowError : adminShowError);
     } else if (state === "admin-dashboard") {
       screen.innerHTML = adminDashboardScreen();
     } else if (state === "login") {
@@ -5252,12 +5247,12 @@
     if (workspaceRoleLabel) {
       workspaceRoleLabel.textContent = role === "dispatcher" ? "Dispatcher" : role === "admin" ? "Admin" : "User";
     }
-    if (role === "admin" || role === "dispatcher") {
+    if (role === "admin") {
       world.classList.add("is-admin");
       screen.classList.add("is-admin");
       activeAdminSidebarTab = "live-operations";
-      if (role === "dispatcher") dispatcherShowError = false;
-      else adminShowError = false;
+      adminShowError = false;
+      dispatcherShowError = false;
       renderScreen("admin-login");
     } else {
       world.classList.remove("is-admin");
@@ -5280,7 +5275,7 @@
     rolePage.hidden = false;
     world.classList.remove("is-admin");
     screen.classList.remove("is-admin");
-    const target = document.querySelector(`[data-open="${currentRole}"]`) ?? document.querySelector('[data-open="user"]');
+    const target = document.querySelector(`[data-open="${currentRole === "dispatcher" ? "admin" : currentRole}"]`) ?? document.querySelector('[data-open="user"]');
     target?.focus();
   });
 
@@ -6169,8 +6164,14 @@
       } else if (adminAction === "autofill-demo") {
         const emailInput = screen.querySelector("#admin-email");
         const passwordInput = screen.querySelector("#admin-password");
-        const demoEmail = currentRole === "dispatcher" ? "dispatcher@saraza.com" : "admin@saraza.com";
-        const demoPassword = currentRole === "dispatcher" ? "DispatcherPass123!" : "AdminPass123!";
+        const demoRole = adminActionBtn.dataset.demoRole;
+        if (demoRole !== "admin" && demoRole !== "dispatcher") {
+          throw new Error(`USAD could not fill demo credentials for unknown role "${demoRole}".`);
+        }
+        currentRole = demoRole;
+        if (workspaceRoleLabel) workspaceRoleLabel.textContent = demoRole === "dispatcher" ? "Dispatcher" : "Admin";
+        const demoEmail = demoRole === "dispatcher" ? "dispatcher@saraza.com" : "admin@saraza.com";
+        const demoPassword = demoRole === "dispatcher" ? "DispatcherPass123!" : "AdminPass123!";
         if (emailInput) {
           emailInput.value = demoEmail;
           emailInput.removeAttribute("aria-invalid");
