@@ -89,9 +89,13 @@
   const discountedUserFarePerPassenger = 100;
   let welcomeTimeout = 0;
   let activeFaqCategory = "all";
-  let tripHistoryFilter = "all";
+  let tripHistoryTab = "upcoming";
   let tripHistoryQuery = "";
   let selectedHistoryTripId = "";
+  let activeTripRatingId = "";
+  let selectedTripRating = 0;
+  let selectedTripComment = "";
+  const tripRatings = new Map();
   let discountVerificationType = "student";
   let discountVerificationStep = 1;
   let discountVerificationFiles = { front: null, back: null };
@@ -112,12 +116,24 @@
     } while (tripHistory.some((trip) => trip.id === reference || trip.receiptId === reference));
     return reference;
   };
+  const toDateInputValue = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const defaultDepartureDate = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    return toDateInputValue(date);
+  };
+  const formatDeparture = (date, time) => new Intl.DateTimeFormat("en-PH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(`${date}T${time}`));
   let tripData = {
     origin: activeRoute.origin,
     destination: activeRoute.destinationShort,
     passengers: 1,
     payment: "GCash",
     seat: "1A",
+    departureDate: defaultDepartureDate(),
+    departureTime: "08:15",
   };
   let bookingConfirmed = false;
   let topUpReturnFocus = null;
@@ -239,7 +255,7 @@
     currency: "PHP",
     minimumFractionDigits: 2,
   }).format(amount);
-  const sampleFarePerPassenger = 80;
+  const sampleFarePerPassenger = 100;
   const sampleUPouchBalance = 2;
   const insufficientUPouchPayment = (payment, passengers) =>
     payment === "U-Pouch" && sampleUPouchBalance < sampleFarePerPassenger * passengers;
@@ -4250,7 +4266,6 @@
       </header>
       <div class="results-map">${mapMarkup(true)}<span class="destination-label">${escapeHtml(tripData.destination)}</span></div>
       <div class="result-filter"><button class="filter-selected" type="button">Fastest</button><button type="button" data-info="Showing the fastest available seats.">More Seats</button></div>
-      <div class="discount-note"><span>✓</span> Student Discount Applied</div>
       <section class="ride-list">
         <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
         <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
@@ -4265,8 +4280,16 @@
       <div class="modal-scrim">
         <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
           <button class="modal-close" type="button" aria-label="Close confirmation" data-screen="find-rides">×</button>
-          <h2 id="booking-dialog-title">Booking Confirmation</h2><p class="sheet-subtitle">Ride Details</p>
+          <h2 id="booking-dialog-title">Booking Confirmation</h2><p class="sheet-subtitle">Review your trip details</p>
           <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>8 seats available</span></div></div>
+          <div class="departure-fields">
+            <label for="booking-departure-date">Travel date</label>
+            <input id="booking-departure-date" type="date" min="${toDateInputValue(new Date())}" value="${escapeHtml(tripData.departureDate)}" required>
+            <label for="booking-departure-time">Departure time</label>
+            <input id="booking-departure-time" type="time" value="${escapeHtml(tripData.departureTime)}" required>
+          </div>
+          <p class="booking-demo-note">Sample date and time only. Schedules are not connected.</p>
+          <p class="booking-date-error" data-booking-date-error role="alert" hidden>Please choose a future date and time.</p>
           <dl class="fare-breakdown"><div><dt>Regular Fare</dt><dd>₱${(regularUserFarePerPassenger * tripData.passengers).toFixed(2)}</dd></div><div><dt>Student Discount</dt><dd>-₱${((regularUserFarePerPassenger - discountedUserFarePerPassenger) * tripData.passengers).toFixed(2)}</dd></div><div class="fare-total"><dt>Total Fare</dt><dd>₱${(discountedUserFarePerPassenger * tripData.passengers).toFixed(2)}</dd></div></dl>
           <div class="dialog-actions"><button type="button" data-screen="find-rides">Cancel</button><button type="button" class="confirm-action" data-action="confirm-booking">Confirm</button></div>
         </section>
@@ -4290,18 +4313,18 @@
     return `
     <div class="booking-confirmed">
       <button type="button" class="confirmed-back" data-screen="${selectedHistoryTripId ? "tickets" : "home"}" aria-label="Back">‹</button>
-      <div class="confirmed-check" aria-hidden="true">${trip.status === "cancelled" ? "↺" : "✓"}</div>
-      <h1>${trip.status === "cancelled" ? "Trip Refunded" : isCurrentBooking ? "Booking Confirmed" : "Trip Receipt"}</h1>
-      <p>₱${Number(trip.fare).toFixed(2)} total · ${escapeHtml(trip.payment)} demo</p>
+      <div class="confirmed-check" aria-hidden="true">${trip.status === "cancelled" ? "×" : "✓"}</div>
+      <h1>${trip.status === "cancelled" ? "Booking Cancelled" : isCurrentBooking ? "Booking Confirmed" : "Trip Details"}</h1>
+      <p>${trip.status === "cancelled" ? `Original fare ₱${Number(trip.originalFare || 0).toFixed(2)}` : `₱${Number(trip.fare).toFixed(2)} total · ${escapeHtml(trip.payment)}`}</p>
       <section class="ticket-panel">
-        <div class="demo-qr" role="img" aria-label="Illustrative non-scannable ticket code"><i></i><i></i><i></i><b></b></div>
+        <div class="demo-qr" role="img" aria-label="Non-scannable ticket code"><i></i><i></i><i></i><b></b></div>
+        <p class="ticket-code-note">QR code cannot be scanned</p>
         <span class="ticket-caption">Ticket Reference</span><strong class="ticket-number">${escapeHtml(trip.receiptId || trip.id)}</strong>
         <div class="ticket-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)}</small></div></div>
-        <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Refunded" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Fare total</span><strong>₱${Number(trip.fare).toFixed(2)}</strong></div></div>
-        ${trip.status === "upcoming" ? '<button type="button" class="track-ride" data-screen="live-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Track this ride</button>' : '<button type="button" class="track-ride" data-screen="tickets">Back to trip history <span>→</span></button>'}
+        <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Cancelled" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Travel date</span><strong>${trip.travelDate && trip.departureTime ? escapeHtml(formatDeparture(trip.travelDate, trip.departureTime)) : escapeHtml(trip.date || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Payment</span><strong>${escapeHtml(trip.payment)}</strong></div><div><span>${trip.status === "cancelled" ? "Original fare" : "Fare total"}</span><strong>₱${Number(trip.status === "cancelled" ? trip.originalFare : trip.fare).toFixed(2)}</strong></div></div>
+        ${trip.status === "upcoming" ? '<button type="button" class="track-ride" data-screen="live-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>View map</button>' : '<button type="button" class="track-ride" data-screen="tickets">Back to My Tickets <span>→</span></button>'}
       </section>
       ${isCurrentBooking ? '<button type="button" class="cancel-booking" data-action="cancel-booking">Cancel booking</button>' : ""}
-      <p class="prototype-stamp">Illustrative demo · No live service connected</p>
     </div>`;
   };
 
@@ -4495,46 +4518,82 @@
       return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13.5 14 9.5a3.5 3.5 0 0 1 5 5l-3 3a3.5 3.5 0 0 1-5 0m3-7-4 4a3.5 3.5 0 0 1-5-5l3-3a3.5 3.5 0 0 1 5 0"/></svg>';
     };
     const tripHistoryScreen = () => {
-      const completedTrips = tripHistory.filter((trip) => trip.status === "completed");
-      const cancelledTrips = tripHistory.filter((trip) => trip.status === "cancelled");
-      const monthlySummary = { month: "October 2026", totalSpent: 1200, rides: 12, co2Saved: 18.4 };
-      const filters = `<div class="home-shortcuts trip-history-filters" role="group" aria-label="Filter trips">
-        <button type="button" data-trip-filter="all" class="is-active" aria-pressed="true">All Trips</button>
-        <button type="button" data-trip-filter="completed" aria-pressed="false">Completed (${completedTrips.length})</button>
-        <button type="button" data-trip-filter="cancelled" aria-pressed="false">Cancelled (${cancelledTrips.length})</button>
-        <button type="button" data-trip-filter="month" aria-pressed="false">This Month</button>
-      </div>`;
-      const cards = tripHistory.map((trip) => {
-        const statusLabel = trip.status === "cancelled" ? "Refunded" : trip.status === "upcoming" ? "Booked" : "Completed";
-        const fareDetail = trip.status === "cancelled" ? `Refunded ₱${trip.originalFare.toFixed(2)}` : `Paid via ${escapeHtml(trip.payment)}`;
-        return `<article class="trip-history-card" data-trip-history-card data-trip-status="${trip.status}" data-trip-period="${trip.inMonth ? "month" : "older"}">
-          <header class="trip-history-card-header"><span class="trip-history-code">${escapeHtml(trip.id)}</span><time>${escapeHtml(trip.date)}</time><span class="trip-history-status is-${trip.status}">${statusLabel}</span></header>
+      const upcomingTrips = tripHistory.filter((trip) => trip.status === "upcoming");
+      const pastTrips = tripHistory.filter((trip) => trip.status !== "upcoming");
+      const ticketCard = (trip) => {
+        const upcoming = trip.status === "upcoming";
+        const tripRating = tripRatings.get(trip.id)?.stars ?? 0;
+        const statusLabel = trip.status === "cancelled" ? "Cancelled" : upcoming ? "Booked" : "Completed";
+        const dateLabel = trip.travelDate && trip.departureTime
+          ? formatDeparture(trip.travelDate, trip.departureTime)
+          : trip.date;
+        const fareDetail = trip.status === "cancelled"
+          ? `Original fare ₱${Number(trip.originalFare || 0).toFixed(2)}`
+          : `Paid via ${escapeHtml(trip.payment)}`;
+        return `<article class="trip-history-card${upcoming ? " upcoming-ticket-card" : ""}" data-trip-history-card data-ticket-tab="${upcoming ? "upcoming" : "past"}">
+          <header class="trip-history-card-header"><span class="trip-history-code">${escapeHtml(trip.id)}</span><time>${escapeHtml(dateLabel)}</time><span class="trip-history-status is-${trip.status}">${statusLabel}</span></header>
           <div class="trip-history-card-body">
             <div class="trip-history-stops">
               <div class="trip-history-stop"><i class="trip-origin-dot"></i><span><strong>${escapeHtml(trip.origin)}</strong><small>${escapeHtml(trip.originDetail)}</small></span></div>
               <div class="trip-history-stop"><i class="trip-destination-dot"></i><span><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.destinationDetail)}</small></span></div>
             </div>
-            <div class="trip-history-fare"><strong>₱${trip.fare.toFixed(2)}</strong><span>Seat ${escapeHtml(trip.seat)}</span><small>${fareDetail}</small></div>
+            <div class="trip-history-fare"><strong>${trip.status === "cancelled" ? "Cancelled" : `₱${Number(trip.fare).toFixed(2)}`}</strong><span>Seat ${escapeHtml(trip.seat)}</span><small>${fareDetail}</small></div>
           </div>
+          ${upcoming ? `<p class="trip-history-reference">Booking reference <strong>${escapeHtml(trip.receiptId || trip.id)}</strong> · ${trip.passengers || 1} ${trip.passengers === 1 ? "passenger" : "passengers"}</p>` : ""}
           ${trip.studentDiscount ? '<p class="trip-history-discount">Student Discount Applied</p>' : ""}
           <footer class="trip-history-actions">
-            <button type="button" class="trip-receipt-link" data-view-trip="${trip.id}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.75h5l3 3v9.5H4zM9 2v3h3M6 8h4m-4 2.5h4"/></svg>${escapeHtml(trip.receiptLabel)}</button>
-            ${trip.showRateAction ? '<button type="button" class="trip-rate-button" data-info="Trip rating is a prototype-only action.">Rate Trip</button>' : ""}
-            ${trip.rebookLabel ? `<button type="button" class="trip-rebook-button${trip.rebookStyle === "secondary" ? " is-secondary" : ""}" data-action="rebook-trip" data-trip-id="${trip.id}">${escapeHtml(trip.rebookLabel)}</button>` : ""}
+            <button type="button" class="trip-receipt-link" data-view-trip="${escapeHtml(trip.id)}">View details</button>
+            ${upcoming ? `<button type="button" class="trip-receipt-link" data-screen="live-map">View map</button><button type="button" class="trip-cancel-button" data-action="cancel-booking" data-trip-id="${escapeHtml(trip.id)}">Cancel booking</button>` : ""}
+            ${trip.status === "completed" ? `<button type="button" class="trip-rate-button" data-trip-rating-toggle="${escapeHtml(trip.id)}">${tripRatings.has(trip.id) ? "Edit rating" : "Rate Trip"}</button>` : ""}
+            ${trip.status === "completed" ? `<button type="button" class="trip-rebook-button" data-action="rebook-trip" data-trip-id="${escapeHtml(trip.id)}">Rebook</button>` : ""}
           </footer>
+          ${tripRatings.has(trip.id) ? `<p class="trip-rating-saved">Your rating: ${tripRatings.get(trip.id).stars}/5${tripRatings.get(trip.id).comment ? ` · “${escapeHtml(tripRatings.get(trip.id).comment)}”` : ""}</p>` : ""}
         </article>`;
-      }).join("");
+      };
+      const upcomingCards = upcomingTrips.map(ticketCard).join("");
+      const pastCards = pastTrips.map(ticketCard).join("");
       return `<div class="trip-history-page">
-        <header class="home-header ticket-history-header">${homeHeaderContent({ searchPlaceholder: "Search trips by bus code, date or invoice...", searchMode: "history", footerMarkup: filters })}</header>
+        <header class="ticket-history-header">
+          <div class="ticket-header-top"><button class="settings-back" type="button" data-screen="home" aria-label="Back to home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><span>TRIPS</span></div>
+          <h1>My Tickets</h1>
+          <p>Keep your upcoming rides and past trips together.</p>
+          <div class="ticket-tabs" role="tablist" aria-label="Ticket categories">
+            <button type="button" role="tab" id="upcoming-tickets-tab" aria-controls="upcoming-tickets-panel" data-ticket-tab-select="upcoming" aria-selected="${tripHistoryTab === "upcoming"}" class="${tripHistoryTab === "upcoming" ? "is-active" : ""}">Upcoming <span>${upcomingTrips.length}</span></button>
+            <button type="button" role="tab" id="past-tickets-tab" aria-controls="past-tickets-panel" data-ticket-tab-select="past" aria-selected="${tripHistoryTab === "past"}" class="${tripHistoryTab === "past" ? "is-active" : ""}">Past trips <span>${pastTrips.length}</span></button>
+          </div>
+        </header>
         <div class="trip-history-body">
-          <section class="trip-history-summary" aria-label="Monthly trip summary">
-            <header><div class="trip-history-summary-title"><span aria-hidden="true"></span><h2>${monthlySummary.month} Spending</h2></div><button type="button" data-info="Tax invoice download is not connected in this prototype.">Download Tax Invoice</button></header>
-            <div class="trip-history-stats"><div><span>Total Spent</span><strong>₱${monthlySummary.totalSpent.toFixed(2)}</strong></div><div><span>Rides Taken</span><strong>${monthlySummary.rides} Rides</strong></div><div><span>Saved CO₂</span><strong>${monthlySummary.co2Saved.toFixed(1)} kg</strong></div></div>
+          <div id="upcoming-tickets-panel" role="tabpanel" aria-labelledby="upcoming-tickets-tab" data-ticket-panel="upcoming">
+            <section class="trip-history-list upcoming-trip-list" aria-label="Upcoming tickets">${upcomingCards}</section>
+            <div class="ticket-empty-state" data-ticket-empty-upcoming${upcomingTrips.length ? " hidden" : ""}>
+              <span class="ticket-empty-icon" aria-hidden="true">＋</span><h2>No upcoming trips</h2><p>Your confirmed bookings will show up here with their reference, seat, fare, and travel details.</p><button type="button" data-action="quick-book">Book a trip</button>
+            </div>
+          </div>
+          <section id="past-tickets-panel" role="tabpanel" aria-labelledby="past-tickets-tab" class="past-trip-panel" data-ticket-panel="past" aria-label="Past trips"${tripHistoryTab === "past" ? "" : " hidden"}>
+            <label class="trip-history-search"><span>Search past trips</span><input type="search" data-trip-history-search placeholder="Search reference, route, or date" value="${escapeHtml(tripHistoryQuery)}"></label>
+            <section class="trip-history-list" data-trip-history-list>${pastCards}</section>
+            <p class="trip-history-empty" data-trip-history-empty hidden>No past trips match your search.</p>
           </section>
-          <div class="trip-history-section-heading"><h2>Recent Activity</h2><span>${escapeHtml(activeRoute.name)}</span></div>
-          <section class="trip-history-list" data-trip-history-list aria-label="Recent trips">${cards}</section>
-          <p class="trip-history-empty" data-trip-history-empty hidden>No trips match this search or filter.</p>
-          <p class="trip-history-disclaimer">Sample trip history · Not connected to live booking records</p>
+        </div>
+        <div class="trip-rating-scrim" data-trip-rating-modal${activeTripRatingId ? "" : " hidden"}>
+          <section class="trip-rating-modal" role="dialog" aria-modal="true" aria-labelledby="trip-rating-title" aria-describedby="trip-rating-description">
+            <button class="trip-rating-close" type="button" data-trip-rating-close aria-label="Close rating">×</button>
+            <span class="trip-rating-modal-icon" aria-hidden="true">★</span>
+            <h2 id="trip-rating-title">Rate your trip</h2>
+            <p id="trip-rating-description">How was your ride? Share what went well or what could be better.</p>
+            <p class="trip-rating-trip-summary" data-trip-rating-summary></p>
+            <div class="trip-rating-stars" role="group" aria-label="Choose a rating from 1 to 5 stars">
+              ${[1, 2, 3, 4, 5].map((rating) => `<button type="button" data-trip-rating-choice="${rating}" aria-label="${rating} ${rating === 1 ? "star" : "stars"}" aria-pressed="${selectedTripRating >= rating}" class="${selectedTripRating >= rating ? "is-selected" : ""}">★</button>`).join("")}
+            </div>
+            <label class="trip-rating-comment-label" for="trip-rating-comment">Your comments <span>Optional</span></label>
+            <textarea id="trip-rating-comment" data-trip-rating-comment maxlength="50" placeholder="Tell us what made your trip good or bad..." rows="4">${escapeHtml(selectedTripComment)}</textarea>
+            <span class="trip-rating-character-count" data-trip-rating-character-count>${selectedTripComment.length}/50</span>
+            <p class="trip-rating-feedback" data-trip-rating-feedback role="status" aria-live="polite"></p>
+            <div class="trip-rating-modal-actions">
+              <button type="button" class="trip-rating-cancel" data-trip-rating-close>Cancel</button>
+              <button type="button" class="trip-rating-submit" data-submit-trip-rating${selectedTripRating ? "" : " disabled"}>${activeTripRatingId && tripRatings.has(activeTripRatingId) ? "Update rating" : "Submit rating"}</button>
+            </div>
+          </section>
         </div>
       </div>`;
     };
@@ -4741,17 +4800,18 @@
   const updateTripHistoryView = () => {
     let visibleCount = 0;
     const query = tripHistoryQuery.trim().toLocaleLowerCase();
-    screen.querySelectorAll("[data-trip-filter]").forEach((button) => {
-      const selected = button.dataset.tripFilter === tripHistoryFilter;
+    screen.querySelectorAll("[data-ticket-tab-select]").forEach((button) => {
+      const selected = button.dataset.ticketTabSelect === tripHistoryTab;
       button.classList.toggle("is-active", selected);
-      button.setAttribute("aria-pressed", String(selected));
+      button.setAttribute("aria-selected", String(selected));
+    });
+    screen.querySelectorAll("[data-ticket-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.ticketPanel !== tripHistoryTab;
     });
     screen.querySelectorAll("[data-trip-history-card]").forEach((card) => {
-      const filterMatches = tripHistoryFilter === "all"
-        || card.dataset.tripStatus === tripHistoryFilter
-        || (tripHistoryFilter === "month" && card.dataset.tripPeriod === "month");
+      const tabMatches = card.dataset.ticketTab === tripHistoryTab;
       const queryMatches = !query || card.textContent.toLocaleLowerCase().includes(query);
-      card.hidden = !filterMatches || !queryMatches;
+      card.hidden = !tabMatches || (tripHistoryTab === "past" && !queryMatches);
       if (!card.hidden) visibleCount += 1;
     });
     const emptyState = screen.querySelector("[data-trip-history-empty]");
@@ -4977,8 +5037,6 @@
       } else if (state === "notifications") {
         updateNotificationView();
       } else if (state === "tickets") {
-        tripHistoryFilter = "all";
-        tripHistoryQuery = "";
         updateTripHistoryView();
       }
     } else if (state === "backend-error") {
@@ -5343,6 +5401,16 @@
       }
       if (screen.querySelector("[data-top-up-modal]")) {
         closeTopUpModal();
+        return;
+      }
+      const ratingModal = screen.querySelector("[data-trip-rating-modal]:not([hidden])");
+      if (ratingModal) {
+        event.preventDefault();
+        screen.querySelector(`[data-trip-rating-toggle="${CSS.escape(activeTripRatingId)}"]`)?.focus();
+        ratingModal.hidden = true;
+        activeTripRatingId = "";
+        selectedTripRating = 0;
+        selectedTripComment = "";
         return;
       }
       const quickBookOverlay = screen.querySelector("[data-quick-book-overlay]");
@@ -5801,6 +5869,12 @@
   });
 
   screen.addEventListener("input", (event) => {
+    if (event.target.matches("[data-trip-rating-comment]")) {
+      selectedTripComment = event.target.value.slice(0, 50);
+      const characterCount = screen.querySelector("[data-trip-rating-character-count]");
+      if (characterCount) characterCount.textContent = `${selectedTripComment.length}/50`;
+      return;
+    }
     if (event.target.matches("[data-report-search]")) {
       reportsSearchQuery = event.target.value;
       const tbody = screen.querySelector("#reports-table-tbody");
@@ -5899,12 +5973,13 @@
     }
 
     if (event.target.matches('input[name="payment"]')) {
-      const bookingContainer = event.target.closest("[data-quick-book], .seat-book-card");
-      tripData.payment = event.target.value;
-      bookingContainer?.querySelectorAll(".payment-option").forEach((option) => {
-        option.classList.toggle("selected", option.querySelector('input[name="payment"]') === event.target);
+      const paymentOptions = event.target.closest(".payment-options");
+      paymentOptions?.querySelectorAll(".payment-option").forEach((option) => {
+        option.classList.toggle("selected", option.querySelector('input[name="payment"]')?.checked === true);
       });
+      tripData.payment = event.target.value;
       if (event.target.value !== "U-Pouch") {
+        const bookingContainer = event.target.closest("[data-quick-book], .seat-book-card");
         const paymentError = bookingContainer?.querySelector("[data-payment-error]");
         if (paymentError) paymentError.hidden = true;
         bookingContainer?.querySelector('input[name="payment"][value="U-Pouch"]')?.removeAttribute("aria-invalid");
@@ -6968,9 +7043,9 @@
       return;
     }
 
-    const tripFilterButton = event.target.closest("[data-trip-filter]");
-    if (tripFilterButton) {
-      tripHistoryFilter = tripFilterButton.dataset.tripFilter;
+    const ticketTabButton = event.target.closest("[data-ticket-tab-select]");
+    if (ticketTabButton) {
+      tripHistoryTab = ticketTabButton.dataset.ticketTabSelect;
       updateTripHistoryView();
       return;
     }
@@ -7124,6 +7199,88 @@
       return;
     }
 
+    const ratingToggle = event.target.closest("[data-trip-rating-toggle]");
+    if (ratingToggle) {
+      activeTripRatingId = ratingToggle.dataset.tripRatingToggle;
+      const savedRating = tripRatings.get(activeTripRatingId);
+      selectedTripRating = savedRating?.stars ?? 0;
+      selectedTripComment = savedRating?.comment ?? "";
+      const modal = screen.querySelector("[data-trip-rating-modal]");
+      if (!modal) throw new Error("USAD could not open trip rating because the rating dialog is missing.");
+      modal.hidden = false;
+      modal.querySelectorAll("[data-trip-rating-choice]").forEach((button) => {
+        const selected = Number(button.dataset.tripRatingChoice) <= selectedTripRating;
+        button.classList.toggle("is-selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+      const commentField = modal.querySelector("[data-trip-rating-comment]");
+      if (commentField) commentField.value = selectedTripComment;
+      const ratingTrip = tripHistory.find(({ id }) => id === activeTripRatingId);
+      const tripSummary = modal.querySelector("[data-trip-rating-summary]");
+      if (!ratingTrip || !tripSummary) throw new Error(`USAD could not display trip details for rating ${activeTripRatingId}.`);
+      tripSummary.textContent = `${ratingTrip.origin} → ${ratingTrip.destination} · ${ratingTrip.date}`;
+      const characterCount = modal.querySelector("[data-trip-rating-character-count]");
+      if (characterCount) characterCount.textContent = `${selectedTripComment.length}/50`;
+      const submit = modal.querySelector("[data-submit-trip-rating]");
+      if (submit) submit.disabled = selectedTripRating === 0;
+      if (submit) submit.textContent = savedRating ? "Update rating" : "Submit rating";
+      commentField?.focus();
+      return;
+    }
+
+    const closeRating = event.target.closest("[data-trip-rating-close]");
+    if (closeRating || event.target.matches("[data-trip-rating-modal]")) {
+      const modal = screen.querySelector("[data-trip-rating-modal]");
+      if (modal) modal.hidden = true;
+      screen.querySelector(`[data-trip-rating-toggle="${CSS.escape(activeTripRatingId)}"]`)?.focus();
+      activeTripRatingId = "";
+      selectedTripRating = 0;
+      selectedTripComment = "";
+      return;
+    }
+
+    const ratingChoice = event.target.closest("[data-trip-rating-choice]");
+    if (ratingChoice) {
+      selectedTripRating = Number(ratingChoice.dataset.tripRatingChoice);
+      if (!Number.isInteger(selectedTripRating) || selectedTripRating < 1 || selectedTripRating > 5) {
+        throw new Error("USAD could not update a trip rating because the selected value is invalid.");
+      }
+      screen.querySelectorAll("[data-trip-rating-modal] [data-trip-rating-choice]").forEach((button) => {
+        const selected = Number(button.dataset.tripRatingChoice) <= selectedTripRating;
+        button.classList.toggle("is-selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+      const submit = screen.querySelector("[data-submit-trip-rating]");
+      if (submit) submit.disabled = false;
+      return;
+    }
+
+    const submitTripRating = event.target.closest("[data-submit-trip-rating]");
+    if (submitTripRating) {
+      if (!activeTripRatingId || selectedTripRating < 1 || selectedTripRating > 5) {
+        throw new Error("USAD could not submit the trip rating because a valid rating has not been selected.");
+      }
+      const tripId = activeTripRatingId;
+      tripRatings.set(tripId, { stars: selectedTripRating, comment: selectedTripComment.trim() });
+      const ratingButton = screen.querySelector(`[data-trip-rating-toggle="${CSS.escape(tripId)}"]`);
+      if (ratingButton) ratingButton.textContent = "Edit rating";
+      activeTripRatingId = "";
+      selectedTripRating = 0;
+      selectedTripComment = "";
+      renderScreen("tickets");
+      return;
+    }
+
+    const viewTripButton = event.target.closest("[data-view-trip]");
+    if (viewTripButton) {
+      const trip = tripHistory.find(({ id }) => id === viewTripButton.dataset.viewTrip);
+      if (!trip) throw new Error(`Unknown trip ticket requested: ${viewTripButton.dataset.viewTrip}.`);
+      selectedHistoryTripId = trip.id;
+      bookingConfirmed = false;
+      renderScreen("booking-confirmed");
+      return;
+    }
+
     const navigationButton = event.target.closest("[data-screen]");
     if (navigationButton) {
       renderScreen(navigationButton.dataset.screen);
@@ -7134,6 +7291,20 @@
     if (actionButton) {
       const { action } = actionButton.dataset;
       if (action === "quick-book") {
+        openQuickBookOverlay();
+      } else if (action === "rebook-trip") {
+        const trip = tripHistory.find(({ id }) => id === actionButton.dataset.tripId);
+        if (!trip) throw new Error(`Unknown trip selected for rebooking: ${actionButton.dataset.tripId}.`);
+        tripData = {
+          ...tripData,
+          origin: trip.origin,
+          destination: trip.destination,
+          passengers: trip.passengers || 1,
+          payment: "GCash",
+          seat: trip.seat === "—" ? "1A" : trip.seat,
+          departureDate: defaultDepartureDate(),
+          departureTime: "08:15",
+        };
         openQuickBookOverlay();
       } else if (action === "open-confirmation") {
         const seatBookingPanel = screen.querySelector(".seat-book-card");
@@ -7151,42 +7322,68 @@
         }
         renderScreen("booking-confirmation");
       } else if (action === "confirm-booking") {
+        const departureDateInput = screen.querySelector("#booking-departure-date");
+        const departureTimeInput = screen.querySelector("#booking-departure-time");
+        const dateError = screen.querySelector("[data-booking-date-error]");
+        if (!departureDateInput || !departureTimeInput || !dateError) {
+          throw new Error("USAD booking could not continue: departure date and time controls are missing.");
+        }
+        if (!departureDateInput.reportValidity() || !departureTimeInput.reportValidity()) return;
+        const departure = new Date(`${departureDateInput.value}T${departureTimeInput.value}`);
+        if (!Number.isFinite(departure.getTime()) || departure.getTime() <= Date.now()) {
+          dateError.hidden = false;
+          departureDateInput.setAttribute("aria-invalid", "true");
+          departureTimeInput.setAttribute("aria-invalid", "true");
+          departureDateInput.focus();
+          return;
+        }
+        dateError.hidden = true;
+        departureDateInput.removeAttribute("aria-invalid");
+        departureTimeInput.removeAttribute("aria-invalid");
+        tripData = {
+          ...tripData,
+          departureDate: departureDateInput.value,
+          departureTime: departureTimeInput.value,
+        };
         const reference = createBookingReference();
         const confirmedTrip = {
           id: reference,
           receiptId: reference,
           date: "Just now",
+          travelDate: tripData.departureDate,
+          departureTime: tripData.departureTime,
           status: "upcoming",
           origin: tripData.origin,
           originDetail: tripData.origin === activeRoute.origin ? activeRoute.originShort : "Trip origin",
           destination: tripData.destination,
           destinationDetail: `Via ${activeRoute.via}`,
-          fare: 80 * tripData.passengers,
+          fare: 100 * tripData.passengers,
           seat: tripData.seat,
           passengers: tripData.passengers,
           payment: tripData.payment,
           co2Saved: 0,
           inMonth: true,
-          receiptLabel: "E-Ticket & Receipt",
-          showRateAction: false,
-          rebookLabel: "Rebook",
         };
         tripHistory.unshift(confirmedTrip);
         selectedHistoryTripId = confirmedTrip.id;
         bookingConfirmed = true;
+        tripHistoryTab = "upcoming";
         renderScreen("booking-confirmed");
       } else if (action === "cancel-booking") {
-        const cancelledTrip = tripHistory.find((trip) => trip.id === selectedHistoryTripId);
-        if (cancelledTrip?.status === "upcoming") {
-          cancelledTrip.status = "cancelled";
-          cancelledTrip.originalFare = cancelledTrip.fare;
-          cancelledTrip.fare = 0;
-          cancelledTrip.destinationDetail = "Refunded to " + cancelledTrip.payment;
-          cancelledTrip.seat = "—";
+        const tripId = actionButton.dataset.tripId || selectedHistoryTripId;
+        const cancelledTrip = tripHistory.find((trip) => trip.id === tripId);
+        if (!cancelledTrip || cancelledTrip.status !== "upcoming") {
+          throw new Error(`USAD could not cancel trip ${tripId || "(missing reference)"} because it is not an upcoming booking.`);
         }
+        cancelledTrip.status = "cancelled";
+        cancelledTrip.originalFare = cancelledTrip.fare;
+        cancelledTrip.fare = 0;
+        cancelledTrip.destinationDetail = "Booking cancelled · illustrative record";
+        cancelledTrip.seat = "—";
         bookingConfirmed = false;
         selectedHistoryTripId = "";
-        renderScreen("home");
+        tripHistoryTab = "past";
+        renderScreen("tickets");
       } else {
         throw new Error(`Unknown USAD prototype action: ${action}`);
       }

@@ -38,7 +38,7 @@ Saraza currently dispatches vehicles ad hoc, with schedules and assignments deci
 - Fleet Management's Bus Assignment panel starts as a tall, narrow tab on the far right and expands leftward to its original panel proportions and content height. Its Seats Filled row supports up to 15 seats per bus: 14 passenger seats and one reserved driver seat (1A); 1B is a passenger seat. Staff can book a walk-in customer with a masked booking ID and timestamp, or release an occupied seat after confirming the customer has left. Booking details and counts are illustrative, session-only, and contain no passenger PII.
 - The prototype currently represents one active route: Malolos to Trinoma via NLEX. Route selectors and route-specific sample content use the shared route data in `routes.js`; this does not represent live service data.
 
-- Confirmed bookings appear in My Tickets with a unique sample reference. Booking and cancellation records are kept only in the current session, and a U-Pouch balance below the displayed fare is rejected.
+- My Tickets separates upcoming bookings from past trips. Booking confirmation collects a travel date and departure time; upcoming tickets show the route, seat, fare, passenger count, and unique reference. Completed trips offer rating and rebooking actions; ratings support an optional comment of up to 50 characters and are kept only for the current session. Past-trip details use consistent labels. Booking and cancellation records are kept only in the current session. Ticket codes, schedules, map tracking, receipts, and payments are not connected to live services, and a U-Pouch balance below the displayed fare is rejected.
 
 ## Brand Commitments
 
