@@ -223,9 +223,9 @@ input:focus-visible,
 }
 
 .workspace-header {
+  display: grid;
   z-index: 2;
   height: 64px;
- .peak-ready-bus-identity div span,
   flex: 0 0 64px;
   grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
@@ -262,6 +262,8 @@ input:focus-visible,
 
 .workspace-title {
   display: flex;
+  grid-column: 2;
+  grid-row: 1;
   align-items: center;
   justify-content: center;
   gap: 10px;
@@ -295,6 +297,8 @@ input:focus-visible,
 
 .zoom-controls {
   display: flex;
+  grid-column: 3;
+  grid-row: 1;
   align-items: center;
   justify-self: end;
   gap: 5px;
@@ -359,6 +363,50 @@ input:focus-visible,
 
 .fit-button {
   padding: 7px 10px;
+}
+
+@media (max-width: 480px) {
+  .workspace-header {
+    height: 88px;
+    flex-basis: 88px;
+    grid-template-columns: 1fr 1fr;
+    padding: 6px 12px;
+  }
+
+  .back-button {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 6px;
+  }
+
+  .workspace-title {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .zoom-controls {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 2px;
+  }
+
+  .zoom-button {
+    width: 25px;
+    height: 26px;
+  }
+
+  .zoom-level {
+    min-width: 32px;
+  }
+
+  .zoom-separator {
+    margin: 0 2px;
+  }
+
+  .fit-button {
+    padding: 5px 6px;
+    font-size: 12px;
+  }
 }
 
 .canvas-viewport {
