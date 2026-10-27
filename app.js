@@ -104,6 +104,14 @@
     { id: "MLS-105", date: "Oct 24 · 7:30 AM", status: "completed", origin: activeRoute.origin, originDetail: activeRoute.originShort, destination: activeRoute.destination, destinationDetail: `Via ${activeRoute.via}`, fare: discountedUserFarePerPassenger, seat: "2A", payment: "GCash", co2Saved: 6.1, receiptId: "USAD-2N05-ML47", inMonth: true, studentDiscount: true, receiptLabel: "View Receipt", rebookLabel: "Rebook", rebookStyle: "secondary" },
     { id: "TRN-009", date: "Oct 20 · 6:10 PM", status: "cancelled", origin: activeRoute.destination, originDetail: "Trip cancelled by operator", destination: activeRoute.origin, destinationDetail: "Refunded to U-Pouch", fare: 0, originalFare: regularUserFarePerPassenger, seat: "—", payment: "U-Pouch", co2Saved: 0, receiptId: "USAD-9R09-TR18", inMonth: false, receiptLabel: "Refund Details" },
   ];
+  let bookingReferenceSequence = 1;
+  const createBookingReference = () => {
+    let reference;
+    do {
+      reference = `USAD-${Date.now().toString(36).toUpperCase()}-${String(bookingReferenceSequence++).padStart(3, "0")}`;
+    } while (tripHistory.some((trip) => trip.id === reference || trip.receiptId === reference));
+    return reference;
+  };
   let tripData = {
     origin: activeRoute.origin,
     destination: activeRoute.destinationShort,
@@ -224,7 +232,6 @@
   const adminFleetSize = 20;
   let dispatchTelemetryFilter = "all";
   let dispatchMapZoom = 1;
-  let dispatchLayersActive = true;
   let dispatchNoteInput = "";
   const dispatchRemittances = [];
   const formatPeso = (amount) => new Intl.NumberFormat("en-PH", {
@@ -233,6 +240,9 @@
     minimumFractionDigits: 2,
   }).format(amount);
   const sampleFarePerPassenger = 80;
+  const sampleUPouchBalance = 2;
+  const insufficientUPouchPayment = (payment, passengers) =>
+    payment === "U-Pouch" && sampleUPouchBalance < sampleFarePerPassenger * passengers;
   const peakDispatchQueue = [
     { id: "peak-03", busNo: "03", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Eldrei Acero", fuel: "92%", status: "ready" },
     { id: "peak-07", busNo: "07", route: "Trinoma Express", terminal: "Malolos Central Depot", driver: "Juan Dela Cruz", fuel: "88%", status: "ready" },
@@ -243,7 +253,7 @@
   let staffSearchQuery = "";
   let staffDepotFilter = "all";
   let staffCurrentPage = 1;
-  let staffPerPage = 8;
+  const staffPageSize = 8;
   let staffSelectedRows = new Set();
   let activeCameraLocationFilter = "all";
   let activeCameraLayout = "3x2"; // "3x2", "2x2", "focus"
@@ -563,13 +573,17 @@
 
   const BUS_TOTAL_SEAT_CAPACITY = 15;
   const EMPLOYEE_RESERVED_SEATS = [
-    { id: "1A", role: "Driver" },
-    { id: "1B", role: "Conductor" }
+    { id: "1A", role: "Driver" }
   ];
   const PASSENGER_SEAT_CAPACITY = BUS_TOTAL_SEAT_CAPACITY - EMPLOYEE_RESERVED_SEATS.length;
   const supportsSeatManagement = (bus) => (
     new RegExp(`^\\d+\\s*\\/\\s*${PASSENGER_SEAT_CAPACITY}\\s*passenger seats$`, "i").test(bus.occupancySeats)
   );
+  const assertSeatMapEditable = (bus) => {
+    if (bus.tripFinished) {
+      throw new Error(`Seat assignments for Bus ${bus.busNo} are locked because its trip is finished.`);
+    }
+  };
 
   const getSeatCounts = (bus) => {
     const match = /^(\d+)\s*\/\s*(\d+)\s*passenger seats$/i.exec(bus.occupancySeats);
@@ -655,6 +669,10 @@
   };
 
   const renderDispatchSeatBookingDetails = (bus) => {
+    if (bus.tripFinished) {
+      return `<p class="dispatch-seat-release-success">Trip finished. Seat assignments are locked.</p>`;
+    }
+
     if (!selectedDispatchSeatBooking) {
       return `<p>Select an available seat to book a walk-in customer, or an occupied seat to view its booking.</p>`;
     }
@@ -704,6 +722,7 @@
   };
 
   const renderAdminSeatLayout = ({ occupied }, bookingLookupBus) => {
+    const isReadOnly = bookingLookupBus?.tripFinished === true;
     const seatLetters = ["A", "B"];
     const rowCount = Math.ceil(BUS_TOTAL_SEAT_CAPACITY / seatLetters.length);
     return Array.from({ length: rowCount }, (_, rowIndex) => {
@@ -713,10 +732,15 @@
         const seatId = `${rowIndex + 1}${letter}`;
         const reservedSeat = EMPLOYEE_RESERVED_SEATS.find((seat) => seat.id === seatId);
         if (reservedSeat) {
-          return `<span class="admin-seat is-reserved" title="Reserved for ${reservedSeat.role.toLowerCase()}" aria-label="Seat ${seatId}, reserved for ${reservedSeat.role.toLowerCase()}">${seatId} · ${reservedSeat.role}</span>`;
+          const seatLabel = reservedSeat.role === "Driver" ? `${seatId} · Driver` : seatId;
+          const seatDescription = reservedSeat.role === "Driver" ? `Seat ${seatId}, reserved for driver` : `Seat ${seatId}, reserved for staff`;
+          return `<span class="admin-seat is-reserved" title="Reserved employee seat" aria-label="${seatDescription}">${seatLabel}</span>`;
         }
         const existingBooking = bookingLookupBus ? getBookingForSeat(bookingLookupBus, seatId) : null;
         const seatState = existingBooking ? "is-occupied" : "is-available";
+        if (isReadOnly) {
+          return `<span class="admin-seat ${seatState}" aria-label="Seat ${seatId}, ${seatState === "is-occupied" ? "occupied" : "available"}; trip finished">${seatId}</span>`;
+        }
         if (seatState === "is-occupied" && bookingLookupBus) {
           const booking = existingBooking;
           const isBookingSelected = selectedDispatchSeatBooking?.seatId === seatId;
@@ -1174,22 +1198,22 @@
       unitCode: "UNIT #01",
       busNo: "01",
       category: "delayed",
-      tripName: "Northbound Express",
+      tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "Delayed (+8m)",
       statusType: "delayed",
       headwayAlert: "8 minutes behind schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "23 min ETA (15:08 PHT)",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
-      conductorName: "Santos, M.",
+      dispatcherName: "Klintroy Suerte Felipe",
       gpsLocation: `${activeRoute.via} Northbound`,
-      scheduledStop: `${activeRoute.destination} (ETA 15:08 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 15:08 PHT)`,
       progressClass: "amber",
       dotClass: "amber"
     },
@@ -1200,20 +1224,20 @@
       category: "deployed",
       tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "On schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "7 min ETA (14:55 PHT)",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Rogers, S.",
       driverId: "#DR-9204",
-      conductorName: "Barton, C.",
+      dispatcherName: "Ross Anthony Jobs",
       gpsLocation: activeRoute.via,
-      scheduledStop: `${activeRoute.destination} (ETA 14:55 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 14:55 PHT)`,
       progressClass: "mint",
       dotClass: "mint"
     },
@@ -1224,22 +1248,22 @@
       category: "terminal",
       tripName: "Southbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "At Terminal",
       statusType: "terminal",
       headwayAlert: "At the terminal. Leaves in 19 minutes.",
       nextStop: activeRoute.origin,
       etaText: "Departing in 19 min",
-      occupancyPct: 92,
-      occupancySeats: "12/13 passenger seats",
-      occupancyPassengers: "92% (12 / 13 passenger seats)",
+      occupancyPct: 86,
+      occupancySeats: "12/14 passenger seats",
+      occupancyPassengers: "86% (12 / 14 passenger seats)",
       driverName: "Dela Cruz, J.",
       driverId: "#DR-4819",
-      conductorName: "Reyes, K.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.destination,
       scheduledStop: `${activeRoute.origin} (ETA 16:30 PHT)`,
       progressClass: "purple",
-      dotClass: ""
+      dotClass: "purple"
     },
     {
       id: "bus-08",
@@ -1248,20 +1272,20 @@
       category: "deployed",
       tripName: "Northbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.destinationShort} to ${activeRoute.originShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "1 minute ahead of schedule",
-      nextStop: activeRoute.destination,
+      nextStop: activeRoute.origin,
       etaText: "12 min ETA (15:00 PHT)",
-      occupancyPct: 46,
-      occupancySeats: "6/13 passenger seats",
-      occupancyPassengers: "46% (6 / 13 passenger seats)",
+      occupancyPct: 43,
+      occupancySeats: "6/14 passenger seats",
+      occupancyPassengers: "43% (6 / 14 passenger seats)",
       driverName: "Bautista, M.",
       driverId: "#DR-7711",
-      conductorName: "Villanueva, E.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.via,
-      scheduledStop: `${activeRoute.destination} (ETA 15:00 PHT)`,
+      scheduledStop: `${activeRoute.origin} (ETA 15:00 PHT)`,
       progressClass: "mint",
       dotClass: "mint"
     },
@@ -1271,20 +1295,20 @@
       busNo: "23",
       badge: "",
       category: "deployed",
-      tripName: "Northbound Bus",
+      tripName: "Southbound Bus",
       routeId: activeRoute.id,
-      routeCorridor: activeRoute.label,
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "Busy bus. Running on schedule.",
       nextStop: activeRoute.destination,
       etaText: "16 min ETA (15:04 PHT)",
-      occupancyPct: 100,
-      occupancySeats: "13/13 passenger seats",
-      occupancyPassengers: "100% (13 / 13 passenger seats)",
+      occupancyPct: 93,
+      occupancySeats: "13/14 passenger seats",
+      occupancyPassengers: "93% (13 / 14 passenger seats)",
       driverName: "Alcantara, R.",
       driverId: "#DR-3108",
-      conductorName: "Morales, G.",
+      dispatcherName: "Unassigned",
       gpsLocation: activeRoute.via,
       scheduledStop: `${activeRoute.destination} (ETA 15:04 PHT)`,
       progressClass: "amber",
@@ -1295,8 +1319,8 @@
       unitCode: "UNIT #06",
       busNo: "06",
       category: "deployed",
-      tripName: "Malolos Central Connector",
-      routeCorridor: "Malolos / Trinoma Corridor",
+      tripName: "Southbound Bus",
+      routeCorridor: `${activeRoute.originShort} to ${activeRoute.destinationShort}`,
       statusText: "On Time",
       statusType: "on-time",
       headwayAlert: "Nominal Headway: On schedule",
@@ -1307,7 +1331,7 @@
       occupancyPassengers: "64% (45 / 70 Passengers)",
       driverName: "Santos, A.",
       driverId: "#DR-6206",
-      conductorName: "Reyes, M.",
+      dispatcherName: "Piolo Pascual",
       gpsLocation: "Malolos Central Loop",
       scheduledStop: "Bocaue Interchange (ETA 15:02 PHT)",
       corridor: "malolos",
@@ -1322,7 +1346,7 @@
       if (dispatchTelemetryFilter === "delayed") return u.category === "delayed";
       if (dispatchTelemetryFilter === "terminal") return u.category === "terminal";
       return true;
-    });
+    }).sort((a, b) => Number(a.busNo) - Number(b.busNo));
 
     if (list.length === 0) {
       return `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">No fleet vehicles in this category.</td></tr>`;
@@ -1442,8 +1466,8 @@
                 ${renderDispatchSeatBookingDetails(unit)}
               </div>
               <div class="dispatch-seat-dropdown-footer">
-                <span>${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available</span>
-                <span>1A driver · 1B conductor</span>
+                <span>${unit.tripFinished ? "Trip finished · seat map locked" : `${seatCounts.available} passenger seat${seatCounts.available === 1 ? "" : "s"} available`}</span>
+                <span>1A Driver · 1B Passenger</span>
               </div>
             </div>
           </details>` : `<div class="dispatch-spec-row">
@@ -1452,7 +1476,11 @@
           </div>`}
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Assigned Driver</span>
-            <span class="spec-val-content">${unit.driverName} (Conductor: ${unit.conductorName})</span>
+            <span class="spec-val-content">${unit.driverName}</span>
+          </div>
+          <div class="dispatch-spec-row">
+            <span class="spec-key-label">Assigned Dispatcher</span>
+            <span class="spec-val-content">${unit.dispatcherName}</span>
           </div>
           <div class="dispatch-spec-row">
             <span class="spec-key-label">Current Location</span>
@@ -1511,84 +1539,99 @@
   };
 
   const renderRadarMapSvg = () => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fallbackPositions = {
+      "bus-01": { x: 448, y: 158 },
+      "bus-02": { x: 525, y: 124 },
+      "bus-06": { x: 140, y: 214 },
+      "bus-14": { x: 674, y: 79 },
+      "bus-08": { x: 365, y: 180 },
+      "bus-23": { x: 278, y: 195 },
+    };
+    const motionStartSeconds = {
+      "bus-01": 8,
+      "bus-02": 17,
+      "bus-06": 23,
+      "bus-08": 2,
+      "bus-23": 12,
+    };
+    const statusColors = {
+      delayed: "#f59e0b",
+      deployed: "#2fd9a8",
+      terminal: "#a78bfa",
+      completed: "#94a3b8",
+    };
+    const mapMarkers = fleetDispatchTelemetryUnits.map((unit) => {
+      const position = fallbackPositions[unit.id];
+      const color = statusColors[unit.category];
+      const shouldAnimate = unit.category !== "terminal" && !unit.tripFinished && !reducedMotion;
+      if (!position || !color || (shouldAnimate && (motionStartSeconds[unit.id] === undefined ||
+        !["Northbound Bus", "Southbound Bus"].includes(unit.tripName)))) {
+        throw new Error(`USAD could not display Bus ${unit.busNo} on the fleet map: its sample position, status color, or route direction is missing.`);
+      }
+      const isSelected = unit.id === selectedDispatchBusId;
+      const labelWidth = 64;
+      const labelX = -labelWidth / 2;
+      const labelY = -31;
+      const markerTransform = shouldAnimate ? "" : ` transform="translate(${position.x} ${position.y})"`;
+      const motionPath = unit.tripName === "Northbound Bus"
+        ? "M 677 80 C 478 146 393 177 304 197 C 215 217 145 248 64 287"
+        : "M 64 287 C 145 248 215 217 304 197 S 478 146 677 80";
+      const motion = shouldAnimate
+        ? `<animateMotion dur="34s" begin="-${motionStartSeconds[unit.id]}s" repeatCount="indefinite" calcMode="linear" rotate="auto" path="${motionPath}"/>`
+        : "";
+      return `
+        <g class="bus-map-marker${isSelected ? " is-selected" : ""}" data-map-bus="${escapeHtml(unit.id)}"${markerTransform}>
+          ${shouldAnimate ? `<circle class="bus-map-live-pulse" cx="0" cy="0" r="15" stroke="${color}"/>` : ""}
+          ${isSelected ? '<circle cx="0" cy="0" r="24" fill="' + color + '" opacity="0.14"/><circle cx="0" cy="0" r="18" fill="none" stroke="' + color + '" stroke-opacity="0.6" stroke-width="1.5"/>' : ""}
+          <circle cx="0" cy="0" r="11" fill="#101a24" stroke="${color}" stroke-width="2.5"/>
+          <path d="M -5 -3 h 10 v 8 h -10 z M -3 -6 h 6 l 3 3 h -12 z" fill="${color}"/>
+          <circle cx="-2.5" cy="6" r="1.2" fill="#101a24"/>
+          <circle cx="2.5" cy="6" r="1.2" fill="#101a24"/>
+          <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="18" rx="9" fill="#101a24" stroke="${isSelected ? color : "#344353"}" stroke-width="${isSelected ? 1.5 : 1}"/>
+          <text x="0" y="${labelY + 12}" fill="#f8fafc" font-size="9" font-weight="700" text-anchor="middle">BUS ${escapeHtml(unit.busNo)}</text>
+          ${motion}
+        </g>
+      `;
+    }).join("");
+
     return `
-      <svg class="radar-map-svg" viewBox="0 0 740 260" preserveAspectRatio="xMidYMid meet" style="transform: scale(${dispatchMapZoom}); transition: transform 0.25s ease;">
+      <svg class="radar-map-svg" viewBox="0 0 740 300" preserveAspectRatio="xMidYMid meet" style="transform: scale(${dispatchMapZoom}); transition: transform 0.25s ease;" role="img" aria-label="Illustrative fleet map showing bus locations between Malolos and Trinoma">
         <defs>
-          <pattern id="tactical-grid-pat" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255, 255, 255, 0.04)" stroke-width="1"/>
+          <pattern id="fleet-map-blocks" width="74" height="58" patternUnits="userSpaceOnUse">
+            <rect x="7" y="7" width="24" height="15" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="38" y="7" width="28" height="15" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="7" y="31" width="20" height="18" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
+            <rect x="34" y="31" width="32" height="18" rx="2" fill="#182532" stroke="#223342" stroke-width="1"/>
           </pattern>
-          <filter id="radar-glow-filter" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
-        <!-- Grid Rect -->
-        <rect width="740" height="260" fill="url(#tactical-grid-pat)" />
+        <rect width="740" height="300" fill="#101a24"/>
+        <rect width="740" height="300" fill="url(#fleet-map-blocks)" opacity="0.88"/>
 
-        <!-- Faint Coordinate / Radar Guides -->
-        <circle cx="450" cy="145" r="120" fill="none" stroke="rgba(255,255,255,0.025)" stroke-dasharray="3 3"/>
-        <line x1="0" y1="145" x2="740" y2="145" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-        <line x1="450" y1="0" x2="450" y2="260" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+        <path d="M -30 78 C 115 92 165 46 285 66 S 500 102 770 50" fill="none" stroke="#1a2936" stroke-width="17" stroke-linecap="round"/>
+        <path d="M -30 78 C 115 92 165 46 285 66 S 500 102 770 50" fill="none" stroke="#314657" stroke-width="1.4" stroke-dasharray="5 7"/>
+        <path d="M 24 275 C 160 224 214 254 334 216 S 550 205 748 259" fill="none" stroke="#1a2936" stroke-width="15" stroke-linecap="round"/>
+        <path d="M 24 275 C 160 224 214 254 334 216 S 550 205 748 259" fill="none" stroke="#314657" stroke-width="1.2" stroke-dasharray="5 7"/>
 
-        <!-- Illustrative path for the active route -->
-        <path d="M 150 215 C 240 205, 250 120, 360 145 S 500 205, 660 75" fill="none" stroke="#2fd9a8" stroke-width="3.5" filter="url(#radar-glow-filter)" stroke-linecap="round"/>
-        <path d="M 150 215 C 240 205, 250 120, 360 145 S 500 205, 660 75" fill="none" stroke="#ffffff" stroke-width="1" stroke-dasharray="6 4" opacity="0.6"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#263747" stroke-width="24" stroke-linecap="round"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#40586b" stroke-width="1.5" stroke-dasharray="7 8"/>
+        <path d="M 64 287 C 145 248 215 217 304 197 S 478 146 677 80" fill="none" stroke="#2fd9a8" stroke-width="2.5" stroke-linecap="round" opacity="0.72"/>
 
-        <!-- Stations / Waypoints -->
-        <!-- Route origin -->
-        <g opacity="0.9">
-          <circle cx="150" cy="215" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
-          <text x="150" y="233" fill="#72849a" font-size="9" font-weight="600" text-anchor="middle">${escapeHtml(activeRoute.origin)}</text>
-        </g>
+        <path d="M 104 0 L 138 300 M 221 0 L 240 300 M 572 0 L 541 300 M 0 129 L 740 140" fill="none" stroke="#253544" stroke-width="4"/>
+        <path d="M 104 0 L 138 300 M 221 0 L 240 300 M 572 0 L 541 300 M 0 129 L 740 140" fill="none" stroke="#35495b" stroke-width="1" stroke-dasharray="3 5"/>
 
-        <!-- Route destination -->
-        <g opacity="0.9">
-          <circle cx="590" cy="82" r="4.5" fill="#0d1b2a" stroke="#2fd9a8" stroke-width="1.8"/>
-          <text x="590" y="72" fill="#8da2bb" font-size="9" font-weight="600" text-anchor="middle">${escapeHtml(activeRoute.destinationShort)}</text>
-        </g>
+        <text x="44" y="37" fill="#7f93a5" font-size="10" font-weight="700" letter-spacing="1.4">BULACAN</text>
+        <text x="82" y="193" fill="#cbd5e1" font-size="11" font-weight="600">MALOLOS</text>
+        <text x="211" y="169" fill="#8fa3b5" font-size="9">GUIGUINTO</text>
+        <text x="316" y="166" fill="#8fa3b5" font-size="9">BOCAUE</text>
+        <text x="404" y="128" fill="#8fa3b5" font-size="9">MARILAO</text>
+        <text x="498" y="102" fill="#8fa3b5" font-size="9">MEYCAUAYAN</text>
+        <text x="596" y="62" fill="#cbd5e1" font-size="10" font-weight="600">TRINOMA</text>
+        <text x="432" y="228" fill="#7890a3" font-size="9" font-weight="600" letter-spacing="1">NORTH LUZON EXPRESSWAY</text>
 
-        <!-- Route destination terminal -->
-        <g opacity="1">
-          <circle cx="660" cy="75" r="5" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5"/>
-          <text x="670" y="65" fill="#fbbf24" font-size="9" font-weight="700">${escapeHtml(activeRoute.destination)}</text>
-        </g>
-
-        <!-- BUS 08 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-08" style="cursor: pointer;">
-          <rect x="348" y="70" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="374" y="82.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 08</text>
-        </g>
-
-        <!-- BUS 02 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-02" style="cursor: pointer;">
-          <rect x="494" y="96" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="520" y="108.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 02</text>
-        </g>
-
-        <!-- BUS 06 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-06" style="cursor: pointer;">
-          <rect x="250" y="174" width="52" height="18" rx="9" fill="#08181f" stroke="#2fd9a8" stroke-width="1.2"/>
-          <text x="276" y="186.5" fill="#2fd9a8" font-size="8.5" font-weight="700" text-anchor="middle">BUS 06</text>
-        </g>
-
-        <!-- BUS 01 (DELAYED) Marker with Sonar Pulse Ring -->
-        <g class="bus-map-marker" data-map-bus="bus-01" style="cursor: pointer;">
-          <circle cx="450" cy="145" r="14" class="radar-ping-ring" stroke="#f59e0b" fill="none" opacity="0.8"/>
-          <circle cx="450" cy="145" r="8" stroke="#f59e0b" stroke-width="1.5" fill="rgba(245, 158, 11, 0.25)"/>
-          <circle cx="450" cy="145" r="3" fill="#f59e0b"/>
-          <rect x="402" y="118" width="96" height="20" rx="10" fill="#241406" stroke="#f59e0b" stroke-width="1.4"/>
-          <text x="450" y="131.5" fill="#fbbf24" font-size="8.5" font-weight="700" text-anchor="middle">BUS 01 (DELAYED)</text>
-        </g>
-
-        <!-- BUS 14 Marker -->
-        <g class="bus-map-marker" data-map-bus="bus-14" style="cursor: pointer;">
-          <rect x="534" y="161" width="52" height="18" rx="9" fill="#1e102b" stroke="#a855f7" stroke-width="1.2"/>
-          <text x="560" y="173.5" fill="#c084fc" font-size="8.5" font-weight="700" text-anchor="middle">BUS 14</text>
-        </g>
+        <circle cx="674" cy="79" r="4" fill="#64748b"/>
+        ${mapMarkers}
       </svg>
     `;
   };
@@ -1691,23 +1734,20 @@
 
     ${renderPeakDispatchReadiness()}
 
-    <!-- Active route map keeps its full-width layout while trip management is open. -->
+    <!-- Illustrative vehicle positions are shown on the fleet map. -->
     <section class="admin-radar-map-card">
       <div class="radar-map-toolbar">
         <div class="corridor-filter-group">
-          <span class="corridor-label">Active Route:</span>
-          <strong>${activeRoute.label}</strong>
+          <div>
+            <h2 class="fleet-map-title">Bus Monitoring Map</h2>
+            <p class="fleet-map-subtitle">${escapeHtml(activeRoute.originShort)} to ${escapeHtml(activeRoute.destinationShort)} via NLEX</p>
+          </div>
         </div>
 
         <div class="map-viewport-tools">
           <button class="map-tool-btn" type="button" data-map-zoom="in" title="Zoom In">+</button>
           <div class="map-tool-divider"></div>
           <button class="map-tool-btn" type="button" data-map-zoom="out" title="Zoom Out">-</button>
-          <div class="map-tool-divider"></div>
-          <button class="map-tool-btn" type="button" data-map-layers title="Toggle Layers">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-            <span>Layers</span>
-          </button>
         </div>
       </div>
 
@@ -1716,9 +1756,10 @@
       </div>
 
       <div class="radar-map-legend">
-        <span class="legend-item"><span class="legend-dot-circle mint"></span> On-Time Transit</span>
-        <span class="legend-item"><span class="legend-dot-circle amber"></span> Behind Schedule (+8 min)</span>
-        <span class="legend-item"><span class="legend-dot-circle purple"></span> Waiting at Terminal</span>
+        <span class="legend-item"><span class="legend-dot-circle mint"></span> On time</span>
+        <span class="legend-item"><span class="legend-dot-circle amber"></span> Delayed</span>
+        <span class="legend-item"><span class="legend-dot-circle purple"></span> At terminal</span>
+        <span class="fleet-map-note"><span class="fleet-map-gps-dot" aria-hidden="true"></span>GPS preview</span>
       </div>
     </section>
 
@@ -1917,41 +1958,149 @@
     `).join("")}
   `;
 
-  const renderStaffTableRows = () => {
-    const q = staffSearchQuery.toLowerCase().trim();
-    const filtered = adminStaffMembersData.filter((member) => {
-      if (activeStaffRoleFilter === "drivers" && member.roleKey !== "driver") return false;
-      if (activeStaffRoleFilter === "dispatchers" && member.roleKey !== "dispatcher") return false;
-      if (activeStaffRoleFilter === "maintenance" && member.roleKey !== "maintenance") return false;
+  const generatedStaffFirstNames = [
+    "Alex", "Bea", "Carlo", "Dana", "Emil", "Faith", "Gabriel", "Hazel", "Ian", "Jessa",
+    "Kevin", "Lara", "Marco", "Nina", "Oscar", "Paolo", "Queenie", "Rafael", "Sofia", "Tomas",
+    "Ulysses", "Vina", "Warren", "Yana", "Zandro", "Althea", "Bryan", "Celine", "Diego", "Erika",
+    "Francis", "Grace", "Harvey", "Isabel", "Joaquin", "Kyla", "Lorenzo", "Mika", "Nathan", "Olivia",
+    "Patrick", "Rina"
+  ];
+  const generatedStaffLastNames = [
+    "Abad", "Bautista", "Castillo", "Dizon", "Enriquez", "Flores", "Garcia", "Hernandez", "Ignacio", "Jimenez",
+    "Lazaro", "Mendoza", "Navarro", "Ocampo", "Pascual", "Quizon", "Ramos", "Santiago", "Torres", "Uy",
+    "Velasco", "Yap", "Zamora", "Aguilar", "Bernardo", "Cruz", "Domingo", "Estrada", "Fernandez", "Gonzales",
+    "Luna", "Manalo", "Reyes", "Salazar", "Villanueva", "Aquino", "Balagtas", "Cabrera", "David", "Evangelista",
+    "Francisco", "Gutierrez"
+  ];
+  const generatedStaffRoleKeys = [
+    ...Array(26).fill("driver"),
+    ...Array(6).fill("dispatcher"),
+    ...Array(10).fill("maintenance")
+  ];
+  generatedStaffRoleKeys.forEach((roleKey, index) => {
+    const staffNumber = index + 9;
+    const firstName = generatedStaffFirstNames[index];
+    const lastName = generatedStaffLastNames[index];
+    if (!firstName || !lastName) {
+      throw new Error(`USAD could not create sample staff record ${staffNumber}: a sample name is missing.`);
+    }
+    const role = roleKey === "driver" ? "Driver" : roleKey === "dispatcher" ? "Dispatcher" : "Maintenance";
+    const roleCode = roleKey === "driver" ? "DRV" : roleKey === "dispatcher" ? "DSP" : "MNT";
+    const depot = index % 2 === 0 ? "Trinoma Hub" : "Malolos Hub";
+    const status = index % 5 === 0 ? "On Break" : index % 7 === 0 ? "Off" : "On Duty";
+    adminStaffMembersData.push({
+      id: `staff-${String(staffNumber).padStart(2, "0")}`,
+      name: `${firstName} ${lastName}`,
+      staffId: `A${String((index % 8) + 1).padStart(2, "0")}OPS${String(100 + staffNumber)} • ${roleCode}`,
+      initials: `${firstName[0]}${lastName[0]}`,
+      avatarClass: "",
+      role,
+      roleKey,
+      busNo: "-",
+      depot,
+      rate: roleKey === "driver" ? "$4.50" : roleKey === "dispatcher" ? "$3.00" : "$3.50",
+      maxHours: roleKey === "driver" ? "10 hrs" : roleKey === "dispatcher" ? "8 hrs" : "8 hrs",
+      status,
+      statusKey: status.toLowerCase().replace(" ", "-"),
+      statusClass: status === "On Duty" ? "on-duty" : status === "On Break" ? "on-break" : "off"
+    });
+  });
+
+  const getFilteredStaffMembers = () => {
+    const query = staffSearchQuery.toLowerCase().trim();
+    const roleFilterKeys = {
+      drivers: "driver",
+      dispatchers: "dispatcher",
+      maintenance: "maintenance"
+    };
+    return adminStaffMembersData.filter((member) => {
+      if (activeStaffRoleFilter !== "all" && member.roleKey !== roleFilterKeys[activeStaffRoleFilter]) return false;
       if (staffDepotFilter !== "all" && !member.depot.toLowerCase().includes(staffDepotFilter.toLowerCase())) return false;
-      if (!q) return true;
+      if (!query) return true;
       return (
-        member.name.toLowerCase().includes(q) ||
-        member.staffId.toLowerCase().includes(q) ||
-        member.role.toLowerCase().includes(q) ||
-        member.depot.toLowerCase().includes(q) ||
-        member.busNo.toLowerCase().includes(q)
+        member.name.toLowerCase().includes(query) ||
+        member.staffId.toLowerCase().includes(query) ||
+        member.role.toLowerCase().includes(query) ||
+        member.depot.toLowerCase().includes(query) ||
+        member.busNo.toLowerCase().includes(query)
       );
     });
+  };
+
+  const renderStaffRoleTabs = () => {
+    const roles = [
+      { filter: "all", label: "All Staff", roleKey: null },
+      { filter: "drivers", label: "Drivers", roleKey: "driver" },
+      { filter: "dispatchers", label: "Dispatchers", roleKey: "dispatcher" },
+      { filter: "maintenance", label: "Maintenance", roleKey: "maintenance" }
+    ];
+    return roles.map(({ filter, label, roleKey }) => {
+      const count = roleKey
+        ? adminStaffMembersData.filter((member) => member.roleKey === roleKey).length
+        : adminStaffMembersData.length;
+      return `<button class="staff-role-pill${activeStaffRoleFilter === filter ? " is-active" : ""}" type="button" data-staff-role-filter="${filter}">${label} (${count})</button>`;
+    }).join("");
+  };
+
+  const renderStaffPagination = (filteredCount) => {
+    const pageCount = Math.ceil(filteredCount / staffPageSize);
+    if (pageCount === 0) return "";
+    const pageButtons = Array.from({ length: pageCount }, (_, index) => {
+      const page = index + 1;
+      return `<button class="staff-page-btn${staffCurrentPage === page ? " is-active" : ""}" type="button" data-staff-page="${page}" aria-current="${staffCurrentPage === page ? "page" : "false"}">${page}</button>`;
+    }).join("");
+    return `
+      <button class="staff-page-btn" type="button" data-staff-page="prev" aria-label="Previous page"${staffCurrentPage === 1 ? " disabled" : ""}>&lt;</button>
+      ${pageButtons}
+      <button class="staff-page-btn" type="button" data-staff-page="next" aria-label="Next page"${staffCurrentPage === pageCount ? " disabled" : ""}>&gt;</button>
+    `;
+  };
+
+  const updateStaffDirectory = () => {
+    const filtered = getFilteredStaffMembers();
+    const pageCount = Math.ceil(filtered.length / staffPageSize);
+    staffCurrentPage = Math.min(Math.max(staffCurrentPage, 1), Math.max(pageCount, 1));
+    const start = filtered.length === 0 ? 0 : (staffCurrentPage - 1) * staffPageSize + 1;
+    const end = Math.min(staffCurrentPage * staffPageSize, filtered.length);
+    const rangeText = `Showing ${start}-${end} of ${filtered.length} staff`;
+    const visibleCount = filtered.length === 0 ? 0 : end - start + 1;
+    const tableBody = screen.querySelector("#staff-table-tbody");
+    if (tableBody) tableBody.innerHTML = renderStaffTableRows();
+    const tabs = screen.querySelector(".staff-role-tabs");
+    if (tabs) tabs.innerHTML = renderStaffRoleTabs();
+    screen.querySelectorAll("[data-staff-count-summary]").forEach((summary) => {
+      summary.innerHTML = `Showing <strong>${visibleCount}</strong> of <strong>${filtered.length}</strong> matching staff`;
+    });
+    const pagination = screen.querySelector("#staff-pagination-nav");
+    if (pagination) pagination.innerHTML = renderStaffPagination(filtered.length);
+    const paginationCount = screen.querySelector("#staff-pagination-count");
+    if (paginationCount) paginationCount.textContent = rangeText;
+    updateStaffSelectionControls();
+  };
+
+  const renderStaffTableRows = () => {
+    const filtered = getFilteredStaffMembers();
+    const pageCount = Math.ceil(filtered.length / staffPageSize);
+    staffCurrentPage = Math.min(Math.max(staffCurrentPage, 1), Math.max(pageCount, 1));
+    const pageRows = filtered.slice((staffCurrentPage - 1) * staffPageSize, staffCurrentPage * staffPageSize);
 
     if (filtered.length === 0) {
       return `<tr><td colspan="8" style="text-align: center; padding: 32px; color: #64748b;">No matching personnel found in directory.</td></tr>`;
     }
 
-    return filtered.map((staff) => {
-      const isChecked = staffSelectedRows.has(staff.id);
+    return pageRows.map((staff) => {
       let statusDot = `<span class="status-dot-mint"></span>`;
       if (staff.statusKey === "on-break") statusDot = `<span class="status-dot-amber"></span>`;
       else if (staff.statusKey === "off") statusDot = `<span class="status-dot-gray"></span>`;
 
       return `
-        <tr data-staff-row="${staff.id}" class="${isChecked ? "is-selected" : ""}">
-          <td>
-            <input type="checkbox" class="staff-checkbox" data-staff-checkbox="${staff.id}" ${isChecked ? "checked" : ""} aria-label="Select ${escapeHtml(staff.name)}">
+        <tr data-staff-row="${staff.id}" class="${staffSelectedRows.has(staff.id) ? "is-selected" : ""}">
+          <td style="width: 32px;">
+            <input type="checkbox" class="staff-checkbox" data-staff-checkbox="${staff.id}" aria-label="Select ${escapeHtml(staff.name)}"${staffSelectedRows.has(staff.id) ? " checked" : ""}>
           </td>
           <td>
             <div class="staff-member-cell">
-              <div class="staff-avatar ${staff.avatarClass}${isChecked ? " is-selected" : ""}">${staff.initials}</div>
+              <div class="staff-avatar ${staff.avatarClass}">${staff.initials}</div>
               <div class="staff-name-wrap">
                 <span class="staff-name-text">${escapeHtml(staff.name)}</span>
                 <span class="staff-id-text">${escapeHtml(staff.staffId)}</span>
@@ -2071,15 +2220,12 @@
         <div class="staff-directory-title-tabs">
           <h2 class="staff-directory-title">Staff Directory</h2>
           <div class="staff-role-tabs" role="tablist">
-            <button class="staff-role-pill${activeStaffRoleFilter === "all" ? " is-active" : ""}" type="button" data-staff-role-filter="all">All Staff (148)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "drivers" ? " is-active" : ""}" type="button" data-staff-role-filter="drivers">Drivers (96)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "dispatchers" ? " is-active" : ""}" type="button" data-staff-role-filter="dispatchers">Dispatchers (24)</button>
-            <button class="staff-role-pill${activeStaffRoleFilter === "maintenance" ? " is-active" : ""}" type="button" data-staff-role-filter="maintenance">Maintenance (28)</button>
+            ${renderStaffRoleTabs()}
           </div>
         </div>
 
         <div class="staff-directory-tools-right">
-          <span class="staff-count-summary">Showing <strong>8</strong> of 148 operational members</span>
+          <span class="staff-count-summary" data-staff-count-summary>Showing <strong>${Math.min(staffPageSize, getFilteredStaffMembers().length)}</strong> of <strong>${getFilteredStaffMembers().length}</strong> matching staff</span>
           <button class="staff-bulk-delete-btn" type="button" data-staff-bulk-delete disabled>Delete selected (0)</button>
           <button class="staff-depot-filter-btn" type="button" data-staff-action="toggle-depot-filter">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2115,27 +2261,8 @@
 
       <!-- Pagination Row -->
       <div class="staff-pagination-row">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span>Show</span>
-          <select class="staff-per-page-select" data-staff-per-page aria-label="Records per page">
-            <option value="8" selected>8 records</option>
-            <option value="16">16 records</option>
-            <option value="32">32 records</option>
-          </select>
-          <span>per page</span>
-        </div>
-
-        <div class="staff-pagination-nav">
-          <button class="staff-page-btn" type="button" data-staff-page="prev" aria-label="Previous page">&lt;</button>
-          <button class="staff-page-btn is-active" type="button" data-staff-page="1">1</button>
-          <button class="staff-page-btn" type="button" data-staff-page="2">2</button>
-          <button class="staff-page-btn" type="button" data-staff-page="3">3</button>
-          <span class="staff-page-ellipsis">...</span>
-          <button class="staff-page-btn" type="button" data-staff-page="19">19</button>
-          <button class="staff-page-btn" type="button" data-staff-page="next" aria-label="Next page">&gt;</button>
-        </div>
-
-        <span class="staff-pagination-count">Showing 1-8 of 148 staff</span>
+        <div class="staff-pagination-nav" id="staff-pagination-nav">${renderStaffPagination(getFilteredStaffMembers().length)}</div>
+        <span class="staff-pagination-count" id="staff-pagination-count">Showing 1-${Math.min(staffPageSize, getFilteredStaffMembers().length)} of ${getFilteredStaffMembers().length} staff</span>
       </div>
     </section>
   `;
@@ -3397,7 +3524,7 @@
       const bus = fleetDispatchTelemetryUnits.find((u) => u.id === busId) || fleetDispatchTelemetryUnits[0];
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
       title = `Assignment Saved — Bus ${bus.busNo}`;
-      desc = `Sample assignment for <strong>Bus ${bus.busNo} (${bus.tripName})</strong>.<br><br>Driver: <strong>${bus.driverName}</strong><br>Conductor: <strong>${bus.conductorName}</strong><br>Route: <strong>${bus.routeCorridor}</strong><br><br>This prototype does not send instructions to a real vehicle.`;
+      desc = `Sample assignment for <strong>Bus ${bus.busNo} (${bus.tripName})</strong>.<br><br>Driver: <strong>${bus.driverName}</strong><br>Dispatcher: <strong>${bus.dispatcherName}</strong><br>Route: <strong>${bus.routeCorridor}</strong><br><br>This prototype does not send instructions to a real vehicle.`;
       primaryBtn = "Close";
       isInfoOnly = true;
     } else if (type.startsWith("assign-driver-unit-")) {
@@ -3413,8 +3540,8 @@
             <input class="admin-input" id="reassign-driver-input" value="${escapeHtml(bus.driverName)}" style="height: 38px;">
           </div>
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Conductor</label>
-            <input class="admin-input" id="reassign-conductor-input" value="${escapeHtml(bus.conductorName)}" style="height: 38px;">
+            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Dispatcher</label>
+            <input class="admin-input" id="reassign-dispatcher-input" value="${escapeHtml(bus.dispatcherName)}" style="height: 38px;">
           </div>
           <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
@@ -4109,6 +4236,7 @@
             <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
           </div>
+          <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
           <button class="sheet-primary" type="submit">Find Rides <span>→</span></button>
         </form>
       </div>
@@ -4245,6 +4373,7 @@
               <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-top-up>＋ Top Up</button></label>
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             </div>
+            <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
             <button class="sheet-primary" type="button" data-action="open-confirmation">Find Rides <span>→</span></button>
           </div>
         </aside>
@@ -4307,6 +4436,7 @@
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
               <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
             </div>
+            <p class="field-error payment-error" data-payment-error role="alert" hidden>U-Pouch balance is insufficient for this trip. Choose another payment method.</p>
           </div>
           <div class="seat-detail-booking-footer"><button class="sheet-primary" type="submit">Find Rides <span>→</span></button></div>
         </form>
@@ -4508,6 +4638,12 @@
                 </div>
               </details>
               <p class="account-message profile-message" data-message role="status" aria-live="polite"></p>
+              <section class="profile-menu-card" aria-label="Account actions">
+                <button class="profile-menu-row account-signout" type="button" data-mobile-action="logout">
+                  <span>Log out</span>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-9h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>
+                </button>
+              </section>
               <button class="profile-support-banner" type="button" data-info="Customer service is not connected in this prototype."><span>Can’t find the topic you are looking for?</span><small>24/7 Live Customer Service</small><i aria-hidden="true">?</i></button>
             </div>`
             : `<div class="faq-page">
@@ -5478,12 +5614,27 @@
       const origin = formData.get("origin");
       const destination = formData.get("destination");
       const payment = formData.get("payment");
+      const seat = formData.get("seat");
       const passengerText = screen.querySelector("#passenger-count")?.textContent ?? "1";
       const passengers = Number.parseInt(passengerText, 10);
+      const paymentError = event.target.querySelector("[data-payment-error]");
+      if (insufficientUPouchPayment(payment, passengers)) {
+        if (paymentError) paymentError.hidden = false;
+        event.target.querySelector('input[name="payment"][value="U-Pouch"]')?.setAttribute("aria-invalid", "true");
+        return;
+      }
+      if (paymentError) paymentError.hidden = true;
       if (typeof origin !== "string" || !origin.trim() || typeof destination !== "string" || !destination.trim() || !Number.isInteger(passengers) || passengers < 1 || typeof payment !== "string") {
         throw new Error("USAD quick booking could not continue: route, passenger, or payment selection is invalid.");
       }
-      tripData = { ...tripData, origin: origin.trim(), destination: destination.trim(), passengers, payment };
+      tripData = {
+        ...tripData,
+        origin: origin.trim(),
+        destination: destination.trim(),
+        passengers,
+        payment,
+        ...(typeof seat === "string" && seat ? { seat } : {}),
+      };
       bookingConfirmed = false;
       renderScreen("find-rides");
     }
@@ -5522,6 +5673,7 @@
       staff.statusKey = status.toLowerCase().replace(" ", "-");
       staff.statusClass = status === "On Duty" ? "on-duty" : status === "On Break" ? "on-break" : "off";
       staff.initials = name.split(/\s+/).map((word) => word[0]).join("").toUpperCase().slice(0, 2);
+      staffCurrentPage = 1;
 
       adminFleetData.forEach((bus) => {
         const busCode = normalizeStaffBusNo(bus.busNo);
@@ -5534,8 +5686,7 @@
         if (busCode === selectedBusNo) unit.driverName = name;
       });
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
       const fleetTbody = screen.querySelector("#admin-fleet-tbody");
       if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
       const dispatchTbody = screen.querySelector("#fleet-telemetry-tbody");
@@ -5579,8 +5730,8 @@
       });
 
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
       return;
     }
 
@@ -5664,14 +5815,8 @@
 
     if (event.target.matches("[data-staff-search]")) {
       staffSearchQuery = event.target.value;
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
-    }
-
-    if (event.target.matches("[data-staff-per-page]")) {
-      staffPerPage = Number(event.target.value);
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
     }
 
     if (event.target.matches("[data-faq-search]")) {
@@ -5994,6 +6139,9 @@
       } else if (mobileAction === "toggle-error") {
         mobileLoginShowError = !mobileLoginShowError;
         renderScreen(mobileLoginShowError ? "login-error" : "login");
+      } else if (mobileAction === "logout") {
+        mobileLoginShowError = false;
+        renderScreen("login");
       }
       return;
     }
@@ -6149,6 +6297,7 @@
     if (dispatchBookingSeat) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for seat booking details.`);
+      assertSeatMapEditable(bus);
       const seatId = dispatchBookingSeat.dataset.dispatchBookingSeat;
       const booking = getBookingForSeat(bus, seatId);
       if (!booking) {
@@ -6175,6 +6324,9 @@
 
     const startSeatRelease = event.target.closest("[data-start-seat-release]");
     if (startSeatRelease) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to release a seat.`);
+      assertSeatMapEditable(bus);
       if (selectedDispatchSeatBooking?.seatId !== startSeatRelease.dataset.startSeatRelease) {
         throw new Error(`USAD could not confirm the selected booking for seat ${startSeatRelease.dataset.startSeatRelease}.`);
       }
@@ -6186,9 +6338,11 @@
 
     const cancelSeatRelease = event.target.closest("[data-cancel-seat-release]");
     if (cancelSeatRelease) {
+      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to cancel a seat release.`);
+      assertSeatMapEditable(bus);
       if (!selectedDispatchSeatBooking?.confirmingRelease) return;
       selectedDispatchSeatBooking.confirmingRelease = false;
-      const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       const bookingDetails = screen.querySelector("[data-dispatch-seat-booking-details]");
       if (bookingDetails && bus) bookingDetails.innerHTML = renderDispatchSeatBookingDetails(bus);
       return;
@@ -6198,7 +6352,9 @@
     if (confirmSeatRelease) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       const seatId = confirmSeatRelease.dataset.confirmSeatRelease;
-      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || !selectedDispatchSeatBooking.confirmingRelease) {
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" to release seat ${seatId}.`);
+      assertSeatMapEditable(bus);
+      if (selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || !selectedDispatchSeatBooking.confirmingRelease) {
         throw new Error(`USAD could not verify the customer departure confirmation for seat ${seatId}.`);
       }
 
@@ -6236,6 +6392,7 @@
     if (availableDispatchSeat) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
       if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for walk-in booking.`);
+      assertSeatMapEditable(bus);
       const seatId = availableDispatchSeat.dataset.dispatchAvailableSeat;
       if (getBookingForSeat(bus, seatId)) {
         throw new Error(`USAD cannot book seat ${seatId} on Bus ${bus.busNo} because it is already occupied.`);
@@ -6261,8 +6418,10 @@
     const bookWalkInButton = event.target.closest("[data-book-walk-in-seat]");
     if (bookWalkInButton) {
       const bus = fleetDispatchTelemetryUnits.find((unit) => unit.id === selectedDispatchBusId);
+      if (!bus) throw new Error(`USAD could not find the selected bus "${selectedDispatchBusId}" for walk-in booking.`);
+      assertSeatMapEditable(bus);
       const seatId = bookWalkInButton.dataset.bookWalkInSeat;
-      if (!bus || selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || selectedDispatchSeatBooking.type !== "available") {
+      if (selectedDispatchSeatBooking?.busId !== bus.id || selectedDispatchSeatBooking.seatId !== seatId || selectedDispatchSeatBooking.type !== "available") {
         throw new Error(`USAD could not confirm the walk-in booking for seat ${seatId}. Select an available seat and try again.`);
       }
       if (getBookingForSeat(bus, seatId)) {
@@ -6312,13 +6471,6 @@
       const zoom = mapZoomBtn.dataset.mapZoom;
       if (zoom === "in") dispatchMapZoom = Math.min(1.8, Math.round((dispatchMapZoom + 0.15) * 100) / 100);
       else if (zoom === "out") dispatchMapZoom = Math.max(0.7, Math.round((dispatchMapZoom - 0.15) * 100) / 100);
-      const mapContainer = screen.querySelector("#radar-viewport-container");
-      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
-      return;
-    }
-
-    if (event.target.closest("[data-map-layers]")) {
-      dispatchLayersActive = !dispatchLayersActive;
       const mapContainer = screen.querySelector("#radar-viewport-container");
       if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
       return;
@@ -6384,6 +6536,7 @@
         }
 
         unit.tripFinished = true;
+        selectedDispatchSeatBooking = null;
         unit.category = "completed";
         unit.statusText = "Finished";
         unit.statusType = "completed";
@@ -6414,12 +6567,12 @@
       const busId = confirmCrewBtn.dataset.adminConfirmCrew;
       const unit = fleetDispatchTelemetryUnits.find((u) => u.id === busId);
       const driverIn = screen.querySelector("#reassign-driver-input");
-      const conductorIn = screen.querySelector("#reassign-conductor-input");
+      const dispatcherIn = screen.querySelector("#reassign-dispatcher-input");
       if (unit && driverIn && driverIn.value.trim()) {
         unit.driverName = driverIn.value.trim();
       }
-      if (unit && conductorIn && conductorIn.value.trim()) {
-        unit.conductorName = conductorIn.value.trim();
+      if (unit && dispatcherIn && dispatcherIn.value.trim()) {
+        unit.dispatcherName = dispatcherIn.value.trim();
       }
       screen.querySelector(".admin-modal-backdrop")?.remove();
       const panel = screen.querySelector("#dispatch-panel-container");
@@ -6432,11 +6585,8 @@
     const staffRoleFilter = event.target.closest("[data-staff-role-filter]");
     if (staffRoleFilter) {
       activeStaffRoleFilter = staffRoleFilter.dataset.staffRoleFilter;
-      screen.querySelectorAll("[data-staff-role-filter]").forEach((btn) => {
-        btn.classList.toggle("is-active", btn === staffRoleFilter);
-      });
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      staffCurrentPage = 1;
+      updateStaffDirectory();
       return;
     }
 
@@ -6483,9 +6633,7 @@
         });
       });
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const staffTbody = screen.querySelector("#staff-table-tbody");
-      if (staffTbody) staffTbody.innerHTML = renderStaffTableRows();
-      updateStaffSelectionControls();
+      updateStaffDirectory();
       const fleetTbody = screen.querySelector("#admin-fleet-tbody");
       if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
       const telemetryTbody = screen.querySelector("#fleet-telemetry-tbody");
@@ -6513,7 +6661,6 @@
       const staffIndex = adminStaffMembersData.findIndex((member) => member.id === staffId);
       if (staffIndex === -1) throw new Error(`Staff member could not be removed: "${staffId}" was not found.`);
       const [removedStaff] = adminStaffMembersData.splice(staffIndex, 1);
-      staffSelectedRows.delete(staffId);
       adminFleetData.forEach((bus) => {
         if (bus.driver === removedStaff.name) bus.driver = "Unassigned";
       });
@@ -6521,8 +6668,7 @@
         if (unit.driverName === removedStaff.name) unit.driverName = "Unassigned";
       });
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
       updateStaffSelectionControls();
       const fleetTbody = screen.querySelector("#admin-fleet-tbody");
       if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
@@ -6599,24 +6745,19 @@
         }
       }
       screen.querySelector(".admin-modal-backdrop")?.remove();
-      const tbody = screen.querySelector("#staff-table-tbody");
-      if (tbody) tbody.innerHTML = renderStaffTableRows();
+      updateStaffDirectory();
       return;
     }
 
     const staffPageBtn = event.target.closest("[data-staff-page]");
     if (staffPageBtn) {
+      if (staffPageBtn.disabled) return;
       const pageVal = staffPageBtn.dataset.staffPage;
+      const pageCount = Math.ceil(getFilteredStaffMembers().length / staffPageSize);
       if (pageVal === "prev") staffCurrentPage = Math.max(1, staffCurrentPage - 1);
-      else if (pageVal === "next") staffCurrentPage = Math.min(19, staffCurrentPage + 1);
+      else if (pageVal === "next") staffCurrentPage = Math.min(pageCount, staffCurrentPage + 1);
       else staffCurrentPage = Number(pageVal) || 1;
-      screen.querySelectorAll("[data-staff-page]").forEach((btn) => {
-        if (btn.dataset.staffPage === String(staffCurrentPage)) {
-          btn.classList.add("is-active");
-        } else if (btn.dataset.staffPage !== "prev" && btn.dataset.staffPage !== "next") {
-          btn.classList.remove("is-active");
-        }
-      });
+      updateStaffDirectory();
       return;
     }
 
@@ -6995,12 +7136,56 @@
       if (action === "quick-book") {
         openQuickBookOverlay();
       } else if (action === "open-confirmation") {
+        const seatBookingPanel = screen.querySelector(".seat-book-card");
+        if (seatBookingPanel) {
+          const payment = seatBookingPanel.querySelector('input[name="payment"]:checked')?.value ?? tripData.payment;
+          const passengers = Number.parseInt(seatBookingPanel.querySelector("#seat-passengers")?.textContent ?? "1", 10);
+          const paymentError = seatBookingPanel.querySelector("[data-payment-error]");
+          if (insufficientUPouchPayment(payment, passengers)) {
+            if (paymentError) paymentError.hidden = false;
+            seatBookingPanel.querySelector('input[name="payment"][value="U-Pouch"]')?.setAttribute("aria-invalid", "true");
+            return;
+          }
+          if (paymentError) paymentError.hidden = true;
+          tripData = { ...tripData, payment, passengers, seat: selectedBusSeatId || tripData.seat };
+        }
         renderScreen("booking-confirmation");
       } else if (action === "confirm-booking") {
+        const reference = createBookingReference();
+        const confirmedTrip = {
+          id: reference,
+          receiptId: reference,
+          date: "Just now",
+          status: "upcoming",
+          origin: tripData.origin,
+          originDetail: tripData.origin === activeRoute.origin ? activeRoute.originShort : "Trip origin",
+          destination: tripData.destination,
+          destinationDetail: `Via ${activeRoute.via}`,
+          fare: 80 * tripData.passengers,
+          seat: tripData.seat,
+          passengers: tripData.passengers,
+          payment: tripData.payment,
+          co2Saved: 0,
+          inMonth: true,
+          receiptLabel: "E-Ticket & Receipt",
+          showRateAction: false,
+          rebookLabel: "Rebook",
+        };
+        tripHistory.unshift(confirmedTrip);
+        selectedHistoryTripId = confirmedTrip.id;
         bookingConfirmed = true;
         renderScreen("booking-confirmed");
       } else if (action === "cancel-booking") {
+        const cancelledTrip = tripHistory.find((trip) => trip.id === selectedHistoryTripId);
+        if (cancelledTrip?.status === "upcoming") {
+          cancelledTrip.status = "cancelled";
+          cancelledTrip.originalFare = cancelledTrip.fare;
+          cancelledTrip.fare = 0;
+          cancelledTrip.destinationDetail = "Refunded to " + cancelledTrip.payment;
+          cancelledTrip.seat = "—";
+        }
         bookingConfirmed = false;
+        selectedHistoryTripId = "";
         renderScreen("home");
       } else {
         throw new Error(`Unknown USAD prototype action: ${action}`);
