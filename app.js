@@ -390,9 +390,10 @@
       const heightPx = Math.round((scaledVal / axisMaximum) * PREDICTIVE_CHART_PLOT_HEIGHT);
       const isSelected = item.id === predictiveSelectedBucket;
       return `
-        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-period="${item.id}" role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${item.periodLabel}: ${scaledVal.toLocaleString()} projected passengers per ${period.unit}" title="${item.periodLabel}: ${scaledVal.toLocaleString()} projected passengers per ${period.unit}">
+        <div class="chart-bar-col${isSelected ? " is-selected" : ""}" data-chart-period="${item.id}" role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${item.periodLabel}: ${scaledVal.toLocaleString()} projected passengers per ${period.unit}" aria-describedby="demand-${item.id}-tooltip" style="--bar-height: ${heightPx}px">
           ${isSelected ? `<div class="bar-selected-badge">${scaledVal.toLocaleString()}</div>` : ""}
           <div class="chart-bar-fill ${item.state}" style="height: ${heightPx}px;"></div>
+          <span class="chart-bar-tooltip" id="demand-${item.id}-tooltip" role="tooltip">${item.periodLabel} · ${scaledVal.toLocaleString()} projected passengers per ${period.unit}</span>
           <div class="bar-heat-pill ${item.heat}"></div>
           <span class="bar-time-label">${item.label}</span>
         </div>
