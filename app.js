@@ -461,8 +461,6 @@
     if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
     const yAxis = screen.querySelector(".chart-y-axis");
     if (yAxis) yAxis.innerHTML = renderPredictiveYAxis();
-    const periodSelector = screen.querySelector("[data-inspect-period]");
-    if (periodSelector) periodSelector.value = predictiveSelectedBucket;
     const forecastBadge = screen.querySelector(".analytics-range-badge");
     if (forecastBadge) forecastBadge.textContent = `${selectedForecastRoute.label} · ${getPredictivePeriod().label} passenger demand`;
     const demandLegend = screen.querySelector(".analytics-legend > span:first-child");
@@ -1168,12 +1166,6 @@
           <input type="range" class="analytics-slider" min="50" max="150" step="5" value="${predictiveTransitLoadScale}" data-analytics-scale aria-label="Transit load scale">
         </div>
 
-        <div class="analytics-ctrl-col scrub-col">
-          <label class="ctrl-label" for="analytics-inspect-period">Inspect period</label>
-          <select class="analytics-ctrl-select" id="analytics-inspect-period" data-inspect-period aria-label="Inspect period">
-            ${predictiveDemandForecast.map((item) => `<option value="${item.id}"${predictiveSelectedBucket === item.id ? " selected" : ""}>${item.periodLabel}</option>`).join("")}
-          </select>
-        </div>
       </div>
     </section>
 
@@ -6035,12 +6027,6 @@
 
     if (event.target.matches("[data-analytics-range]")) {
       activePredictivePeriod = event.target.value;
-      updatePredictiveView();
-      return;
-    }
-
-    if (event.target.matches("[data-inspect-period]")) {
-      predictiveSelectedBucket = event.target.value;
       updatePredictiveView();
       return;
     }

@@ -5033,7 +5033,7 @@ input:focus-visible,
 /* Analytics Controls Bar */
 .analytics-controls-bar {
   display: grid;
-  grid-template-columns: 1.1fr 1.2fr 1.4fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   align-items: center;
   gap: 24px;
   padding-top: 16px;
