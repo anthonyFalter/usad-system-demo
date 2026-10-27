@@ -8540,6 +8540,27 @@ input:focus-visible,
 .reports-line-hit-area {
   fill: transparent;
   pointer-events: all;
+  transition: fill 150ms ease;
+}
+
+.reports-line-point:hover .reports-line-hit-area,
+.reports-line-point:focus-visible .reports-line-hit-area {
+  fill: rgba(47, 217, 168, 0.075);
+}
+
+.reports-line-guide {
+  stroke: rgba(110, 231, 183, 0.55);
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+  vector-effect: non-scaling-stroke;
+}
+
+.reports-line-point:hover .reports-line-guide,
+.reports-line-point:focus-visible .reports-line-guide {
+  opacity: 1;
 }
 
 .reports-line-point:hover .reports-line-marker,
@@ -9337,6 +9358,8 @@ input:focus-visible,
 
 @media (prefers-reduced-motion: reduce) {
   .reports-line-marker,
+  .reports-line-hit-area,
+  .reports-line-guide,
   .reports-line-tooltip,
   .reports-trend-bar,
   .reports-chart-tooltip,

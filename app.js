@@ -3005,9 +3005,12 @@
     const markers = points.map((point, index) => {
       const tooltipX = Math.min(854, Math.max(4, point.x - 71));
       const tooltipY = point.y - 42;
+      const hitStart = index === 0 ? 20 : (points[index - 1].x + point.x) / 2;
+      const hitEnd = index === points.length - 1 ? 980 : (point.x + points[index + 1].x) / 2;
       return `
         <g class="reports-line-point" tabindex="0" role="img" aria-label="${point.label}: ${formatPhp(point.value)}" aria-describedby="reports-revenue-${index}-tooltip">
-          <circle cx="${point.x}" cy="${point.y}" r="16" class="reports-line-hit-area"/>
+          <rect x="${hitStart}" y="22" width="${hitEnd - hitStart}" height="158" class="reports-line-hit-area"/>
+          <line x1="${point.x}" y1="${point.y + 8}" x2="${point.x}" y2="178" class="reports-line-guide"/>
           <circle cx="${point.x}" cy="${point.y}" r="5" class="reports-line-marker"/>
           <title>${point.label}: ${formatPhp(point.value)}</title>
           <g class="reports-line-tooltip" id="reports-revenue-${index}-tooltip" role="tooltip">
