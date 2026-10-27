@@ -1753,7 +1753,7 @@ input:focus-visible,
 .passenger-stepper button:last-child { border-color: #107d5d; background: #107d5d; color: #fff; }
 .payment-options { display: grid; gap: var(--space-2); }
 .payment-option { position: relative; display: flex; min-height: 52px; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #d9dfdc; border-radius: 8px; cursor: pointer; }
-.payment-option:has(input:checked) { border-color: #32b993; background: #eefff8; }
+.payment-option.selected, .payment-option:has(input:checked) { border-color: #32b993; background: #eefff8; }
 .payment-option input { position: absolute; top: 50%; right: 8px; width: 14px; height: 14px; margin: 0; accent-color: #108363; transform: translateY(-50%); }
 .payment-icon { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; border: 1px solid #cdd6d2; border-radius: 5px; color: #82908a; font-size: 14px; }
 .payment-icon.gcash { border-color: #1978dc; background: #0878ee; color: #fff; font-size: 16px; font-weight: 800; }
@@ -1803,10 +1803,15 @@ input:focus-visible,
 .with-confirmation { overflow: hidden; }
 .with-confirmation > .ride-results { position: absolute; inset: 0; width: 100%; height: 100%; }
 .with-confirmation > .modal-scrim { align-items: center; padding: 14px; }
+.top-up-modal-scrim { z-index: 10; align-items: center; padding: 18px; }
 .booking-dialog { position: relative; width: 100%; padding: 19px 15px 13px; border-radius: 14px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
 .booking-dialog .modal-close { top: 17px; right: 14px; }
 .booking-dialog h2 { padding-right: 29px; font-size: 17px; }
 .booking-dialog .sheet-subtitle { margin-bottom: 13px; }
+.top-up-message { display: grid; justify-items: center; gap: 12px; padding: 18px 8px; text-align: center; }
+.top-up-message h2 { padding: 0; }
+.top-up-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: #e8f8f2; color: #107a5b; }
+.top-up-icon svg { width: 24px; height: 24px; }
 .confirm-route { display: flex; gap: 9px; padding: 10px 0; border-bottom: 1px solid #e2e7e4; }
 .confirm-route > div { display: grid; gap: 4px; }
 .confirm-route strong { font-size: 11px; }

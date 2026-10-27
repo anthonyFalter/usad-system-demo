@@ -92,6 +92,7 @@
     seat: "1A",
   };
   let bookingConfirmed = false;
+  let topUpReturnFocus = null;
   const liveBusDetails = [
     { name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: "₱80.00", status: "On time" },
     { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: "₱80.00", status: "On time" },
@@ -4019,7 +4020,7 @@
         </header>
         <section class="pouch-panel" aria-label="U-Pouch balance">
           <div><span>Current U-Pouch Balance:</span><strong>₱2.00</strong></div>
-          <button type="button" data-info="Top up is a visual demo only."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Top Up</span></button>
+          <button type="button" data-top-up><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Top Up</span></button>
           <span class="pouch-icon" aria-hidden="true"><svg viewBox="0 0 40 36"><defs><linearGradient id="pouch-gradient" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#19bd91"/><stop offset="1" stop-color="#109b78"/></linearGradient></defs><path fill="url(#pouch-gradient)" d="M8 3h24a4 4 0 0 1 4 4v4h-7V8H8a4 4 0 0 0 0 8h27a4 4 0 0 1 4 4v11a4 4 0 0 1-4 4H8a8 8 0 0 1-8-8V11a8 8 0 0 1 8-8Z"/><path fill="#fff" d="M8 7h21a2 2 0 0 1 2 2v2H8a2 2 0 1 1 0-4Zm24 15h4v8h-4z"/></svg></span>
         </section>
         <section class="home-map-section" aria-label="Nearby vehicles map">
@@ -4129,7 +4130,7 @@
           <div class="passenger-stepper"><span id="passenger-count">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
           <label class="sheet-label">Payment Method</label>
           <div class="payment-options">
-            <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
+            <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-top-up>＋ Top Up</button></label>
             <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
           </div>
@@ -4266,7 +4267,7 @@
             <div class="passenger-stepper"><span id="seat-passengers">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
             <label class="sheet-label">Payment Method</label>
             <div class="payment-options">
-              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
+              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-top-up>＋ Top Up</button></label>
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
             </div>
             <button class="sheet-primary" type="button" data-action="open-confirmation">Find Rides <span>→</span></button>
@@ -4327,7 +4328,7 @@
             <select id="live-seat-picker" class="seat-picker" name="seat" aria-label="Select a seat">${seatOptions}</select>
             <label class="sheet-label">Payment Method</label>
             <div class="payment-options">
-              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-info="Top up is a visual demo only.">＋ Top Up</button></label>
+              <label class="payment-option${tripData.payment === "U-Pouch" ? " selected" : ""}"><input type="radio" name="payment" value="U-Pouch"${tripData.payment === "U-Pouch" ? " checked" : ""}><span class="payment-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h15v13H4zM4 7l2-3h13v3m0 3h3v5h-3a2.5 2.5 0 0 1 0-5Z"/></svg></span><span><strong>U-Pouch</strong><small>₱2.00 <em>Insufficient amount</em></small></span><button type="button" data-top-up>＋ Top Up</button></label>
               <label class="payment-option${tripData.payment === "GCash" ? " selected" : ""}"><input type="radio" name="payment" value="GCash"${tripData.payment === "GCash" ? " checked" : ""}><span class="payment-icon gcash">G</span><span><strong>GCash</strong><small>••••5678 · Sufficient Balance</small></span></label>
               <label class="payment-option${tripData.payment === "Credit / Debit Card" ? " selected" : ""}"><input type="radio" name="payment" value="Credit / Debit Card"${tripData.payment === "Credit / Debit Card" ? " checked" : ""}><span class="payment-icon card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h4"/></svg></span><span><strong>Credit / Debit Card</strong><small>••4567</small></span></label>
             </div>
@@ -4362,7 +4363,7 @@
         </div>
         <section class="notification-list" aria-label="Notifications" data-notification-list>
           ${notifications.map((notification) => `
-            <button type="button" class="notification-item${notification.unread ? " is-unread" : ""}" data-notification-id="${notification.id}" aria-label="${notification.unread ? "Mark as read: " : "Mark as unread: "}${escapeHtml(notification.title)}">
+            <button type="button" class="notification-item${notification.unread ? " is-unread" : ""}" data-notification-id="${notification.id}" aria-label="${notification.unread ? "Unread notification: " : "Read notification: "}${escapeHtml(notification.title)}">
               <span class="notification-item-icon is-${notification.type}">${notificationIcon(notification.type)}</span>
               <span class="notification-item-copy"><strong>${escapeHtml(notification.title)}</strong><span>${escapeHtml(notification.body)}</span><small>${escapeHtml(notification.time)}</small></span>
               <span class="notification-unread-dot" aria-hidden="true"${notification.unread ? "" : " hidden"}></span>
@@ -4652,7 +4653,7 @@
       button.hidden = hidden;
       if (!hidden) visibleCount += 1;
       button.classList.toggle("is-unread", notification.unread);
-      button.setAttribute("aria-label", `${notification.unread ? "Mark as read: " : "Mark as unread: "}${notification.title}`);
+      button.setAttribute("aria-label", `${notification.unread ? "Unread notification: " : "Read notification: "}${notification.title}`);
       const unreadDot = button.querySelector(".notification-unread-dot");
       if (unreadDot) unreadDot.hidden = !notification.unread;
     });
@@ -4895,6 +4896,36 @@
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) finishClose();
   };
 
+  const openTopUpModal = () => {
+    if (screen.querySelector("[data-top-up-modal]")) return;
+    topUpReturnFocus = document.activeElement;
+    const template = document.createElement("template");
+    template.innerHTML = `
+      <div class="modal-scrim top-up-modal-scrim" data-top-up-modal>
+        <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="top-up-dialog-title">
+          <button class="modal-close" type="button" aria-label="Close top-up message" data-top-up-close>×</button>
+          <div class="top-up-message">
+            <span class="top-up-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M14 4h6v6m-.5-5.5L11 13m-2-7H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h2 id="top-up-dialog-title">Redirecting you to merchant</h2>
+          </div>
+        </section>
+      </div>`;
+    const modal = template.content.firstElementChild;
+    if (!modal) throw new Error("USAD could not open the top-up message.");
+    screen.append(modal);
+    modal.querySelector("[data-top-up-close]")?.focus();
+  };
+
+  const closeTopUpModal = () => {
+    const modal = screen.querySelector("[data-top-up-modal]");
+    if (!modal) return;
+    modal.remove();
+    if (topUpReturnFocus?.isConnected) topUpReturnFocus.focus();
+    topUpReturnFocus = null;
+  };
+
   const openQuickBookOverlay = () => {
     const currentPage = screen.firstElementChild;
     if (!currentPage || screen.querySelector("[data-quick-book-overlay]")) return;
@@ -5123,6 +5154,10 @@
 
   screen.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (screen.querySelector("[data-top-up-modal]")) {
+        closeTopUpModal();
+        return;
+      }
       const quickBookOverlay = screen.querySelector("[data-quick-book-overlay]");
       if (quickBookOverlay) {
         closeQuickBookOverlay(quickBookOverlay);
@@ -5627,6 +5662,19 @@
       selectedBusSeatId = event.target.value;
     }
 
+    if (event.target.matches('input[name="payment"]')) {
+      const bookingContainer = event.target.closest("[data-quick-book], .seat-book-card");
+      tripData.payment = event.target.value;
+      bookingContainer?.querySelectorAll(".payment-option").forEach((option) => {
+        option.classList.toggle("selected", option.querySelector('input[name="payment"]') === event.target);
+      });
+      if (event.target.value !== "U-Pouch") {
+        const paymentError = bookingContainer?.querySelector("[data-payment-error]");
+        if (paymentError) paymentError.hidden = true;
+        bookingContainer?.querySelector('input[name="payment"][value="U-Pouch"]')?.removeAttribute("aria-invalid");
+      }
+    }
+
     if (event.target.matches("[data-discount-id-upload]")) {
       const file = event.target.files?.[0];
       const side = event.target.dataset.discountIdUpload;
@@ -5711,6 +5759,24 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const topUpButton = event.target.closest("[data-top-up]");
+    if (topUpButton) {
+      event.preventDefault();
+      openTopUpModal();
+      return;
+    }
+
+    if (event.target.closest("[data-top-up-close]")) {
+      closeTopUpModal();
+      return;
+    }
+
+    const topUpModal = event.target.closest("[data-top-up-modal]");
+    if (topUpModal && event.target === topUpModal) {
+      closeTopUpModal();
+      return;
+    }
+
     const showAllTripsButton = event.target.closest("[data-trip-log-show-all]");
     if (showAllTripsButton) {
       showAllTripLogs = !showAllTripLogs;
@@ -6662,7 +6728,7 @@
     if (notificationButton) {
       const notification = notifications.find(({ id }) => id === notificationButton.dataset.notificationId);
       if (!notification) throw new Error(`Unknown notification in the inbox: ${notificationButton.dataset.notificationId}.`);
-      notification.unread = !notification.unread;
+      notification.unread = false;
       updateNotificationView();
       return;
     }
