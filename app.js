@@ -1197,7 +1197,7 @@
         <div class="bento-divider-line"></div>
 
         <div class="analytics-action-row">
-          <button class="btn-approve-fleet" type="button" data-admin-action="approve-redistribution">Apply Bus Changes</button>
+          <button class="btn-approve-fleet" type="button" data-admin-action="preview-redistribution">Preview &amp; Apply Changes</button>
           <button class="btn-simulate-surge" type="button" data-admin-action="simulate-surge">Preview Estimate</button>
         </div>
       </article>
@@ -3336,6 +3336,7 @@
     let desc = `Place ${accountRole} finger on hardware biometric scanner to authenticate.`;
     let primaryBtn = "Simulate Scan &amp; Login";
     let isInfoOnly = false;
+    let hidePrimaryBtn = false;
     let customHtml = "";
 
     if (type === "smartcard") {
@@ -3533,17 +3534,28 @@
   desc = `Preparing a sample demand report for <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Peak ${selectedPeriod.unit}: <strong>${peakPeriod.periodLabel}</strong><br>Projected demand: <strong>${peakDemand.toLocaleString()} passengers/${selectedPeriod.unit}</strong><br>Forecast model convergence: <strong>96.4%</strong>`;
   primaryBtn = "Download Report";
       isInfoOnly = true;
+    } else if (type === "preview-redistribution") {
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+      title = "Passenger Demand Preview";
+      desc = `Sample estimate based on 1,000 simulated trips on <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Estimated queue wait time: <strong>42% shorter</strong> at ${escapeHtml(activeRoute.destinationShort)}.<br><br>Proposed bus changes:<br>• Add <strong>3 standby buses</strong><br>• Reduce the time between evening buses from <strong>12 to 5 minutes</strong><br>• Deploy <strong>2 available buses</strong> from ${escapeHtml(activeRoute.origin)} depot<br><br>This prototype does not update real bus assignments.`;
+      customHtml = `
+        <div class="admin-modal-actions">
+          <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+          <button class="admin-modal-button-primary" type="button" data-admin-action="apply-redistribution">Apply Changes</button>
+        </div>
+      `;
+      isInfoOnly = true;
     } else if (type === "approve-redistribution") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
       title = "Bus Changes Applied";
       desc = `Sample changes for ${escapeHtml(activeRoute.label)}:<br><br>• Add <strong>3 standby buses</strong><br>• Reduce the time between evening buses from <strong>12 to 5 minutes</strong><br>• Deploy <strong>2 available buses</strong> from ${escapeHtml(activeRoute.origin)} depot<br><br>This prototype does not update real bus assignments.`;
-      primaryBtn = "Close";
+      hidePrimaryBtn = true;
       isInfoOnly = true;
     } else if (type === "simulate-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>`;
       title = "Passenger Demand Estimate";
-      desc = `Sample estimate based on 1,000 simulated trips on ${escapeHtml(activeRoute.label)}.<br><br>Estimated queue wait time: <strong>42% shorter</strong> at ${escapeHtml(activeRoute.destinationShort)}.`;
-      primaryBtn = "Close Estimate";
+      desc = `Sample estimate based on 1,000 simulated trips on <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Estimated queue wait time: <strong>42% shorter</strong> at ${escapeHtml(activeRoute.destinationShort)}.`;
+      hidePrimaryBtn = true;
       isInfoOnly = true;
     } else if (type.startsWith("dispatch-order-sent-")) {
       const busId = type.replace("dispatch-order-sent-", "");
@@ -3950,7 +3962,7 @@
         ${customHtml || `
           <div class="admin-modal-actions">
             <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
-            <button class="admin-modal-button-primary" type="button" ${isInfoOnly ? "data-admin-modal-close" : "data-admin-modal-auth"}>${primaryBtn}</button>
+            ${hidePrimaryBtn ? "" : `<button class="admin-modal-button-primary" type="button" ${isInfoOnly ? "data-admin-modal-close" : "data-admin-modal-auth"}>${primaryBtn}</button>`}
           </div>
         `}
       </div>
@@ -6419,7 +6431,9 @@
         openAdminModal("user-menu");
       } else if (adminAction === "export-surge") {
         openAdminModal("export-surge");
-      } else if (adminAction === "approve-redistribution") {
+      } else if (adminAction === "preview-redistribution") {
+        openAdminModal("preview-redistribution");
+      } else if (adminAction === "apply-redistribution") {
         openAdminModal("approve-redistribution");
       } else if (adminAction === "simulate-surge") {
         openAdminModal("simulate-surge");
