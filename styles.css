@@ -9120,16 +9120,12 @@ input:focus-visible,
   z-index: 2;
 }
 
-.reports-trend-column:hover .reports-trend-bar,
+.reports-trend-bar:hover,
 .reports-trend-column:focus-visible .reports-trend-bar {
+  outline: 1px solid #a7f3d0;
+  outline-offset: 2px;
   transform: scaleY(1.04);
   filter: brightness(1.18) drop-shadow(0 0 5px rgba(47, 217, 168, 0.35));
-}
-
-.reports-trend-column:focus-visible {
-  outline: 2px solid #6ee7b7;
-  outline-offset: 3px;
-  border-radius: 4px;
 }
 
 .reports-chart-tooltip {
@@ -9263,12 +9259,14 @@ input:focus-visible,
   transition: filter 160ms ease, transform 160ms ease;
 }
 
-.reports-mix-track:hover > span,
+.reports-mix-track > span:hover,
 .reports-mix-track:focus-visible > span,
-.reports-deployment-track:hover > span,
+.reports-deployment-track > span:hover,
 .reports-deployment-track:focus-visible > span,
-.reports-efficiency-track:hover > span,
+.reports-efficiency-track > span:hover,
 .reports-efficiency-track:focus-visible > span {
+  outline: 1px solid #d1fae5;
+  outline-offset: -1px;
   filter: brightness(1.12);
   transform: scaleY(1.22);
 }
