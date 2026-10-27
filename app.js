@@ -2980,10 +2980,11 @@
   const renderReportsTrendBars = (values, labels, type) => {
     const maxValue = Math.max(...values);
     return values.map((value, index) => `
-      <div class="reports-trend-column" aria-label="${labels[index]}: ${type === "revenue" ? formatPhp(value) : `${value.toLocaleString()} passengers`}">
+      <div class="reports-trend-column" tabindex="0" aria-label="${labels[index]}: ${type === "revenue" ? formatPhp(value) : `${value.toLocaleString()} passengers`}" aria-describedby="reports-${type}-${index}-tooltip">
         <span class="reports-trend-value">${formatChartValue(value, type)}</span>
-        <div class="reports-trend-track" title="${labels[index]}: ${type === "revenue" ? formatPhp(value) : `${value.toLocaleString()} passengers`}">
-          <span class="reports-trend-bar${type === "passengers" ? " passengers" : ""}" style="height: ${Math.max(8, value / maxValue * 100)}%"></span>
+        <div class="reports-trend-track" style="--bar-height: ${Math.max(8, value / maxValue * 100)}%">
+          <span class="reports-trend-bar${type === "passengers" ? " passengers" : ""}"></span>
+          <span class="reports-chart-tooltip" id="reports-${type}-${index}-tooltip" role="tooltip">${labels[index]} · ${type === "revenue" ? formatPhp(value) : `${value.toLocaleString()} passengers`}</span>
         </div>
         <span class="reports-trend-label">${labels[index]}</span>
       </div>
@@ -3001,14 +3002,24 @@
     const pointList = points.map(({ x, y }) => `${x},${y}`).join(" ");
     const areaPath = `M ${points[0].x},178 L ${points.map(({ x, y }) => `${x},${y}`).join(" L ")} L ${points[points.length - 1].x},178 Z`;
     const gridLines = [38, 83, 128, 173].map((y) => `<line x1="36" y1="${y}" x2="964" y2="${y}" class="reports-line-gridline"/>`).join("");
-    const markers = points.map((point) => `
-      <circle cx="${point.x}" cy="${point.y}" r="5" class="reports-line-marker">
-        <title>${point.label}: ${formatPhp(point.value)}</title>
-      </circle>
-    `).join("");
+    const markers = points.map((point, index) => {
+      const tooltipX = Math.min(854, Math.max(4, point.x - 71));
+      const tooltipY = point.y - 42;
+      return `
+        <g class="reports-line-point" tabindex="0" role="img" aria-label="${point.label}: ${formatPhp(point.value)}" aria-describedby="reports-revenue-${index}-tooltip">
+          <circle cx="${point.x}" cy="${point.y}" r="16" class="reports-line-hit-area"/>
+          <circle cx="${point.x}" cy="${point.y}" r="5" class="reports-line-marker"/>
+          <title>${point.label}: ${formatPhp(point.value)}</title>
+          <g class="reports-line-tooltip" id="reports-revenue-${index}-tooltip" role="tooltip">
+            <rect x="${tooltipX}" y="${tooltipY}" width="142" height="28" rx="6"/>
+            <text x="${tooltipX + 71}" y="${tooltipY + 18}">${point.label} · ${formatPhp(point.value)}</text>
+          </g>
+        </g>
+      `;
+    }).join("");
 
     return `
-      <svg class="reports-line-chart-svg" viewBox="0 0 1000 205" preserveAspectRatio="none" role="img" aria-label="Fare revenue line chart">
+      <svg class="reports-line-chart-svg" viewBox="0 0 1000 205" preserveAspectRatio="none" role="group" aria-label="Fare revenue line chart">
         ${gridLines}
         <path d="${areaPath}" class="reports-line-area"/>
         <polyline points="${pointList}" class="reports-line-path"/>
@@ -3053,7 +3064,7 @@
             </div>
             <div class="reports-chart-total">${passengerTotal.toLocaleString()}<span>passengers</span></div>
           </div>
-          <div class="reports-trend-chart passenger-chart" role="img" aria-label="Passenger volume from ${trend.periodLabel}">
+          <div class="reports-trend-chart passenger-chart" role="group" aria-label="Passenger volume from ${trend.periodLabel}">
             ${renderReportsTrendBars(trend.passengers, trend.labels, "passengers")}
           </div>
         </section>
@@ -3065,7 +3076,7 @@
             <h2 class="reports-visual-title">Revenue collection mix</h2>
             <span class="reports-visual-caption">Month to date</span>
           </div>
-          <div class="reports-mix-track" role="img" aria-label="Cash ${cashShare.toFixed(0)} percent, U-Pouch ${pouchShare.toFixed(0)} percent">
+          <div class="reports-mix-track" tabindex="0" role="img" aria-label="Cash ${cashShare.toFixed(0)} percent, U-Pouch ${pouchShare.toFixed(0)} percent" data-tooltip="Cash ${cashShare.toFixed(0)}% · ${formatPhp(reportingSummary.cashRevenueMonthToDate)} | U-Pouch ${pouchShare.toFixed(0)}% · ${formatPhp(reportingSummary.pouchRevenueMonthToDate)}">
             <span class="reports-mix-cash" style="width: ${cashShare}%"></span>
             <span class="reports-mix-pouch" style="width: ${pouchShare}%"></span>
           </div>
@@ -3081,7 +3092,7 @@
             <span class="reports-visual-caption">Dispatch snapshot</span>
           </div>
           <div class="reports-deployment-value">${snapshot.movingUnits.length}<span> / ${adminFleetSize} buses active</span></div>
-          <div class="reports-deployment-track" role="img" aria-label="${snapshot.movingUnits.length} of ${adminFleetSize} fleet buses active">
+          <div class="reports-deployment-track" tabindex="0" role="img" aria-label="${snapshot.movingUnits.length} of ${adminFleetSize} fleet buses active" data-tooltip="${snapshot.movingUnits.length} of ${adminFleetSize} buses active · ${snapshot.movingUnits.filter((unit) => unit.statusType === "on-time").length} on time · ${snapshot.delayedUnits.length} delayed · ${snapshot.terminalUnits.length} at terminal">
             <span style="width: ${activeShare}%"></span>
           </div>
           <div class="reports-deployment-legend"><span>${snapshot.movingUnits.filter((unit) => unit.statusType === "on-time").length} on time</span><span>${snapshot.delayedUnits.length} delayed</span><span>${snapshot.terminalUnits.length} at terminal</span></div>
@@ -3093,7 +3104,7 @@
             <span class="reports-visual-caption">Month to date</span>
           </div>
           <div class="reports-efficiency-value">${reportingSummary.fleetEfficiency}<span> km/L</span></div>
-          <div class="reports-efficiency-track" role="img" aria-label="${reportingSummary.fleetEfficiency} kilometers per liter, planning benchmark 3.5 kilometers per liter">
+          <div class="reports-efficiency-track" tabindex="0" role="img" aria-label="${reportingSummary.fleetEfficiency} kilometers per liter, planning benchmark 3.5 kilometers per liter" data-tooltip="Fleet average: ${reportingSummary.fleetEfficiency} km/L · Benchmark: 3.5 km/L">
             <span style="width: ${efficiencyShare}%"></span>
             <i style="left: 77.78%"></i>
           </div>

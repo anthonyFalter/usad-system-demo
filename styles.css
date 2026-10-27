@@ -8527,6 +8527,58 @@ input:focus-visible,
   stroke: #2fd9a8;
   stroke-width: 3;
   vector-effect: non-scaling-stroke;
+  transition: transform 150ms ease, filter 150ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.reports-line-point {
+  cursor: crosshair;
+  outline: none;
+}
+
+.reports-line-hit-area {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.reports-line-point:hover .reports-line-marker,
+.reports-line-point:focus-visible .reports-line-marker {
+  filter: drop-shadow(0 0 5px rgba(47, 217, 168, 0.65));
+  transform: scale(1.55);
+}
+
+.reports-line-point:focus-visible .reports-line-marker {
+  stroke: #a7f3d0;
+  stroke-width: 4;
+}
+
+.reports-line-tooltip {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+  visibility: hidden;
+}
+
+.reports-line-tooltip rect {
+  fill: #0b0f17;
+  stroke: #334155;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.reports-line-tooltip text {
+  fill: #f8fafc;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.reports-line-point:hover .reports-line-tooltip,
+.reports-line-point:focus-visible .reports-line-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .reports-line-xlabels {
@@ -8994,6 +9046,7 @@ input:focus-visible,
   }
 }
 .reports-trend-column {
+  position: relative;
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
@@ -9014,12 +9067,13 @@ input:focus-visible,
 
 .reports-trend-track {
   position: relative;
+  z-index: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   width: 100%;
   height: 166px;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 5px 5px 0 0;
   background: repeating-linear-gradient(to bottom, transparent 0, transparent 40px, rgba(148, 163, 184, 0.08) 41px, transparent 42px);
   border-bottom: 1px solid #334155;
@@ -9031,11 +9085,57 @@ input:focus-visible,
   min-height: 8px;
   border-radius: 5px 5px 0 0;
   background: linear-gradient(180deg, #2fd9a8, #0d9476);
-  transition: height 0.2s ease;
+  height: var(--bar-height);
+  transform-origin: center bottom;
+  transition: transform 180ms ease, filter 180ms ease;
 }
 
 .reports-trend-bar.passengers {
   background: linear-gradient(180deg, #60a5fa, #2563eb);
+}
+
+.reports-trend-column:hover,
+.reports-trend-column:focus-visible {
+  z-index: 2;
+}
+
+.reports-trend-column:hover .reports-trend-bar,
+.reports-trend-column:focus-visible .reports-trend-bar {
+  transform: scaleY(1.04);
+  filter: brightness(1.18) drop-shadow(0 0 5px rgba(47, 217, 168, 0.35));
+}
+
+.reports-trend-column:focus-visible {
+  outline: 2px solid #6ee7b7;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.reports-chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(var(--bar-height) + 8px);
+  left: 50%;
+  padding: 6px 9px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0b0f17;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+  white-space: nowrap;
+}
+
+.reports-trend-column:hover .reports-chart-tooltip,
+.reports-trend-column:focus-visible .reports-chart-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .reports-trend-label {
@@ -9074,9 +9174,62 @@ input:focus-visible,
   display: flex;
   height: 12px;
   margin: 16px 0 12px;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 999px;
   background: #263244;
+  cursor: crosshair;
+  transition: filter 160ms ease;
+}
+
+.reports-mix-track:focus-visible,
+.reports-deployment-track:focus-visible,
+.reports-efficiency-track:focus-visible {
+  outline: 2px solid #6ee7b7;
+  outline-offset: 4px;
+}
+
+.reports-mix-track::after,
+.reports-deployment-track::after,
+.reports-efficiency-track::after {
+  position: absolute;
+  z-index: 3;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  padding: 6px 9px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0b0f17;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  color: #f8fafc;
+  content: attr(data-tooltip);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+  white-space: nowrap;
+}
+
+.reports-mix-track:hover,
+.reports-mix-track:focus-visible,
+.reports-deployment-track:hover,
+.reports-deployment-track:focus-visible,
+.reports-efficiency-track:hover,
+.reports-efficiency-track:focus-visible {
+  z-index: 2;
+  filter: brightness(1.15);
+}
+
+.reports-mix-track:hover::after,
+.reports-mix-track:focus-visible::after,
+.reports-deployment-track:hover::after,
+.reports-deployment-track:focus-visible::after,
+.reports-efficiency-track:hover::after,
+.reports-efficiency-track:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .reports-mix-cash,
@@ -9086,6 +9239,17 @@ input:focus-visible,
   display: block;
   height: 100%;
   border-radius: inherit;
+  transition: filter 160ms ease, transform 160ms ease;
+}
+
+.reports-mix-track:hover > span,
+.reports-mix-track:focus-visible > span,
+.reports-deployment-track:hover > span,
+.reports-deployment-track:focus-visible > span,
+.reports-efficiency-track:hover > span,
+.reports-efficiency-track:focus-visible > span {
+  filter: brightness(1.12);
+  transform: scaleY(1.22);
 }
 
 .reports-mix-cash {
@@ -9169,6 +9333,25 @@ input:focus-visible,
   width: 2px;
   height: 18px;
   background: #f8fafc;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reports-line-marker,
+  .reports-line-tooltip,
+  .reports-trend-bar,
+  .reports-chart-tooltip,
+  .reports-mix-track,
+  .reports-deployment-track,
+  .reports-efficiency-track,
+  .reports-mix-track::after,
+  .reports-deployment-track::after,
+  .reports-efficiency-track::after,
+  .reports-mix-cash,
+  .reports-mix-pouch,
+  .reports-deployment-track span,
+  .reports-efficiency-track span {
+    transition: none;
+  }
 }
 
 @media (max-width: 700px) {
