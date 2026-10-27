@@ -3004,20 +3004,14 @@
     const areaPath = `M ${points[0].x},178 L ${points.map(({ x, y }) => `${x},${y}`).join(" L ")} L ${points[points.length - 1].x},178 Z`;
     const gridLines = [38, 83, 128, 173].map((y) => `<line x1="36" y1="${y}" x2="964" y2="${y}" class="reports-line-gridline"/>`).join("");
     const markers = points.map((point, index) => {
-      const tooltipX = Math.min(854, Math.max(4, point.x - 71));
-      const tooltipY = point.y - 42;
       const hitStart = index === 0 ? 20 : (points[index - 1].x + point.x) / 2;
       const hitEnd = index === points.length - 1 ? 980 : (point.x + points[index + 1].x) / 2;
       return `
-        <g class="reports-line-point" tabindex="0" role="img" aria-label="${point.label}: ${formatPhp(point.value)}" aria-describedby="reports-revenue-${index}-tooltip">
+        <g class="reports-line-point" tabindex="0" role="img" aria-label="${point.label}: ${formatPhp(point.value)}" aria-describedby="reports-revenue-tooltip" data-tooltip="${point.label} · ${formatPhp(point.value)}">
           <rect x="${hitStart}" y="22" width="${hitEnd - hitStart}" height="158" class="reports-line-hit-area"/>
           <line x1="${point.x}" y1="${point.y + 8}" x2="${point.x}" y2="178" class="reports-line-guide"/>
           <circle cx="${point.x}" cy="${point.y}" r="5" class="reports-line-marker"/>
           <title>${point.label}: ${formatPhp(point.value)}</title>
-          <g class="reports-line-tooltip" id="reports-revenue-${index}-tooltip" role="tooltip">
-            <rect x="${tooltipX}" y="${tooltipY}" width="142" height="28" rx="6"/>
-            <text x="${tooltipX + 71}" y="${tooltipY + 18}">${point.label} · ${formatPhp(point.value)}</text>
-          </g>
         </g>
       `;
     }).join("");
@@ -3029,6 +3023,7 @@
         <polyline points="${pointList}" class="reports-line-path"/>
         ${markers}
       </svg>
+      <div class="reports-line-tooltip" id="reports-revenue-tooltip" role="tooltip" aria-hidden="true"></div>
       <div class="reports-line-xlabels" style="--reports-point-count: ${labels.length}">
         ${labels.map((label) => `<span>${label}</span>`).join("")}
       </div>
@@ -5961,6 +5956,58 @@
       const fieldError = screen.querySelector(`#${event.target.id}-error`);
       if (fieldError) fieldError.hidden = true;
     }
+  });
+
+  const showReportsRevenueTooltip = (point) => {
+    const chart = point.closest(".reports-line-chart");
+    const marker = point.querySelector(".reports-line-marker");
+    const tooltip = chart?.querySelector("#reports-revenue-tooltip");
+    const tooltipText = point.dataset.tooltip;
+    if (!chart || !marker || !tooltip || !tooltipText) return;
+
+    tooltip.textContent = tooltipText;
+    tooltip.setAttribute("aria-hidden", "false");
+    tooltip.classList.add("is-visible");
+
+    const chartRect = chart.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    const scaleX = chartRect.width / chart.offsetWidth;
+    const scaleY = chartRect.height / chart.offsetHeight;
+    const tooltipHalfWidth = tooltip.offsetWidth / 2;
+    const centerX = (markerRect.left + markerRect.width / 2 - chartRect.left) / scaleX;
+    const left = Math.max(tooltipHalfWidth + 8, Math.min(chart.offsetWidth - tooltipHalfWidth - 8, centerX));
+    let top = (markerRect.top - chartRect.top) / scaleY - tooltip.offsetHeight - 8;
+    if (top < 0) top = (markerRect.bottom - chartRect.top) / scaleY + 8;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  };
+
+  const hideReportsRevenueTooltip = () => {
+    const tooltip = screen.querySelector("#reports-revenue-tooltip");
+    if (!tooltip) return;
+    tooltip.classList.remove("is-visible");
+    tooltip.setAttribute("aria-hidden", "true");
+  };
+
+  screen.addEventListener("pointerover", (event) => {
+    const point = event.target.closest(".reports-line-point");
+    if (point) showReportsRevenueTooltip(point);
+  });
+
+  screen.addEventListener("pointerout", (event) => {
+    const point = event.target.closest(".reports-line-point");
+    if (!point || (event.relatedTarget instanceof Node && point.contains(event.relatedTarget))) return;
+    if (point !== screen.activeElement) hideReportsRevenueTooltip();
+  });
+
+  screen.addEventListener("focusin", (event) => {
+    const point = event.target.closest(".reports-line-point");
+    if (point) showReportsRevenueTooltip(point);
+  });
+
+  screen.addEventListener("focusout", (event) => {
+    const point = event.target.closest(".reports-line-point");
+    if (point && !point.matches(":hover")) hideReportsRevenueTooltip();
   });
 
   screen.addEventListener("change", (event) => {

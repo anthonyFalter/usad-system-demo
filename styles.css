@@ -8525,6 +8525,7 @@ input:focus-visible,
 }
 
 .reports-line-chart {
+  position: relative;
   height: 230px;
   margin-top: 14px;
 }
@@ -8607,30 +8608,28 @@ input:focus-visible,
 }
 
 .reports-line-tooltip {
+  position: absolute;
+  z-index: 4;
+  padding: 6px 9px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0b0f17;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 140ms ease;
+  transform: translate(-50%, 4px);
+  transition: opacity 140ms ease, transform 140ms ease;
   visibility: hidden;
 }
 
-.reports-line-tooltip rect {
-  fill: #0b0f17;
-  stroke: #334155;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.reports-line-tooltip text {
-  fill: #f8fafc;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  text-anchor: middle;
-}
-
-.reports-line-point:hover .reports-line-tooltip,
-.reports-line-point:focus-visible .reports-line-tooltip {
+.reports-line-tooltip.is-visible {
   opacity: 1;
+  transform: translate(-50%, 0);
   visibility: visible;
 }
 
@@ -9395,7 +9394,6 @@ input:focus-visible,
   .reports-line-marker,
   .reports-line-hit-area,
   .reports-line-guide,
-  .reports-line-tooltip,
   .reports-trend-bar,
   .reports-chart-tooltip,
   .reports-mix-track,
@@ -9408,6 +9406,10 @@ input:focus-visible,
   .reports-mix-pouch,
   .reports-deployment-track span,
   .reports-efficiency-track span {
+    transition: none;
+  }
+
+  .reports-line-tooltip {
     transition: none;
   }
 }
