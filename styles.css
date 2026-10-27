@@ -1964,7 +1964,7 @@ input:focus-visible,
   visibility: hidden;
 }
 .map-art.is-live .map-label { z-index: 2; padding: 4px 6px; border: 1px solid rgba(208, 218, 213, .8); border-radius: 4px; background: rgba(255,255,255,.88); color: #53675e; font-size: 8px; letter-spacing: .04em; }
-.map-controls { position: absolute; z-index: 3; top: 232px; right: 12px; display: grid; justify-items: center; gap: 4px; padding: 4px; border: 1px solid rgba(30, 50, 42, .1); border-radius: 8px; background: rgba(255,255,255,.96); box-shadow: 0 2px 8px rgba(24, 45, 36, .12); }
+.map-controls { position: absolute; z-index: 3; top: 210px; right: 12px; display: grid; justify-items: center; gap: 4px; padding: 4px; border: 1px solid rgba(30, 50, 42, .1); border-radius: 8px; background: rgba(255,255,255,.96); box-shadow: 0 2px 8px rgba(24, 45, 36, .12); }
 .map-controls button { display: grid; width: 31px; height: 31px; place-items: center; padding: 0; border: 0; border-radius: 5px; background: #fff; color: #245b49; cursor: pointer; font-size: 21px; line-height: 1; }
 .map-controls button:hover { background: #edf8f3; }
 .map-controls button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -1976,19 +1976,19 @@ input:focus-visible,
   top: 0;
   right: 0;
   left: 0;
-  height: 220px;
-  padding: 0 16px;
+  height: 198px;
+  padding: 0 18px;
   border-radius: 0 0 22px 22px;
   background: linear-gradient(145deg, #2fd9a8, #28b996);
   color: #fff;
   box-shadow: 0 8px 16px rgba(24, 45, 36, .1);
 }
-.live-map-header-content { position: absolute; right: 16px; bottom: 12px; left: 16px; display: grid; gap: 10px; }
+.live-map-header-content { position: absolute; top: 45px; right: 18px; left: 18px; display: grid; gap: 15px; }
 .live-map-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
 }
 .live-map-pin {
   display: grid;
@@ -2003,16 +2003,17 @@ input:focus-visible,
 .live-map-location {
   display: grid;
   flex: 1;
-  gap: 4px;
+  gap: 6px;
   color: rgba(255,255,255,.9);
   font-size: 10px;
 }
 .live-map-location > span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   color: #e7fff7;
-  font-size: 10px;
+  font-size: 11px;
+  letter-spacing: .02em;
 }
 .live-map-location > span svg {
   width: 16px;
@@ -2027,9 +2028,9 @@ input:focus-visible,
 .live-map-location strong {
   display: block;
   color: #fff;
-  font-size: 15px;
+  font-size: 18px;
   letter-spacing: -.03em;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 .notification-button.compact {
   position: relative;
@@ -2072,7 +2073,7 @@ input:focus-visible,
   display: flex;
   align-items: center;
   gap: 9px;
-  height: 40px;
+  height: 44px;
   margin: 0;
   padding: 0 9px 0 10px;
   border: 0;
@@ -2100,73 +2101,12 @@ input:focus-visible,
   outline: none;
 }
 .live-map-search input::placeholder { color: #69756f; }
-.live-map-search button {
-  display: grid;
-  width: 26px;
-  height: 26px;
-  flex: 0 0 26px;
-  place-items: center;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: #147d61;
-  cursor: pointer;
-}
-.live-map-search button svg {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.live-map-filters {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 5px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.live-map-filters::-webkit-scrollbar { display: none; }
-.live-map-filters button {
-  display: flex;
-  flex: 0 0 auto;
-  min-height: 30px;
-  align-items: center;
-  gap: 4px;
-  padding: 0 10px;
-  border: 1px solid rgba(255,255,255,.22);
-  border-radius: 999px;
-  background: rgba(255,255,255,.2);
-  color: #fff;
-  cursor: pointer;
-  font-size: 9px;
-  font-weight: 650;
-  white-space: nowrap;
-}
-.live-map-filters button svg {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.live-map-filters button.is-active {
-  border-color: #fff;
-  background: #fff;
-  color: #15785f;
-}
 .map-live-card {
   display: none;
   position: absolute;
   z-index: 4;
   right: 9px;
-  top: 224px;
+  top: 210px;
   left: 9px;
   gap: 4px;
   padding: 12px;
@@ -2193,14 +2133,14 @@ input:focus-visible,
 }
 .map-seat-button:hover { background: #d2f5e6; }
 .map-attribution { position: absolute; z-index: 2; bottom: 7px; left: 10px; margin: 0; color: #3f4d46; font-size: 10px; pointer-events: none; text-shadow: 0 1px 2px rgba(255,255,255,.9); }
-.live-map-legend { position: absolute; z-index: 3; top: 230px; right: 56px; display: grid; gap: 5px; min-width: 104px; padding: 9px 10px; border: 1px solid #e4e9e7; border-radius: 10px; background: rgba(255,255,255,.96); box-shadow: 0 2px 8px rgba(24,45,36,.1); color: #56635e; font-size: 8px; }
+.live-map-legend { position: absolute; z-index: 3; top: 210px; right: 56px; display: grid; gap: 5px; min-width: 104px; padding: 9px 10px; border: 1px solid #e4e9e7; border-radius: 10px; background: rgba(255,255,255,.96); box-shadow: 0 2px 8px rgba(24,45,36,.1); color: #56635e; font-size: 8px; }
 .live-map-legend strong { margin-bottom: 1px; color: #718078; font-size: 8px; font-weight: 700; text-transform: uppercase; }
 .live-map-legend span { display: flex; align-items: center; gap: 6px; }
 .live-map-legend span.is-current { margin: -2px -4px; padding: 2px 4px; border-radius: 5px; background: #f1f7f4; color: #253b31; font-weight: 700; }
 .live-map-legend i { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: #14a979; }
 .live-map-legend i.is-moderate { background: #ed9b22; }
 .live-map-legend i.is-congested { background: #e14e55; }
-.live-map-filter-summary { margin: 0; color: rgba(255,255,255,.84); font-size: 8px; line-height: 1.2; }
+.live-map-summary { margin: 0 2px; color: rgba(255,255,255,.9); font-size: 10px; line-height: 1.3; }
 .bus-route-overview { margin: 0 0 9px; border: 1px solid #e2ebe6; border-radius: 9px; background: #f7faf8; }
 .bus-route-overview summary { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; cursor: pointer; list-style: none; }
 .bus-route-overview summary::-webkit-details-marker { display: none; }
@@ -3049,6 +2989,35 @@ input:focus-visible,
 .profile-support-banner > span { font-size: 10px; }
 .profile-support-banner small { color: #d2d6d4; font-size: 9px; }
 .profile-support-banner i { position: absolute; top: 50%; right: 10px; display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: #2fd9a8; color: #124b3b; font-size: 14px; font-style: normal; font-weight: 700; transform: translateY(-50%); }
+.payment-settings-page { display: grid; align-content: start; gap: 14px; min-height: 720px; padding: 18px 14px 28px; background: #f1f2f3; }
+.payment-page-note { margin: 0 2px 2px; color: #65716b; font-size: 11px; line-height: 1.45; }
+.payment-settings-group { overflow: hidden; border: 1px solid #e8eaeb; border-radius: 11px; background: #fff; }
+.payment-settings-group h2 { min-height: 48px; margin: 0; padding: 14px 14px 11px; border-bottom: 1px solid #eceeef; color: #30373b; font-size: 14px; font-weight: 650; }
+.payment-method-row { display: grid; min-height: 62px; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 13px; border-bottom: 1px solid #eff0f1; }
+.payment-method-row:last-child { border-bottom: 0; }
+.payment-method-icon { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border-radius: 8px; background: #f1f5f3; color: #168263; font-size: 15px; font-weight: 750; }
+.payment-method-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.payment-method-icon.is-bank { background: #eef4ff; color: #3478c8; }
+.payment-method-icon.is-card { background: #f2f3f5; color: #56636d; }
+.payment-method-icon.is-gcash { background: #eef6ff; color: #1680d6; }
+.payment-method-icon.is-maya { background: #edfaf3; color: #159466; }
+.payment-method-icon.is-pouch { background: #fff2ed; color: #ca644d; }
+.payment-method-icon.is-auto { background: #fff2ed; color: #cf694f; }
+.payment-method-copy { display: grid; min-width: 0; gap: 4px; }
+.payment-method-copy strong { overflow: hidden; color: #30373b; font-size: 13px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.payment-method-copy small { color: #76817b; font-size: 10px; line-height: 1.35; }
+.payment-method-badge { width: fit-content; padding: 4px 7px; border-radius: 5px; background: #f0f2f2; color: #59635e; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+.payment-method-action { min-height: 34px; padding: 0 9px; border: 1px solid #cde8dc; border-radius: 7px; background: #f1faf6; color: #157654; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; }
+.payment-method-action.is-secondary { border-color: #e2a295; background: #fff; color: #b46050; }
+.payment-method-add { display: flex; width: 100%; min-height: 56px; align-items: center; gap: 10px; padding: 9px 13px; border: 0; background: #fff; color: #48554e; cursor: pointer; font: inherit; font-size: 13px; text-align: left; }
+.payment-method-add:hover { background: #f8faf9; }
+.payment-method-add > span:first-child:not(.payment-method-icon, .payment-method-copy, .payment-method-chevron, .payment-bank-wordmark) { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border: 1px dashed #cbd2ce; color: #748078; font-size: 18px; }
+.payment-method-add .payment-method-copy { flex: 1; }
+.payment-method-add .payment-method-icon { margin-right: 0; }
+.payment-method-chevron { margin-left: auto; color: #56615b; font-size: 24px; line-height: 1; }
+.payment-bank-wordmark { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border-radius: 50%; background: #f7f4df; color: #8d7829; font-size: 10px; font-weight: 800; }
+.payment-method-balance { color: #30373b; font-size: 12px; font-variant-numeric: tabular-nums; }
+.payment-settings-message { min-height: 16px; margin: 0 2px; color: #536159; font-size: 11px; line-height: 1.4; }
 .account-identity { display: flex; min-height: 100px; align-items: center; gap: 17px; padding: 0 0 6px; }
 .account-avatar { display: grid; width: 68px; height: 68px; flex: 0 0 68px; place-items: center; border-radius: 50%; background: #eff1f4; color: #858d9b; }
 .account-avatar svg { width: 44px; height: 44px; fill: currentColor; stroke: currentColor; stroke-width: 1.4; }

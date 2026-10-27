@@ -149,7 +149,6 @@
   let liveMapZoom = 1;
   let liveMapDrag = null;
   let liveMapAnimationFrame = 0;
-  let liveMapFilter = "all";
   let liveMapQuery = "";
   let zoom = 1;
   let panX = 0;
@@ -4469,7 +4468,7 @@
   };
 
   const secondaryTabScreen = (state) => {
-    const titles = { "live-map": "Live Map", tickets: "My Tickets", profile: "Account Information", faq: "Customer Support", notifications: "Notifications" };
+    const titles = { "live-map": "Live Map", tickets: "My Tickets", profile: "Account Information", "payment-options": "Payment Options", faq: "Customer Support", notifications: "Notifications" };
     const notificationIcon = (type) => {
       const paths = {
         ride: '<path d="M5 16V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9M5 12h14M8 19h.01M16 19h.01M7 16h10l2 3H5l2-3Z"/>',
@@ -4540,7 +4539,6 @@
             <div class="trip-history-fare"><strong>${trip.status === "cancelled" ? "Cancelled" : `₱${Number(trip.fare).toFixed(2)}`}</strong><span>Seat ${escapeHtml(trip.seat)}</span><small>${fareDetail}</small></div>
           </div>
           ${upcoming ? `<p class="trip-history-reference">Booking reference <strong>${escapeHtml(trip.receiptId || trip.id)}</strong> · ${trip.passengers || 1} ${trip.passengers === 1 ? "passenger" : "passengers"}</p>` : ""}
-          ${trip.studentDiscount ? '<p class="trip-history-discount">Student Discount Applied</p>' : ""}
           <footer class="trip-history-actions">
             <button type="button" class="trip-receipt-link" data-view-trip="${escapeHtml(trip.id)}">View details</button>
             ${upcoming ? `<button type="button" class="trip-receipt-link" data-screen="live-map">View map</button><button type="button" class="trip-cancel-button" data-action="cancel-booking" data-trip-id="${escapeHtml(trip.id)}">Cancel booking</button>` : ""}
@@ -4608,15 +4606,8 @@
             <div class="live-map-search" role="search">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
               <input type="search" data-live-map-search placeholder="Search trips by bus code, route..." aria-label="Search trips by bus code or route">
-              <button type="button" data-live-filter-toggle aria-label="Toggle trip filters" aria-expanded="true" aria-controls="live-map-filters"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
             </div>
-            <div class="live-map-filters" id="live-map-filters" role="group" aria-label="Filter map activity">
-              <button type="button" class="is-active" data-live-map-filter="all" aria-pressed="true">All Trips</button>
-              <button type="button" data-live-map-filter="completed" aria-pressed="false">Completed (11)</button>
-              <button type="button" data-live-map-filter="cancelled" aria-pressed="false">Cancelled (1)</button>
-              <button type="button" data-live-map-filter="month" aria-pressed="false">This Month</button>
-            </div>
-            <p class="live-map-filter-summary" data-live-map-filter-summary role="status" aria-live="polite">12 trips · 2 buses on this corridor</p>
+            <p class="live-map-summary" data-live-map-summary role="status" aria-live="polite">2 buses on this corridor</p>
           </div>
         </header>
         ${mapMarkup(false, true)}
@@ -4630,6 +4621,57 @@
         ? liveMapScreen()
         : state === "tickets"
           ? tripHistoryScreen()
+          : state === "payment-options"
+            ? `<div class="payment-settings-page">
+              <p class="payment-page-note">Manage the payment methods available in this demo. Linking and account management are not connected to a live service.</p>
+              <section class="payment-settings-group" aria-labelledby="payment-savings-heading">
+                <h2 id="payment-savings-heading">MariBank Savings</h2>
+                <div class="payment-method-row">
+                  <span class="payment-method-icon is-bank" aria-hidden="true">M</span>
+                  <span class="payment-method-copy"><strong>MariBank Savings</strong><small>Sample linked account ·•••• 4022</small></span>
+                  <button class="payment-method-action is-secondary" type="button" data-info="Unlinking accounts is not connected in this prototype.">Unlink</button>
+                </div>
+              </section>
+              <section class="payment-settings-group" aria-labelledby="payment-cards-heading">
+                <h2 id="payment-cards-heading">Credit / Debit Card</h2>
+                <div class="payment-method-row">
+                  <span class="payment-method-icon is-card" aria-hidden="true">${paymentIcon("card")}</span>
+                  <span class="payment-method-copy"><strong>Mastercard •••• 4567</strong><small>Sample card · Default</small></span>
+                  <span class="payment-method-badge">Default</span>
+                </div>
+                <div class="payment-method-row">
+                  <span class="payment-method-icon is-card" aria-hidden="true">${paymentIcon("card")}</span>
+                  <span class="payment-method-copy"><strong>Visa •••• 1882</strong><small>Sample card</small></span>
+                </div>
+                <button class="payment-method-add" type="button" data-info="Adding a card is not connected in this prototype."><span aria-hidden="true">＋</span>Add New Card</button>
+              </section>
+              <section class="payment-settings-group" aria-labelledby="payment-bank-heading">
+                <h2 id="payment-bank-heading">Bank Account</h2>
+                <button class="payment-method-add" type="button" data-info="Adding a bank account is not connected in this prototype."><span class="payment-method-icon is-bank" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h18M5 9v9m4-9v9m6-9v9m4-9v9M3 20h18M12 3 2 8h20L12 3Z"/></svg></span>Add Bank Account</button>
+              </section>
+              <section class="payment-settings-group" aria-labelledby="payment-linked-heading">
+                <h2 id="payment-linked-heading">Linked Bank Accounts</h2>
+                <button class="payment-method-add" type="button" data-info="Linking bank accounts is not connected in this prototype."><span class="payment-bank-wordmark" aria-hidden="true">BPI</span>Link BPI Account</button>
+              </section>
+              <section class="payment-settings-group" aria-labelledby="payment-wallet-heading">
+                <h2 id="payment-wallet-heading">Digital Wallets</h2>
+                <div class="payment-method-row">
+                  <span class="payment-method-icon is-gcash" aria-hidden="true">${paymentIcon("gcash")}</span>
+                  <span class="payment-method-copy"><strong>GCash</strong><small>Sample wallet ·•••• 5678</small></span>
+                  <button class="payment-method-action is-secondary" type="button" data-info="Managing linked wallets is not connected in this prototype.">Unlink</button>
+                </div>
+                <div class="payment-method-row">
+                  <span class="payment-method-icon is-maya" aria-hidden="true">${paymentIcon("maya")}</span>
+                  <span class="payment-method-copy"><strong>Maya</strong><small>Not linked</small></span>
+                  <button class="payment-method-action" type="button" data-info="Linking Maya is not connected in this prototype.">＋ Link</button>
+                </div>
+              </section>
+              <section class="payment-settings-group" aria-labelledby="payment-auto-heading">
+                <h2 id="payment-auto-heading">Auto Payment Service</h2>
+                <button class="payment-method-add" type="button" data-info="Auto Payment Service is not connected in this prototype."><span class="payment-method-icon is-auto" aria-hidden="true">S</span><span class="payment-method-copy"><strong>Auto Payment Service</strong><small>Manage automatic payments</small></span><span class="payment-method-chevron" aria-hidden="true">›</span></button>
+              </section>
+              <p class="payment-settings-message" data-message role="status" aria-live="polite"></p>
+            </div>`
           : state === "profile"
             ? `<div class="account-page account-profile-page">
               <section class="profile-user-card" aria-label="Account profile">
@@ -4686,16 +4728,9 @@
                   ${profileField("address", "Address")}
                 </div>
               </details>
-              <details class="profile-menu-card profile-extra-card">
-                <summary>Payment Options <span aria-hidden="true">›</span></summary>
-                <div class="profile-extra-content account-payment-list">
-                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("pouch")}</span><strong>U-Pouch</strong><small>₱2.00</small><button class="toggle-switch is-on account-payment-toggle" type="button" data-setting-toggle role="switch" aria-checked="true" aria-label="Enable U-Pouch"></button></div>
-                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("wallet")}</span><strong>E-Wallet</strong><small>Unlinked</small><button class="account-payment-link" type="button" data-info="E-Wallet linking is not connected in this prototype." aria-label="Link E-Wallet">${paymentIcon("link")}</button></div>
-                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("card")}</span><strong>Card</strong><small>Unlinked</small><button class="account-payment-link" type="button" data-info="Card linking is not connected in this prototype." aria-label="Link card">${paymentIcon("link")}</button></div>
-                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("gcash")}</span><strong>GCash</strong><small>Unlinked</small><button class="account-payment-link" type="button" data-info="GCash linking is not connected in this prototype." aria-label="Link GCash">${paymentIcon("link")}</button></div>
-                  <div class="account-payment-row"><span class="account-payment-icon">${paymentIcon("maya")}</span><strong>Maya</strong><small>Unlinked</small><button class="account-payment-link" type="button" data-info="Maya linking is not connected in this prototype." aria-label="Link Maya">${paymentIcon("link")}</button></div>
-                </div>
-              </details>
+              <section class="profile-menu-card" aria-label="Payment settings">
+                <button class="profile-menu-row" type="button" data-screen="payment-options">Payment Options <span aria-hidden="true">›</span></button>
+              </section>
               <p class="account-message profile-message" data-message role="status" aria-live="polite"></p>
               <section class="profile-menu-card" aria-label="Account actions">
                 <button class="profile-menu-row account-signout" type="button" data-mobile-action="logout">
@@ -4733,14 +4768,14 @@
               <p class="faq-message" data-message role="status" aria-live="polite"></p>
               <section class="faq-endcap"><img src="assets/3d-images/robot-mascot.png" alt="Smiling USAD support assistant"><h3>You've caught up to the end</h3><p>FAQs update automatically as new questions arise.<br>For now, relax and let us handle the heavy lifting.</p></section>
             </div>`;
-    const isSettingsFrame = state === "profile" || state === "faq" || state === "notifications" || state === "tickets";
+    const isSettingsFrame = state === "profile" || state === "payment-options" || state === "faq" || state === "notifications" || state === "tickets";
     const hasBrandedHeader = isSettingsFrame || state === "tickets";
     const header = state === "live-map" || state === "tickets"
       ? ""
       : state === "profile"
         ? `<header class="settings-header profile-settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="profile-settings-title"><h1>Account Profile</h1></div></header>`
         : hasBrandedHeader
-          ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" ? "profile" : "home"}" aria-label="${state === "faq" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
+          ? `<header class="settings-header"><div class="device-status-spacer" aria-hidden="true"></div><div class="settings-title"><button type="button" class="settings-back" data-screen="${state === "faq" || state === "payment-options" ? "profile" : "home"}" aria-label="${state === "faq" || state === "payment-options" ? "Back to Account Information" : "Back to home"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1>${titles[state]}</h1></div></header>`
           : `<header class="tab-header"><button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button><h1>${titles[state]}</h1></header>`;
     const busPopup = state === "live-map" ? `
         <div class="modal-scrim bus-popup-scrim" data-bus-popup hidden>
@@ -4871,35 +4906,22 @@
   const updateLiveMapView = () => {
     const map = screen.querySelector(".tab-map");
     if (!map) return;
-    map.dataset.liveFilter = liveMapFilter;
     let visibleBusCount = 0;
     const query = liveMapQuery.trim().toLocaleLowerCase();
-    const showLiveFleet = liveMapFilter === "all" || liveMapFilter === "month";
 
-    screen.querySelectorAll("[data-live-map-filter]").forEach((button) => {
-      const selected = button.dataset.liveMapFilter === liveMapFilter;
-      button.classList.toggle("is-active", selected);
-      button.setAttribute("aria-pressed", String(selected));
-    });
     screen.querySelectorAll("[data-sim-bus]").forEach((marker) => {
       const bus = liveBusDetails[Number(marker.dataset.simBus)];
       const matchesQuery = !query || [bus.name, bus.fleetId, bus.route].some((value) => value.toLocaleLowerCase().includes(query));
-      marker.hidden = !showLiveFleet || !matchesQuery;
+      marker.hidden = !matchesQuery;
       if (!marker.hidden) visibleBusCount += 1;
     });
-    const summary = screen.querySelector("[data-live-map-filter-summary]");
+    const summary = screen.querySelector("[data-live-map-summary]");
     if (!summary) return;
-    const filterSummaries = {
-      all: "12 trips · 2 buses on this corridor",
-      completed: "11 completed trips · October 2026",
-      cancelled: "1 cancelled trip · no active bus shown",
-      month: "October 2026 · 12 trips · 18.4 kg CO₂ saved",
-    };
-    summary.textContent = showLiveFleet && query
+    summary.textContent = query
       ? visibleBusCount
         ? `${visibleBusCount} matching ${visibleBusCount === 1 ? "bus" : "buses"} on this corridor`
         : "No matching buses. Try another bus code or route."
-      : filterSummaries[liveMapFilter];
+      : "2 buses on this corridor";
   };
 
   const stopLiveMapSimulation = () => {
@@ -5021,12 +5043,11 @@
       screen.innerHTML = liveSeatOverviewScreen();
     } else if (state === "live-seat-detail") {
       screen.innerHTML = liveSeatDetailScreen();
-    } else if (state === "live-map" || state === "tickets" || state === "profile" || state === "faq" || state === "notifications") {
+    } else if (state === "live-map" || state === "tickets" || state === "profile" || state === "payment-options" || state === "faq" || state === "notifications") {
       screen.innerHTML = secondaryTabScreen(state);
       if (state === "live-map") {
         liveMapPan = { x: 0, y: 0 };
         liveMapZoom = 1;
-        liveMapFilter = "all";
         liveMapQuery = "";
         applyLiveMapTransform();
         updateLiveMapView();
@@ -5044,7 +5065,7 @@
     } else {
       throw new Error(`Unknown USAD prototype screen: ${state}`);
     }
-    if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "verify-account", "live-map", "live-seat-overview", "live-seat-detail", "tickets", "profile", "faq", "notifications"].includes(state)) {
+    if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "verify-account", "live-map", "live-seat-overview", "live-seat-detail", "tickets", "profile", "payment-options", "faq", "notifications"].includes(state)) {
       screen.firstElementChild?.classList.add("screen-enter");
     }
     enforceMinimumFontSize();
@@ -7017,22 +7038,6 @@
     const popup = event.target.closest("[data-bus-popup]");
     if (popup && event.target === popup) {
       closeBottomSheet(popup, () => screen.querySelector(`[data-sim-bus="${selectedLiveBus}"]`)?.focus());
-      return;
-    }
-
-    const liveMapFilterButton = event.target.closest("[data-live-map-filter]");
-    if (liveMapFilterButton) {
-      liveMapFilter = liveMapFilterButton.dataset.liveMapFilter;
-      updateLiveMapView();
-      return;
-    }
-
-    const liveMapFilterToggle = event.target.closest("[data-live-filter-toggle]");
-    if (liveMapFilterToggle) {
-      const filters = screen.querySelector("#live-map-filters");
-      if (!filters) return;
-      filters.hidden = !filters.hidden;
-      liveMapFilterToggle.setAttribute("aria-expanded", String(!filters.hidden));
       return;
     }
 
