@@ -125,9 +125,26 @@
   let topUpReturnFocus = null;
   let passwordUpdatedReturnFocus = null;
   const liveBusDetails = [
-    { name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
-    { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
+    { id: "bus-01", name: "Bus 01", fleetId: "MLS-042", route: activeRoute.label, eta: "3 min", seats: 8, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
+    { id: "bus-02", name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
   ];
+  const getBusForTrip = (trip) => {
+    if (!trip?.busId) return null;
+    const bus = liveBusDetails.find(({ id }) => id === trip.busId);
+    if (!bus) throw new Error(`Unknown assigned bus "${trip.busId}" on ticket ${trip.id}.`);
+    return bus;
+  };
+  const getActiveTrackingTrip = () => {
+    const selectedTrip = tripHistory.find(({ id }) => id === selectedHistoryTripId);
+    if (selectedTrip?.status === "upcoming") return selectedTrip;
+    return tripHistory
+      .filter((trip) => trip.status === "upcoming")
+      .sort((first, second) => {
+        const firstDeparture = new Date(`${first.travelDate || "9999-12-31"}T${first.departureTime || "23:59"}`).getTime();
+        const secondDeparture = new Date(`${second.travelDate || "9999-12-31"}T${second.departureTime || "23:59"}`).getTime();
+        return firstDeparture - secondDeparture;
+      })[0] ?? null;
+  };
   let selectedLiveBus = 0;
   let selectedBusSeatId = "";
   let quickBookReturnFocus = null;
@@ -135,7 +152,6 @@
   let liveMapZoom = 1;
   let liveMapDrag = null;
   let liveMapAnimationFrame = 0;
-  let liveMapQuery = "";
   let zoom = 1;
   let panX = 0;
   let panY = 0;
@@ -4094,11 +4110,18 @@
       </button>
     </nav>`;
 
-  const mapMarkup = (compact = false, live = false) => {
+  const mapMarkup = (compact = false, live = false, trackedBus = null) => {
     const roads = live
       ? '<path class="road-local" d="M-20 45 94 72 148 59 215 86 380 65M-20 128 75 153 153 135 224 167 380 143M-20 214 92 194 160 224 247 208 380 242M-20 302 81 277 165 306 238 284 380 318M-20 392 88 360 161 395 255 372 380 414M-20 486 92 454 167 486 247 463 380 502M-20 574 84 548 164 577 255 553 380 596M42-20 62 102 42 206 76 303 50 404 87 505 68 660M118-20 133 78 110 174 145 272 124 373 153 468 137 570 160 660M235-20 218 93 251 186 224 285 261 383 232 475 272 572 251 660M326-20 302 92 335 188 310 282 348 374 318 469 350 566 330 660"/><path class="road-secondary" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650M-15 100 130 122 354 95M30 255 163 329 345 355M-12 455 210 386 365 422M66 0 91 180 44 313M290 35 252 202 290 300 269 620"/><path class="road-main" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650"/><path class="route-line route-line-normal" d="M217 515 200 469 210 386"/><path class="route-line route-line-moderate" d="M210 386 163 329 191 253"/><path class="route-line route-line-congested" d="M191 253 186 245"/><path class="bus-travel-path" d="M217 515 200 469 210 386 163 329 191 253 186 245"/><circle class="map-junction" cx="163" cy="329" r="8"/><circle class="map-junction" cx="191" cy="253" r="7"/><circle class="map-junction" cx="210" cy="386" r="7"/>'
       : '<path class="road-main" d="M-12 136 68 95 118 108 164 65 217 78 286 20 374 35"/><path class="road-secondary" d="M-15 48 68 95 95 166M118 108 152 180M164 65 147 0M217 78 231 158M286 20 312 0M286 20 332 114"/><path class="route-line" d="M48 119 110 104 160 70 220 77 296 35"/>';
     const viewBox = live ? "0 0 360 640" : "0 0 360 180";
+    const trackedBusIndex = trackedBus ? liveBusDetails.findIndex(({ id }) => id === trackedBus.id) : -1;
+    if (trackedBus && trackedBusIndex < 0) throw new Error(`Unknown bus requested for passenger map: ${trackedBus.id}.`);
+    const busMarker = live
+      ? trackedBus
+        ? `<span class="map-marker map-marker-bus" data-sim-bus="${trackedBusIndex}" tabindex="0" role="img" aria-label="Assigned ${escapeHtml(trackedBus.name)} on ${escapeHtml(trackedBus.route)}. Sample ETA ${escapeHtml(trackedBus.eta)}." aria-describedby="tracked-bus-tooltip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="tracked-bus-tooltip" role="tooltip"><strong>${escapeHtml(trackedBus.name)}</strong><span>${escapeHtml(trackedBus.route)}</span><span>${escapeHtml(trackedBus.eta)} · ${trackedBus.seats} seats</span><small>${escapeHtml(trackedBus.status)} · Demo data</small></span></span>`
+        : ""
+      : '<span class="map-marker map-marker-bus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg></span>';
     return `
       <div class="map-art${compact ? " is-compact" : ""}${live ? " is-live" : ""}" role="${live ? "group" : "img"}" aria-label="Illustrative, not-to-scale route map from ${escapeHtml(activeRoute.origin)} to ${escapeHtml(activeRoute.destination)} via ${escapeHtml(activeRoute.via)}">
         <div class="map-scene">
@@ -4108,7 +4131,7 @@
           <svg class="map-roads" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${roads}</svg>
           <span class="map-label map-label-one">${live ? escapeHtml(activeRoute.origin) : "MALOLOS"}</span><span class="map-label map-label-two">${live ? escapeHtml(activeRoute.destinationShort) : "TRINOMA"}</span>
           <span class="map-marker map-marker-start" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-8.1 8-13a8 8 0 1 0-16 0c0 4.9 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
-          ${live ? `<span class="map-marker map-marker-bus" data-sim-bus="0" tabindex="0" role="img" aria-label="Simulated Bus 1 on ${escapeHtml(activeRoute.label)}. 3 minutes away, 8 seats available, on time." aria-describedby="bus-tooltip-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="bus-tooltip-1" role="tooltip"><strong>Bus 01</strong><span>${escapeHtml(activeRoute.name)}</span><span>3 min · 8 seats</span><small>On time · Demo data</small></span></span><span class="map-marker map-marker-bus map-marker-bus-alt" data-sim-bus="1" tabindex="0" role="img" aria-label="Simulated Bus 2 on ${escapeHtml(activeRoute.label)}. Less than 1 minute away, 1 seat available, on time." aria-describedby="bus-tooltip-2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg><span class="map-bus-tooltip" id="bus-tooltip-2" role="tooltip"><strong>Bus 02</strong><span>${escapeHtml(activeRoute.name)}</span><span>&lt;1 min · 1 seat</span><small>On time · Demo data</small></span></span>` : '<span class="map-marker map-marker-bus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg></span>'}
+          ${busMarker}
           <span class="map-marker map-marker-destination" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-8.1 8-13a8 8 0 1 0-16 0c0 4.9 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
           ${compact ? "" : '<span class="map-compass" aria-hidden="true">N</span>'}
         </div>
@@ -4362,21 +4385,24 @@
       <div class="results-map">${mapMarkup(true)}<span class="destination-label">${escapeHtml(tripData.destination)}</span></div>
       <div class="result-filter"><button class="filter-selected" type="button">Fastest</button><button type="button" data-info="Showing the fastest available seats.">More Seats</button></div>
       <section class="ride-list">
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>Bus 02 · 1 seat available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation" data-bus-id="bus-02">Book</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>Bus 01 · 8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation" data-bus-id="bus-01">Book</button></article>
         <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>0 seats · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
       </section>
       <p class="prototype-stamp">Sample ride options · Not live availability</p>
     </div>`;
 
-  const bookingConfirmationScreen = () => `
+  const bookingConfirmationScreen = () => {
+    const assignedBus = liveBusDetails.find(({ id }) => id === tripData.busId);
+    if (!assignedBus) throw new Error("USAD booking confirmation could not render because the selected ride has no assigned bus.");
+    return `
     <div class="ride-results with-confirmation">
       ${rideResultsScreen()}
       <div class="modal-scrim">
         <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
           <button class="modal-close" type="button" aria-label="Close confirmation" data-screen="find-rides">×</button>
           <h2 id="booking-dialog-title">Booking Confirmation</h2><p class="sheet-subtitle">Review your trip details</p>
-          <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>8 seats available</span></div></div>
+          <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(activeRoute.name)}</strong><small>${escapeHtml(assignedBus.name)} · via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>${assignedBus.seats} ${assignedBus.seats === 1 ? "seat" : "seats"} available</span></div></div>
           <div class="departure-fields">
             <label for="booking-departure-date">Travel date</label>
             <input id="booking-departure-date" type="date" min="${toDateInputValue(new Date())}" value="${escapeHtml(tripData.departureDate)}" required>
@@ -4390,6 +4416,7 @@
         </section>
       </div>
     </div>`;
+  };
 
   const bookingConfirmedScreen = () => {
     const trip = tripHistory.find(({ id }) => id === selectedHistoryTripId)
@@ -4403,7 +4430,9 @@
         passengers: tripData.passengers,
         payment: tripData.payment,
         status: "upcoming",
+        busId: tripData.busId || liveBusDetails[0].id,
       };
+    const assignedBus = getBusForTrip(trip);
     const isCurrentBooking = bookingConfirmed && trip.status === "upcoming";
     return `
     <div class="booking-confirmed">
@@ -4416,8 +4445,8 @@
         <p class="ticket-code-note">QR code cannot be scanned</p>
         <span class="ticket-caption">Ticket Reference</span><strong class="ticket-number">${escapeHtml(trip.receiptId || trip.id)}</strong>
         <div class="ticket-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)}</small></div></div>
-        <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Cancelled" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Travel date</span><strong>${trip.travelDate && trip.departureTime ? escapeHtml(formatDeparture(trip.travelDate, trip.departureTime)) : escapeHtml(trip.date || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Payment</span><strong>${escapeHtml(trip.payment)}</strong></div><div><span>${trip.status === "cancelled" ? "Original fare" : "Fare total"}</span><strong>₱${Number(trip.status === "cancelled" ? trip.originalFare : trip.fare).toFixed(2)}</strong></div></div>
-        ${trip.status === "upcoming" ? '<button type="button" class="track-ride" data-screen="live-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>View map</button>' : '<button type="button" class="track-ride" data-screen="tickets">Back to My Tickets <span>→</span></button>'}
+        <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Cancelled" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Assigned bus</span><strong>${escapeHtml(assignedBus?.name || "Not assigned")}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Travel date</span><strong>${trip.travelDate && trip.departureTime ? escapeHtml(formatDeparture(trip.travelDate, trip.departureTime)) : escapeHtml(trip.date || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Payment</span><strong>${escapeHtml(trip.payment)}</strong></div><div><span>${trip.status === "cancelled" ? "Original fare" : "Fare total"}</span><strong>₱${Number(trip.status === "cancelled" ? trip.originalFare : trip.fare).toFixed(2)}</strong></div></div>
+        ${trip.status === "upcoming" ? `<button type="button" class="track-ride" data-track-trip="${escapeHtml(trip.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>View ${assignedBus ? `${escapeHtml(assignedBus.name)} map` : "ticket map"}</button>` : '<button type="button" class="track-ride" data-screen="tickets">Back to My Tickets <span>→</span></button>'}
       </section>
       ${isCurrentBooking ? '<button type="button" class="cancel-booking" data-action="cancel-booking">Cancel booking</button>' : ""}
     </div>`;
@@ -4617,6 +4646,7 @@
       const pastTrips = tripHistory.filter((trip) => trip.status !== "upcoming");
       const ticketCard = (trip) => {
         const upcoming = trip.status === "upcoming";
+        const assignedBus = getBusForTrip(trip);
         const tripRating = tripRatings.get(trip.id)?.stars ?? 0;
         const statusLabel = trip.status === "cancelled" ? "Cancelled" : upcoming ? "Booked" : "Completed";
         const dateLabel = trip.travelDate && trip.departureTime
@@ -4634,10 +4664,10 @@
             </div>
             <div class="trip-history-fare"><strong>${trip.status === "cancelled" ? "Cancelled" : `₱${Number(trip.fare).toFixed(2)}`}</strong><span>Seat ${escapeHtml(trip.seat)}</span><small>${fareDetail}</small></div>
           </div>
-          ${upcoming ? `<p class="trip-history-reference">Booking reference <strong>${escapeHtml(trip.receiptId || trip.id)}</strong> · ${trip.passengers || 1} ${trip.passengers === 1 ? "passenger" : "passengers"}</p>` : ""}
+          ${upcoming ? `<p class="trip-history-reference">Booking reference <strong>${escapeHtml(trip.receiptId || trip.id)}</strong> · ${trip.passengers || 1} ${trip.passengers === 1 ? "passenger" : "passengers"} · ${escapeHtml(assignedBus?.name || "Bus not assigned")}</p>` : ""}
           <footer class="trip-history-actions">
             <button type="button" class="trip-receipt-link" data-view-trip="${escapeHtml(trip.id)}">View details</button>
-            ${upcoming ? `<button type="button" class="trip-receipt-link" data-screen="live-map">View map</button><button type="button" class="trip-cancel-button" data-action="cancel-booking" data-trip-id="${escapeHtml(trip.id)}">Cancel booking</button>` : ""}
+            ${upcoming ? `<button type="button" class="trip-receipt-link" data-track-trip="${escapeHtml(trip.id)}">View map</button><button type="button" class="trip-cancel-button" data-action="cancel-booking" data-trip-id="${escapeHtml(trip.id)}">Cancel booking</button>` : ""}
             ${trip.status === "completed" ? `<button type="button" class="trip-rate-button" data-trip-rating-toggle="${escapeHtml(trip.id)}">${tripRatings.has(trip.id) ? "Edit rating" : "Rate Trip"}</button>` : ""}
             ${trip.status === "completed" ? `<button type="button" class="trip-rebook-button" data-action="rebook-trip" data-trip-id="${escapeHtml(trip.id)}">Rebook</button>` : ""}
           </footer>
@@ -4691,26 +4721,31 @@
         </div>
       </div>`;
     };
-    const liveMapScreen = () => `
-      <div class="tab-map" tabindex="0" aria-label="Illustrative live operations map. Drag to pan, use plus and minus to zoom, or use arrow keys.">
+    const liveMapScreen = () => {
+      const trackingTrip = getActiveTrackingTrip();
+      const trackedBus = trackingTrip ? getBusForTrip(trackingTrip) : null;
+      const mapSummary = !trackingTrip
+        ? "No upcoming ticket to track. Your map will show its assigned bus after booking."
+        : trackedBus
+          ? `${trackedBus.name} is assigned to ticket ${trackingTrip.receiptId || trackingTrip.id}. Sample position · not live GPS.`
+          : `No bus is assigned to ticket ${trackingTrip.receiptId || trackingTrip.id} yet.`;
+      return `
+      <div class="tab-map" tabindex="0" aria-label="Illustrative passenger map showing only the bus assigned to your selected upcoming ticket. Drag to pan, use plus and minus to zoom, or use arrow keys.">
         <header class="live-map-header">
           <div class="live-map-header-content">
             <div class="live-map-topbar">
-              <div class="live-map-location"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Sample Map</span><strong>Bus Map</strong></div>
+              <div class="live-map-location"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your booked trip</span><strong>${trackedBus ? escapeHtml(trackedBus.name) : "Bus tracking"}</strong></div>
               <button class="notification-button compact" type="button" data-screen="notifications" aria-label="Notifications, ${unreadNotificationCount()} unread"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
             </div>
-            <div class="live-map-search" role="search">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
-              <input type="search" data-live-map-search placeholder="Search trips by bus code, route..." aria-label="Search trips by bus code or route">
-            </div>
-            <p class="live-map-summary" data-live-map-summary role="status" aria-live="polite">2 buses on this corridor</p>
+            <p class="live-map-summary" data-live-map-summary role="status" aria-live="polite">${escapeHtml(mapSummary)}</p>
           </div>
         </header>
-        ${mapMarkup(false, true)}
+        ${mapMarkup(false, true, trackedBus)}
         <aside class="live-map-legend" aria-label="Traffic flow legend"><strong>Traffic Flow</strong><span class="is-current" data-traffic-level="normal"><i class="is-normal"></i>Normal Flow</span><span data-traffic-level="moderate"><i class="is-moderate"></i>Moderate</span><span data-traffic-level="congested"><i class="is-congested"></i>Congested</span></aside>
         <div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div>
         <p class="map-attribution">Illustrative map · Not to scale</p>
       </div>`;
+    };
     const content = state === "notifications"
       ? notificationContent
       : state === "live-map"
@@ -4999,27 +5034,6 @@
     if (zoomOutput) zoomOutput.textContent = `${Math.round(liveMapZoom * 100)}%`;
   };
 
-  const updateLiveMapView = () => {
-    const map = screen.querySelector(".tab-map");
-    if (!map) return;
-    let visibleBusCount = 0;
-    const query = liveMapQuery.trim().toLocaleLowerCase();
-
-    screen.querySelectorAll("[data-sim-bus]").forEach((marker) => {
-      const bus = liveBusDetails[Number(marker.dataset.simBus)];
-      const matchesQuery = !query || [bus.name, bus.fleetId, bus.route].some((value) => value.toLocaleLowerCase().includes(query));
-      marker.hidden = !matchesQuery;
-      if (!marker.hidden) visibleBusCount += 1;
-    });
-    const summary = screen.querySelector("[data-live-map-summary]");
-    if (!summary) return;
-    summary.textContent = query
-      ? visibleBusCount
-        ? `${visibleBusCount} matching ${visibleBusCount === 1 ? "bus" : "buses"} on this corridor`
-        : "No matching buses. Try another bus code or route."
-      : "2 buses on this corridor";
-  };
-
   const stopLiveMapSimulation = () => {
     if (liveMapAnimationFrame) cancelAnimationFrame(liveMapAnimationFrame);
     liveMapAnimationFrame = 0;
@@ -5144,9 +5158,7 @@
       if (state === "live-map") {
         liveMapPan = { x: 0, y: 0 };
         liveMapZoom = 1;
-        liveMapQuery = "";
         applyLiveMapTransform();
-        updateLiveMapView();
         startLiveMapSimulation();
       } else if (state === "faq") {
         activeFaqCategory = "all";
@@ -6043,11 +6055,6 @@
     if (event.target.matches("[data-trip-history-search]")) {
       tripHistoryQuery = event.target.value;
       updateTripHistoryView();
-    }
-
-    if (event.target.matches("[data-live-map-search]")) {
-      liveMapQuery = event.target.value;
-      updateLiveMapView();
     }
 
     if (event.target.matches("[data-admin-fleet-search]")) {
@@ -7493,6 +7500,17 @@
     }
 
     const navigationButton = event.target.closest("[data-screen]");
+    const trackTripButton = event.target.closest("[data-track-trip]");
+    if (trackTripButton) {
+      const trip = tripHistory.find(({ id }) => id === trackTripButton.dataset.trackTrip);
+      if (!trip || trip.status !== "upcoming") {
+        throw new Error(`Cannot open map tracking for ticket ${trackTripButton.dataset.trackTrip || "(missing reference)"} because it is not an upcoming trip.`);
+      }
+      selectedHistoryTripId = trip.id;
+      renderScreen("live-map");
+      return;
+    }
+
     if (navigationButton) {
       renderScreen(navigationButton.dataset.screen);
       return;
@@ -7519,6 +7537,11 @@
         openQuickBookOverlay();
       } else if (action === "open-confirmation") {
         const seatBookingPanel = screen.querySelector(".seat-book-card");
+        const assignedBusId = actionButton.dataset.busId || liveBusDetails[selectedLiveBus]?.id;
+        if (!assignedBusId || !liveBusDetails.some(({ id }) => id === assignedBusId)) {
+          throw new Error("USAD booking could not continue because the selected ride has no valid bus assignment.");
+        }
+        tripData = { ...tripData, busId: assignedBusId };
         if (seatBookingPanel) {
           const payment = seatBookingPanel.querySelector('input[name="payment"]:checked')?.value ?? tripData.payment;
           const passengers = Number.parseInt(seatBookingPanel.querySelector("#seat-passengers")?.textContent ?? "1", 10);
@@ -7552,6 +7575,10 @@
         departureDateInput.removeAttribute("aria-invalid");
         departureTimeInput.removeAttribute("aria-invalid");
         tripData = {
+        const assignedBus = liveBusDetails.find(({ id }) => id === tripData.busId);
+        if (!assignedBus) {
+          throw new Error("USAD booking could not be confirmed because a bus has not been assigned to the ride.");
+        }
           ...tripData,
           departureDate: departureDateInput.value,
           departureTime: departureTimeInput.value,
@@ -7565,6 +7592,7 @@
           departureTime: tripData.departureTime,
           status: "upcoming",
           origin: tripData.origin,
+          busId: assignedBus.id,
           originDetail: tripData.origin === activeRoute.origin ? activeRoute.originShort : "Trip origin",
           destination: tripData.destination,
           destinationDetail: `Via ${activeRoute.via}`,
