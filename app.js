@@ -3267,7 +3267,15 @@
             </button>
             <button class="admin-nav-item${activeAdminSidebarTab === "fleet-dispatch" ? " is-active" : ""}" type="button" data-admin-nav="fleet-dispatch" aria-current="${activeAdminSidebarTab === "fleet-dispatch" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>Fleet</span>
+              <span>Fleet &amp; Assets</span>
+            </button>
+            <button class="admin-nav-item${activeAdminSidebarTab === "queue-merging" ? " is-active" : ""}" type="button" data-admin-nav="queue-merging" aria-current="${activeAdminSidebarTab === "queue-merging" ? "page" : "false"}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>Gate Queue Merging</span>
+            </button>
+            <button class="admin-nav-item${activeAdminSidebarTab === "driver-terminal" ? " is-active" : ""}" type="button" data-admin-nav="driver-terminal" aria-current="${activeAdminSidebarTab === "driver-terminal" ? "page" : "false"}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <span>Driver Terminal</span>
             </button>
             <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources" aria-current="${activeAdminSidebarTab === "staff-resources" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -3303,13 +3311,17 @@
         ${activeAdminSidebarTab === "predictive-analytics"
       ? adminPredictiveAnalyticsView()
       : activeAdminSidebarTab === "fleet-dispatch"
-        ? adminFleetDispatchView()
+        ? (window.USAD_FLEET ? window.USAD_FLEET.renderFleetDispatchDashboard({ originalContent: adminFleetDispatchView() }) : adminFleetDispatchView())
+        : activeAdminSidebarTab === "queue-merging"
+          ? (window.USAD_QUEUE ? window.USAD_QUEUE.renderQueueMergingInterface() : "")
+          : activeAdminSidebarTab === "driver-terminal"
+            ? (window.USAD_DRIVER ? window.USAD_DRIVER.renderDriverTerminalView() : "")
         : activeAdminSidebarTab === "staff-resources"
           ? adminStaffResourcesView()
           : activeAdminSidebarTab === "sensor-camera"
             ? adminSensorCameraView()
             : activeAdminSidebarTab === "reports"
-              ? adminReportsView()
+              ? (window.USAD_REPORTS ? window.USAD_REPORTS.renderTabularReportsView() : adminReportsView())
               : adminLiveOperationsView()}
       </main>
     </div>`;
@@ -5489,6 +5501,11 @@
   });
 
   screen.addEventListener("submit", (event) => {
+    if (window.USAD_FLEET && activeAdminSidebarTab === "fleet-dispatch") {
+      window.USAD_FLEET.handleFleetInteractions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
     if (event.target.matches("[data-admin-login-form]")) {
       event.preventDefault();
       const emailInput = screen.querySelector("#admin-email");
@@ -5890,6 +5907,21 @@
   });
 
   screen.addEventListener("input", (event) => {
+    if (window.USAD_FLEET && activeAdminSidebarTab === "fleet-dispatch") {
+      window.USAD_FLEET.handleFleetInteractions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
+    if (window.USAD_QUEUE && activeAdminSidebarTab === "queue-merging") {
+      window.USAD_QUEUE.handleClerkActions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
+    if (window.USAD_REPORTS && activeAdminSidebarTab === "reports") {
+      window.USAD_REPORTS.handleReportInteractions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
     if (event.target.matches("[data-trip-rating-comment]")) {
       selectedTripComment = event.target.value.slice(0, 50);
       const characterCount = screen.querySelector("[data-trip-rating-character-count]");
@@ -5982,6 +6014,21 @@
   });
 
   screen.addEventListener("change", (event) => {
+    if (window.USAD_FLEET && activeAdminSidebarTab === "fleet-dispatch") {
+      window.USAD_FLEET.handleFleetInteractions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
+    if (window.USAD_QUEUE && activeAdminSidebarTab === "queue-merging") {
+      window.USAD_QUEUE.handleClerkActions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
+    if (window.USAD_REPORTS && activeAdminSidebarTab === "reports") {
+      window.USAD_REPORTS.handleReportInteractions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
     if (event.target.matches("[data-revenue-period]")) {
       activeRevenueChartPeriod = event.target.value;
       const charts = screen.querySelector("#reports-decision-charts");
@@ -6091,6 +6138,31 @@
   });
 
   screen.addEventListener("click", (event) => {
+    // Modular view handlers
+    if (window.USAD_FLEET && activeAdminSidebarTab === "fleet-dispatch") {
+      window.USAD_FLEET.handleFleetInteractions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
+    if (window.USAD_QUEUE && activeAdminSidebarTab === "queue-merging") {
+      window.USAD_QUEUE.handleClerkActions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
+    if (window.USAD_DRIVER && activeAdminSidebarTab === "driver-terminal") {
+      const bayBtn = event.target.closest("[data-driver-select-bay]");
+      if (bayBtn) {
+        const container = screen.querySelector(".admin-main-container");
+        if (container) {
+          container.innerHTML = window.USAD_DRIVER.renderDriverTerminalView(bayBtn.dataset.driverSelectBay);
+        }
+      }
+    }
+    if (window.USAD_REPORTS && activeAdminSidebarTab === "reports") {
+      window.USAD_REPORTS.handleReportInteractions(event, () => {
+        renderScreen("admin-dashboard");
+      });
+    }
     const passwordToggle = event.target.closest("[data-password-toggle]");
     if (passwordToggle) {
       const passwordInput = screen.querySelector(`#${passwordToggle.dataset.passwordToggle}`);
