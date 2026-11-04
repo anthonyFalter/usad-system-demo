@@ -227,6 +227,24 @@
     if (!bus) throw new Error(`Unknown assigned bus "${trip.busId}" on ticket ${trip.id}.`);
     return bus;
   };
+  const ticketBoardingStatusMarkup = (trip, compact = false) => {
+    if (trip.status !== "upcoming") return "";
+    const assignedBus = getBusForTrip(trip);
+    const busName = assignedBus?.name || "your assigned bus";
+    const origin = trip.origin || "your boarding stop";
+    const scheduledDeparture = trip.travelDate && trip.departureTime
+      ? formatDeparture(trip.travelDate, trip.departureTime)
+      : "your scheduled departure";
+    const statusMessage = compact
+      ? `Scheduled ${scheduledDeparture}. No need to queue before arrival.`
+      : `Scheduled ${scheduledDeparture} from ${origin}. No need to queue before ${busName} arrives.`;
+    return `
+      <div class="ticket-boarding-status${compact ? " is-compact" : ""}" role="status">
+        <span class="ticket-boarding-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zm1 11.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg></span>
+        <span class="ticket-boarding-copy"><small>Boarding status</small><strong>Wait for ${escapeHtml(busName)}</strong><span>${escapeHtml(statusMessage)}</span></span>
+        <span class="ticket-boarding-note">Sample status · confirm bus arrival with terminal staff.</span>
+      </div>`;
+  };
   const getActiveTrackingTrip = () => {
     const selectedTrip = tripHistory.find(({ id }) => id === selectedHistoryTripId);
     if (selectedTrip?.status === "upcoming") return selectedTrip;
@@ -4570,6 +4588,7 @@
         <span class="ticket-caption">Ticket Reference</span><strong class="ticket-number">${escapeHtml(trip.receiptId || trip.id)}</strong>
         <div class="ticket-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)} · ${escapeHtml(tripOriginDetail)} to ${escapeHtml(tripRoute.stops.find(({ id }) => id === trip.destinationStopId)?.short || tripRoute.destinationShort)}</small></div></div>
         <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Cancelled" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Assigned bus</span><strong>${escapeHtml(assignedBus?.name || "Not assigned")}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Travel date</span><strong>${trip.travelDate && trip.departureTime ? escapeHtml(formatDeparture(trip.travelDate, trip.departureTime)) : escapeHtml(trip.date || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Payment</span><strong>${escapeHtml(trip.payment)}</strong></div><div><span>${trip.status === "cancelled" ? "Original fare" : "Fare total"}</span><strong>₱${Number(trip.status === "cancelled" ? trip.originalFare : trip.fare).toFixed(2)}</strong></div></div>
+        ${ticketBoardingStatusMarkup(trip)}
         ${trip.status === "upcoming" ? `<button type="button" class="track-ride" data-track-trip="${escapeHtml(trip.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>View ${assignedBus ? `${escapeHtml(assignedBus.name)} map` : "ticket map"}</button>` : '<button type="button" class="track-ride" data-screen="tickets">Back to My Tickets <span>→</span></button>'}
       </section>
       ${isCurrentBooking ? '<button type="button" class="cancel-booking" data-action="cancel-booking">Cancel booking</button>' : ""}
@@ -4783,6 +4802,7 @@
             <div class="trip-history-fare"><strong>${trip.status === "cancelled" ? "Cancelled" : `₱${Number(trip.fare).toFixed(2)}`}</strong><span>Seat ${escapeHtml(trip.seat)}</span><small>${fareDetail}</small></div>
           </div>
           ${upcoming ? `<p class="trip-history-reference">Booking reference <strong>${escapeHtml(trip.receiptId || trip.id)}</strong> · ${trip.passengers || 1} ${trip.passengers === 1 ? "passenger" : "passengers"} · ${escapeHtml(assignedBus?.name || "Bus not assigned")}</p>` : ""}
+          ${ticketBoardingStatusMarkup(trip, true)}
           <footer class="trip-history-actions">
             <button type="button" class="trip-receipt-link" data-view-trip="${escapeHtml(trip.id)}">View details</button>
             ${upcoming ? `<button type="button" class="trip-receipt-link" data-track-trip="${escapeHtml(trip.id)}">View map</button><button type="button" class="trip-cancel-button" data-action="cancel-booking" data-trip-id="${escapeHtml(trip.id)}">Cancel booking</button>` : ""}

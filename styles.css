@@ -2033,6 +2033,22 @@ input:focus-visible,
 .ticket-facts div { display: grid; gap: 3px; }
 .ticket-facts span { color: #919995; font-size: 8px; }
 .ticket-facts strong { color: #2c3933; font-size: 10px; }
+.ticket-boarding-status { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 9px; margin: 0 0 11px; padding: 11px; border: 1px solid #cfe9dd; border-radius: 10px; background: #f0faf5; text-align: left; }
+.ticket-boarding-icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; background: #d9f3e7; color: #087c59; }
+.ticket-boarding-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.ticket-boarding-copy { display: grid; gap: 3px; min-width: 0; }
+.ticket-boarding-copy small { color: #276c54; font-size: 8px; font-weight: 700; }
+.ticket-boarding-copy strong { color: #184a38; font-size: 10px; line-height: 1.35; }
+.ticket-boarding-copy > span { color: #35594b; font-size: 8px; line-height: 1.45; }
+.ticket-boarding-note { grid-column: 2; color: #5a7167; font-size: 7px; line-height: 1.4; }
+.ticket-boarding-status.is-compact { grid-template-columns: 25px minmax(0, 1fr); gap: 7px; margin: 0 0 8px; padding: 8px; }
+.ticket-boarding-status.is-compact .ticket-boarding-icon { width: 25px; height: 25px; border-radius: 7px; }
+.ticket-boarding-status.is-compact .ticket-boarding-icon svg { width: 15px; height: 15px; }
+.ticket-boarding-status.is-compact .ticket-boarding-copy { grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 6px; }
+.ticket-boarding-status.is-compact .ticket-boarding-copy small { grid-column: 1 / -1; }
+.ticket-boarding-status.is-compact .ticket-boarding-copy strong { font-size: 9px; }
+.ticket-boarding-status.is-compact .ticket-boarding-copy > span { grid-column: 1 / -1; }
+.ticket-boarding-status.is-compact .ticket-boarding-note { grid-column: 2; }
 .track-ride { display: flex; width: 100%; height: 37px; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 6px; background: #0d7959; color: white; cursor: pointer; font-size: 10px; font-weight: 650; }
 .track-ride svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .cancel-booking { width: 100%; height: 34px; flex: 0 0 auto; margin-top: 12px; border: 1px solid #bfc8c4; border-radius: 6px; background: transparent; color: #67716c; cursor: pointer; font-size: 10px; }
@@ -2950,6 +2966,7 @@ input:focus-visible,
 .trip-history-fare small { max-width: 92px; }
 .trip-history-reference { margin: 0 0 9px; color: #718078; font-size: 8px; }
 .trip-history-reference strong { color: #176f54; }
+.trip-history-card .ticket-boarding-status { margin-top: 2px; }
 .trip-history-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding-top: 8px; border-top: 1px solid #edf0ee; }
 .trip-history-actions button { min-height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: #f0f3f6; color: #5d6873; cursor: pointer; font-size: 9px; font-weight: 650; }
 .trip-history-actions .trip-receipt-link { padding: 0; background: transparent; color: #078260; font-weight: 700; }
