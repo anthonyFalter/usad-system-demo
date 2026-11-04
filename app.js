@@ -24,6 +24,59 @@
   const renderRouteOptions = (selectedRouteId = activeRoute.id) => routes.map((route) => `
     <option value="${route.id}"${selectedRouteId === route.id ? " selected" : ""}>${route.label}</option>
   `).join("");
+  const getRoute = (routeId) => {
+    const route = routes.find(({ id }) => id === routeId);
+    if (!route) throw new Error(`Unknown passenger route: "${routeId}".`);
+    return route;
+  };
+  const getStop = (route, stopId) => {
+    const stop = route.stops.find(({ id }) => id === stopId);
+    if (!stop) throw new Error(`Unknown stop "${stopId}" on route "${route.id}".`);
+    return stop;
+  };
+  const getTripStops = (trip) => {
+    const route = getRoute(trip.routeId || activeRoute.id);
+    const originIndex = route.stops.findIndex(({ id }) => id === trip.originStopId);
+    const destinationIndex = route.stops.findIndex(({ id }) => id === trip.destinationStopId);
+    if (originIndex < 0 || destinationIndex <= originIndex) {
+      throw new Error(`Invalid origin and drop-off selection for route "${route.id}".`);
+    }
+    return { route, origin: route.stops[originIndex], destination: route.stops[destinationIndex], originIndex, destinationIndex };
+  };
+  const renderStopOptions = (route, stops, selectedStopId) => stops.map((stop) => `
+    <option value="${escapeHtml(stop.id)}"${selectedStopId === stop.id ? " selected" : ""}>${escapeHtml(stop.label)}</option>
+  `).join("");
+  const renderTripStopFields = (compact = false) => {
+    const { route, originIndex, destination } = getTripStops(tripData);
+    const className = compact ? "trip-stop-fields" : "route-fields";
+    return `
+      <div class="${className}" data-trip-stop-fields>
+        <label><span>${compact ? "From" : '<span class="route-dot origin-dot" aria-hidden="true"></span>Starting point'}</span><select name="origin" data-trip-origin aria-label="Starting point">${renderStopOptions(route, route.stops.slice(0, -1), tripData.originStopId)}</select></label>
+        <label><span>${compact ? "Drop-off" : '<span class="route-dot destination-dot" aria-hidden="true"></span>Drop-off point'}</span><select name="destination" data-trip-destination aria-label="Drop-off point">${renderStopOptions(route, route.stops.slice(originIndex + 1), destination.id)}</select></label>
+      </div>`;
+  };
+  const readTripStops = (routeId, originStopId, destinationStopId) => {
+    const route = getRoute(routeId);
+    const selection = getTripStops({ routeId, originStopId, destinationStopId });
+    return {
+      routeId: route.id,
+      originStopId: selection.origin.id,
+      destinationStopId: selection.destination.id,
+      origin: selection.origin.label,
+      destination: selection.destination.short,
+    };
+  };
+  const resolveTripStops = (origin, destination) => {
+    const matchingRoute = routes.find((route) => {
+      const originIndex = route.stops.findIndex((stop) => [stop.id, stop.label, stop.short].includes(origin));
+      const destinationIndex = route.stops.findIndex((stop) => [stop.id, stop.label, stop.short].includes(destination));
+      return originIndex >= 0 && destinationIndex > originIndex;
+    });
+    if (!matchingRoute) throw new Error(`Could not match trip stops "${origin}" to "${destination}" on an available route.`);
+    const originStop = matchingRoute.stops.find((stop) => [stop.id, stop.label, stop.short].includes(origin));
+    const destinationStop = matchingRoute.stops.find((stop) => [stop.id, stop.label, stop.short].includes(destination));
+    return readTripStops(matchingRoute.id, originStop.id, destinationStop.id);
+  };
 
   let currentRole = "user";
   const savedRouteIds = new Set();
@@ -113,6 +166,9 @@
     timeStyle: "short",
   }).format(new Date(`${date}T${time}`));
   let tripData = {
+    routeId: activeRoute.id,
+    originStopId: activeRoute.stops[0].id,
+    destinationStopId: activeRoute.stops[activeRoute.stops.length - 1].id,
     origin: activeRoute.origin,
     destination: activeRoute.destinationShort,
     passengers: 1,
@@ -4110,11 +4166,18 @@
       </button>
     </nav>`;
 
-  const mapMarkup = (compact = false, live = false, trackedBus = null) => {
+  const mapMarkup = (compact = false, live = false, trackedBus = null, trip = tripData) => {
+    const { route, origin, destination } = getTripStops(trip);
+    const segmentStart = Math.min(origin.progress, destination.progress);
+    const segmentLength = Math.abs(destination.progress - origin.progress);
     const roads = live
       ? '<path class="road-local" d="M-20 45 94 72 148 59 215 86 380 65M-20 128 75 153 153 135 224 167 380 143M-20 214 92 194 160 224 247 208 380 242M-20 302 81 277 165 306 238 284 380 318M-20 392 88 360 161 395 255 372 380 414M-20 486 92 454 167 486 247 463 380 502M-20 574 84 548 164 577 255 553 380 596M42-20 62 102 42 206 76 303 50 404 87 505 68 660M118-20 133 78 110 174 145 272 124 373 153 468 137 570 160 660M235-20 218 93 251 186 224 285 261 383 232 475 272 572 251 660M326-20 302 92 335 188 310 282 348 374 318 469 350 566 330 660"/><path class="road-secondary" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650M-15 100 130 122 354 95M30 255 163 329 345 355M-12 455 210 386 365 422M66 0 91 180 44 313M290 35 252 202 290 300 269 620"/><path class="road-main" d="M158-10 169 112 151 181 191 253 163 329 210 386 200 469 231 552 202 650"/><path class="route-line route-line-normal" d="M217 515 200 469 210 386"/><path class="route-line route-line-moderate" d="M210 386 163 329 191 253"/><path class="route-line route-line-congested" d="M191 253 186 245"/><path class="bus-travel-path" d="M217 515 200 469 210 386 163 329 191 253 186 245"/><circle class="map-junction" cx="163" cy="329" r="8"/><circle class="map-junction" cx="191" cy="253" r="7"/><circle class="map-junction" cx="210" cy="386" r="7"/>'
       : '<path class="road-main" d="M-12 136 68 95 118 108 164 65 217 78 286 20 374 35"/><path class="road-secondary" d="M-15 48 68 95 95 166M118 108 152 180M164 65 147 0M217 78 231 158M286 20 312 0M286 20 332 114"/><path class="route-line" d="M48 119 110 104 160 70 220 77 296 35"/>';
     const viewBox = live ? "0 0 360 640" : "0 0 360 180";
+    const routePathD = live
+      ? "M217 515 200 469 210 386 163 329 191 253 186 245"
+      : "M48 119 110 104 160 70 220 77 296 35";
+    const selectedRoutePath = `<path class="selected-route-path" d="${routePathD}" pathLength="1" stroke-dasharray="${segmentLength} 1" stroke-dashoffset="${-segmentStart}"/>${route.stops.map((stop) => `<circle class="route-stop-marker${stop.id === origin.id ? " is-origin" : stop.id === destination.id ? " is-destination" : ""}" data-route-stop-progress="${stop.progress}" cx="0" cy="0" r="4"/>`).join("")}`;
     const trackedBusIndex = trackedBus ? liveBusDetails.findIndex(({ id }) => id === trackedBus.id) : -1;
     if (trackedBus && trackedBusIndex < 0) throw new Error(`Unknown bus requested for passenger map: ${trackedBus.id}.`);
     const busMarker = live
@@ -4123,17 +4186,16 @@
         : ""
       : '<span class="map-marker map-marker-bus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6.5A3.5 3.5 0 0 1 8.5 3h7A3.5 3.5 0 0 1 19 6.5v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-10Z"/><path d="M7 7h10v6H7zM8 18.5v2m8-2v2M8.5 15.5h.01m7 0h.01"/></svg></span>';
     return `
-      <div class="map-art${compact ? " is-compact" : ""}${live ? " is-live" : ""}" role="${live ? "group" : "img"}" aria-label="Illustrative, not-to-scale route map from ${escapeHtml(activeRoute.origin)} to ${escapeHtml(activeRoute.destination)} via ${escapeHtml(activeRoute.via)}">
+      <div class="map-art${compact ? " is-compact" : ""}${live ? " is-live" : ""}" role="${live ? "group" : "img"}" aria-label="Illustrative, not-to-scale route map from ${escapeHtml(origin.label)} to ${escapeHtml(destination.label)} via ${escapeHtml(route.via)}">
         <div class="map-scene">
           <span class="map-block map-block-one"></span><span class="map-block map-block-two"></span>
           <span class="map-block map-block-three"></span><span class="map-block map-block-four"></span>
           ${live ? '<span class="map-park map-park-one"></span><span class="map-park map-park-two"></span><span class="map-district-label district-malolos">MALOLOS</span><span class="map-district-label district-bocaue">BOCAUE</span><span class="map-district-label district-marilao">MARILAO</span><span class="map-district-label district-balintawak">BALINTAWAK</span><span class="map-district-label district-trinoma">TRINOMA</span>' : ""}
           <svg class="map-roads" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${roads}</svg>
-          <span class="map-label map-label-one">${live ? escapeHtml(activeRoute.origin) : "MALOLOS"}</span><span class="map-label map-label-two">${live ? escapeHtml(activeRoute.destinationShort) : "TRINOMA"}</span>
-          <span class="map-marker map-marker-start" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-8.1 8-13a8 8 0 1 0-16 0c0 4.9 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+          <span class="map-label map-label-one">${escapeHtml(origin.short)}</span><span class="map-label map-label-two">${escapeHtml(destination.short)}</span>
           ${busMarker}
-          <span class="map-marker map-marker-destination" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-8.1 8-13a8 8 0 1 0-16 0c0 4.9 8 13 8 13Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
           ${compact ? "" : '<span class="map-compass" aria-hidden="true">N</span>'}
+          <svg class="route-stop-overlay" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${selectedRoutePath}</svg>
         </div>
       </div>`;
   };
@@ -4231,22 +4293,21 @@
       </div>`;
   };
 
-  const homeHeaderContent = ({ searchPlaceholder = "Where are you heading?", searchMode = "route", footerMarkup = null } = {}) => `
+  const homeHeaderContent = () => `
     <div class="home-header-content">
       <div class="home-greeting-row">
-        <div><p class="location-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Your Location</p><h1>${escapeHtml(activeRoute.origin)}</h1></div>
+        <div><p class="location-kicker">Choose your route</p><h1>${escapeHtml(tripData.origin)}</h1></div>
         <button class="notification-button" type="button" aria-label="Notifications, ${unreadNotificationCount()} unread" data-screen="notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-count"${unreadNotificationCount() ? "" : " hidden"}>${unreadNotificationCount()}</span></button>
       </div>
       <form class="destination-search" data-route-search>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
-        <input name="destination" type="text" placeholder="${searchPlaceholder}" aria-label="${searchPlaceholder}"${searchMode === "history" ? " data-trip-history-search" : ""}>
-        <button type="submit" aria-label="Search rides"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
+        ${renderTripStopFields(true)}
+        <button type="submit" aria-label="Find rides for selected stops"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10m-7 5h4"/><circle cx="9" cy="7" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="11" cy="17" r="1.7"/></svg></button>
       </form>
-      ${footerMarkup ?? `<div class="home-shortcuts">
+      <div class="home-shortcuts">
         <button type="button" data-home-shortcut="saved-routes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4Z"/></svg>Saved Routes</button>
         <button type="button" data-home-shortcut="trip-readiness"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V6Z"/><path d="m9 12 2 2 4-4"/></svg>Trip Readiness</button>
         <button type="button" data-home-shortcut="nearby-stops"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>Nearby Stops</button>
-      </div>`}
+      </div>
     </div>`;
 
   const homeScreen = () => `
@@ -4282,7 +4343,7 @@
             <span class="vehicle-eta soon">&lt;1 min<small>On time</small></span>
           </button>
         </section>
-        <p class="home-demo-note">Illustrative vehicle ETAs · No live tracking</p>
+        <p class="home-demo-note">Choose your boarding and drop-off stops · Location is not collected</p>
       </div>
       ${navigation("home")}
     </div>`;
@@ -4358,10 +4419,7 @@
         <form class="bottom-sheet quick-book-sheet" data-quick-book>
           <span class="sheet-handle"></span>
           <h2>Quick Book</h2><p class="sheet-subtitle">Find and reserve a seat in seconds</p>
-          <div class="route-fields">
-            <label><span class="route-dot origin-dot"></span><input name="origin" aria-label="Starting point" value="${escapeHtml(tripData.origin)}" required></label>
-            <label><span class="route-dot destination-dot"></span><input name="destination" aria-label="Destination" value="${escapeHtml(tripData.destination)}" required></label>
-          </div>
+          ${renderTripStopFields()}
           <label class="sheet-label" for="passenger-count">Passengers</label>
           <div class="passenger-stepper"><span id="passenger-count">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
           <label class="sheet-label">Payment Method</label>
@@ -4376,7 +4434,9 @@
       </div>
     </div>`;
 
-  const rideResultsScreen = () => `
+  const rideResultsScreen = () => {
+    const route = getRoute(tripData.routeId);
+    return `
     <div class="ride-results">
       <header class="results-header">
         <button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button>
@@ -4385,15 +4445,18 @@
       <div class="results-map">${mapMarkup(true)}<span class="destination-label">${escapeHtml(tripData.destination)}</span></div>
       <div class="result-filter"><button class="filter-selected" type="button">Fastest</button><button type="button" data-info="Showing the fastest available seats.">More Seats</button></div>
       <section class="ride-list">
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>Bus 02 · 1 seat available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation" data-bus-id="bus-02">Book</button></article>
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>Bus 01 · 8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation" data-bus-id="bus-01">Book</button></article>
-        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>0 seats · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(route.name)}</h2><p>via ${escapeHtml(route.via)}</p><span>Bus 02 · 1 seat available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation" data-bus-id="bus-02">Book</button></article>
+        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(route.name)}</h2><p>via ${escapeHtml(route.via)}</p><span>Bus 01 · 8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation" data-bus-id="bus-01">Book</button></article>
+        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(route.name)}</h2><p>via ${escapeHtml(route.via)}</p><span>0 seats · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
       </section>
       <p class="prototype-stamp">Sample ride options · Not live availability</p>
     </div>`;
+  };
 
   const bookingConfirmationScreen = () => {
     const assignedBus = liveBusDetails.find(({ id }) => id === tripData.busId);
+    const route = getRoute(tripData.routeId);
+    const { destination } = getTripStops(tripData);
     if (!assignedBus) throw new Error("USAD booking confirmation could not render because the selected ride has no assigned bus.");
     return `
     <div class="ride-results with-confirmation">
@@ -4402,7 +4465,7 @@
         <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
           <button class="modal-close" type="button" aria-label="Close confirmation" data-screen="find-rides">×</button>
           <h2 id="booking-dialog-title">Booking Confirmation</h2><p class="sheet-subtitle">Review your trip details</p>
-          <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(activeRoute.name)}</strong><small>${escapeHtml(assignedBus.name)} · via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>${assignedBus.seats} ${assignedBus.seats === 1 ? "seat" : "seats"} available</span></div></div>
+          <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(route.name)}</strong><small>${escapeHtml(assignedBus.name)} · via ${escapeHtml(route.via)} · Drop-Off at ${escapeHtml(destination.label)}</small><span>${assignedBus.seats} ${assignedBus.seats === 1 ? "seat" : "seats"} available</span></div></div>
           <div class="departure-fields">
             <label for="booking-departure-date">Travel date</label>
             <input id="booking-departure-date" type="date" min="${toDateInputValue(new Date())}" value="${escapeHtml(tripData.departureDate)}" required>
@@ -4425,6 +4488,9 @@
         receiptId: "USAD-7X29-KM41",
         origin: tripData.origin,
         destination: tripData.destination,
+        routeId: tripData.routeId,
+        originStopId: tripData.originStopId,
+        destinationStopId: tripData.destinationStopId,
         fare: discountedUserFarePerPassenger * tripData.passengers,
         seat: tripData.seat,
         passengers: tripData.passengers,
@@ -4433,6 +4499,8 @@
         busId: tripData.busId || liveBusDetails[0].id,
       };
     const assignedBus = getBusForTrip(trip);
+    const tripRoute = getRoute(trip.routeId || activeRoute.id);
+    const tripOriginDetail = tripRoute.stops.find(({ id }) => id === trip.originStopId)?.short || tripRoute.originShort;
     const isCurrentBooking = bookingConfirmed && trip.status === "upcoming";
     return `
     <div class="booking-confirmed">
@@ -4444,7 +4512,7 @@
         <div class="demo-qr" role="img" aria-label="Non-scannable ticket code"><i></i><i></i><i></i><b></b></div>
         <p class="ticket-code-note">QR code cannot be scanned</p>
         <span class="ticket-caption">Ticket Reference</span><strong class="ticket-number">${escapeHtml(trip.receiptId || trip.id)}</strong>
-        <div class="ticket-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)}</small></div></div>
+        <div class="ticket-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)} · ${escapeHtml(tripOriginDetail)} to ${escapeHtml(tripRoute.stops.find(({ id }) => id === trip.destinationStopId)?.short || tripRoute.destinationShort)}</small></div></div>
         <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Cancelled" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Assigned bus</span><strong>${escapeHtml(assignedBus?.name || "Not assigned")}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Travel date</span><strong>${trip.travelDate && trip.departureTime ? escapeHtml(formatDeparture(trip.travelDate, trip.departureTime)) : escapeHtml(trip.date || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Payment</span><strong>${escapeHtml(trip.payment)}</strong></div><div><span>${trip.status === "cancelled" ? "Original fare" : "Fare total"}</span><strong>₱${Number(trip.status === "cancelled" ? trip.originalFare : trip.fare).toFixed(2)}</strong></div></div>
         ${trip.status === "upcoming" ? `<button type="button" class="track-ride" data-track-trip="${escapeHtml(trip.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>View ${assignedBus ? `${escapeHtml(assignedBus.name)} map` : "ticket map"}</button>` : '<button type="button" class="track-ride" data-screen="tickets">Back to My Tickets <span>→</span></button>'}
       </section>
@@ -4509,10 +4577,7 @@
               <button type="button" aria-label="Close quick book" data-screen="live-map">×</button>
             </div>
             <p class="sheet-subtitle">Find and reserve a seat in seconds</p>
-            <div class="route-fields">
-              <label><span class="route-dot origin-dot"></span><input name="origin" aria-label="Starting point" value="${escapeHtml(tripData.origin)}" readonly></label>
-              <label><span class="route-dot destination-dot"></span><input name="destination" aria-label="Destination" value="${escapeHtml(tripData.destination)}" readonly></label>
-            </div>
+            ${renderTripStopFields()}
             <label class="sheet-label" for="seat-passengers">Passengers</label>
             <div class="passenger-stepper"><span id="seat-passengers">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
             <label class="sheet-label">Payment Method</label>
@@ -4569,10 +4634,7 @@
           <div class="seat-detail-booking-scroll">
             <h2>Quick Book</h2>
             <p class="sheet-subtitle">Find and reserve a seat in seconds</p>
-            <div class="route-fields">
-              <label><span class="route-dot origin-dot"></span><input name="origin" aria-label="Starting point" value="${escapeHtml(tripData.origin)}" readonly></label>
-              <label><span class="route-dot destination-dot"></span><input name="destination" aria-label="Destination" value="${escapeHtml(tripData.destination)}" readonly></label>
-            </div>
+            ${renderTripStopFields()}
             <label class="sheet-label" for="passenger-count">Passengers</label>
             <div class="passenger-stepper"><span id="passenger-count">${tripData.passengers} ${tripData.passengers === 1 ? "passenger" : "passengers"}</span><div><button type="button" data-passengers="minus" aria-label="Remove passenger">−</button><strong>${tripData.passengers}</strong><button type="button" data-passengers="plus" aria-label="Add passenger">+</button></div></div>
             <label class="sheet-label" for="live-seat-picker">Seat/s</label>
@@ -4740,7 +4802,7 @@
             <p class="live-map-summary" data-live-map-summary role="status" aria-live="polite">${escapeHtml(mapSummary)}</p>
           </div>
         </header>
-        ${mapMarkup(false, true, trackedBus)}
+        ${mapMarkup(false, true, trackedBus, trackingTrip || tripData)}
         <aside class="live-map-legend" aria-label="Traffic flow legend"><strong>Traffic Flow</strong><span class="is-current" data-traffic-level="normal"><i class="is-normal"></i>Normal Flow</span><span data-traffic-level="moderate"><i class="is-moderate"></i>Moderate</span><span data-traffic-level="congested"><i class="is-congested"></i>Congested</span></aside>
         <div class="map-controls" aria-label="Map controls"><button type="button" data-map-control="zoom-in" aria-label="Zoom in">+</button><output data-map-zoom>100%</output><button type="button" data-map-control="zoom-out" aria-label="Zoom out">−</button><span></span><button type="button" data-map-control="reset" aria-label="Reset map position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button></div>
         <p class="map-attribution">Illustrative map · Not to scale</p>
@@ -5113,6 +5175,26 @@
     liveMapAnimationFrame = requestAnimationFrame(animate);
   };
 
+  const positionRouteMapStops = () => {
+    screen.querySelectorAll(".map-art").forEach((mapArt) => {
+      const path = mapArt.querySelector(".selected-route-path");
+      if (!path) return;
+      const pathLength = path.getTotalLength();
+      if (!Number.isFinite(pathLength) || pathLength <= 0) {
+        throw new Error("The selected route could not be drawn because its map path has no length.");
+      }
+      mapArt.querySelectorAll("[data-route-stop-progress]").forEach((marker) => {
+        const progress = Number(marker.dataset.routeStopProgress);
+        if (!Number.isFinite(progress) || progress < 0 || progress > 1) {
+          throw new Error(`Invalid route stop position "${marker.dataset.routeStopProgress}".`);
+        }
+        const point = path.getPointAtLength(pathLength * progress);
+        marker.setAttribute("cx", String(point.x));
+        marker.setAttribute("cy", String(point.y));
+      });
+    });
+  };
+
   const renderScreen = (state, options = {}) => {
     if (welcomeTimeout) window.clearTimeout(welcomeTimeout);
     welcomeTimeout = 0;
@@ -5173,6 +5255,7 @@
     } else {
       throw new Error(`Unknown USAD prototype screen: ${state}`);
     }
+    positionRouteMapStops();
     if (["home", "quick-book", "find-rides", "booking-confirmation", "booking-confirmed", "verify-account", "live-map", "live-seat-overview", "live-seat-detail", "tickets", "profile", "payment-options", "faq", "notifications"].includes(state)) {
       screen.firstElementChild?.classList.add("screen-enter");
     }
@@ -5375,6 +5458,7 @@
     workspacePage.hidden = false;
     roleNote.textContent = "";
     workspacePage.classList.toggle("is-passenger", role !== "admin");
+    backButton.hidden = role !== "admin";
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", role === "admin" ? "#1d1d1d" : "#ffffff");
     if (workspaceRoleLabel) {
       workspaceRoleLabel.textContent = role === "admin" ? "Admin" : "User";
@@ -5390,7 +5474,7 @@
       mobileLoginShowError = false;
       renderScreen("login");
     }
-    resetCanvas();
+  
     viewport.focus({ preventScroll: true });
   };
 
@@ -5500,7 +5584,7 @@
       zoom = Math.max(0.35, zoom / 1.12);
       updateCanvas();
     } else if (event.key === "Home") {
-      resetCanvas();
+    
     }
   });
 
@@ -5816,18 +5900,12 @@
 
     if (event.target.matches("[data-route-search]")) {
       event.preventDefault();
-      if (activeState === "tickets") {
-        tripHistoryQuery = String(new FormData(event.target).get("destination") ?? "");
-        updateTripHistoryView();
-        return;
-      }
-      const destination = new FormData(event.target).get("destination");
-      if (typeof destination === "string" && destination.trim()) {
-        tripData.destination = destination.trim();
-        renderScreen("find-rides");
-      } else {
-        openQuickBookOverlay();
-      }
+      const formData = new FormData(event.target);
+      tripData = {
+        ...tripData,
+        ...readTripStops(tripData.routeId, String(formData.get("origin") || ""), String(formData.get("destination") || "")),
+      };
+      renderScreen("find-rides");
       return;
     }
 
@@ -5838,6 +5916,7 @@
       const destination = formData.get("destination");
       const payment = formData.get("payment");
       const seat = formData.get("seat");
+      const stops = readTripStops(tripData.routeId, String(origin || ""), String(destination || ""));
       const passengerText = screen.querySelector("#passenger-count")?.textContent ?? "1";
       const passengers = Number.parseInt(passengerText, 10);
       const paymentError = event.target.querySelector("[data-payment-error]");
@@ -5852,8 +5931,7 @@
       }
       tripData = {
         ...tripData,
-        origin: origin.trim(),
-        destination: destination.trim(),
+        ...stops,
         passengers,
         payment,
         ...(typeof seat === "string" && seat ? { seat } : {}),
@@ -6163,6 +6241,33 @@
   });
 
   screen.addEventListener("change", (event) => {
+    if (event.target.matches("[data-trip-origin]")) {
+      const route = getRoute(tripData.routeId);
+      const originIndex = route.stops.findIndex(({ id }) => id === event.target.value);
+      if (originIndex < 0 || originIndex >= route.stops.length - 1) {
+        throw new Error(`Invalid starting stop selected on route "${route.id}".`);
+      }
+      const destinationSelect = event.target.closest("[data-trip-stop-fields]")?.querySelector("[data-trip-destination]");
+      if (!destinationSelect) throw new Error("The drop-off selector is missing for the selected starting point.");
+      const currentDestination = destinationSelect.value;
+      const downstreamStops = route.stops.slice(originIndex + 1);
+      const selectedDestination = downstreamStops.some(({ id }) => id === currentDestination)
+        ? currentDestination
+        : downstreamStops[downstreamStops.length - 1].id;
+      destinationSelect.innerHTML = renderStopOptions(route, downstreamStops, selectedDestination);
+      tripData = { ...tripData, ...readTripStops(route.id, event.target.value, selectedDestination) };
+      const homeOrigin = screen.querySelector(".home-greeting-row h1");
+      if (homeOrigin) homeOrigin.textContent = tripData.origin;
+      return;
+    }
+
+    if (event.target.matches("[data-trip-destination]")) {
+      tripData = { ...tripData, ...readTripStops(tripData.routeId, tripData.originStopId, event.target.value) };
+      const homeOrigin = screen.querySelector(".home-greeting-row h1");
+      if (homeOrigin) homeOrigin.textContent = tripData.origin;
+      return;
+    }
+
     if (event.target.matches("[data-revenue-period]")) {
       activeRevenueChartPeriod = event.target.value;
       const charts = screen.querySelector("#reports-decision-charts");
@@ -6344,7 +6449,10 @@
     if (homeRouteUse) {
       const route = routes.find(({ id }) => id === homeRouteUse.dataset.homeRouteUse);
       if (!route) throw new Error(`Unknown route selected from a home shortcut: "${homeRouteUse.dataset.homeRouteUse}".`);
-      tripData = { ...tripData, origin: route.origin, destination: route.destinationShort };
+      tripData = {
+        ...tripData,
+        ...readTripStops(route.id, route.stops[0].id, route.stops[route.stops.length - 1].id),
+      };
       renderScreen("find-rides");
       return;
     }
@@ -7499,7 +7607,6 @@
       return;
     }
 
-    const navigationButton = event.target.closest("[data-screen]");
     const trackTripButton = event.target.closest("[data-track-trip]");
     if (trackTripButton) {
       const trip = tripHistory.find(({ id }) => id === trackTripButton.dataset.trackTrip);
@@ -7511,6 +7618,7 @@
       return;
     }
 
+    const navigationButton = event.target.closest("[data-screen]");
     if (navigationButton) {
       renderScreen(navigationButton.dataset.screen);
       return;
@@ -7524,10 +7632,10 @@
       } else if (action === "rebook-trip") {
         const trip = tripHistory.find(({ id }) => id === actionButton.dataset.tripId);
         if (!trip) throw new Error(`Unknown trip selected for rebooking: ${actionButton.dataset.tripId}.`);
+        const selectedStops = resolveTripStops(trip.origin, trip.destination);
         tripData = {
           ...tripData,
-          origin: trip.origin,
-          destination: trip.destination,
+          ...selectedStops,
           passengers: trip.passengers || 1,
           payment: "GCash",
           seat: trip.seat === "—" ? "1A" : trip.seat,
@@ -7536,12 +7644,12 @@
         };
         openQuickBookOverlay();
       } else if (action === "open-confirmation") {
-        const seatBookingPanel = screen.querySelector(".seat-book-card");
         const assignedBusId = actionButton.dataset.busId || liveBusDetails[selectedLiveBus]?.id;
         if (!assignedBusId || !liveBusDetails.some(({ id }) => id === assignedBusId)) {
           throw new Error("USAD booking could not continue because the selected ride has no valid bus assignment.");
         }
         tripData = { ...tripData, busId: assignedBusId };
+        const seatBookingPanel = screen.querySelector(".seat-book-card");
         if (seatBookingPanel) {
           const payment = seatBookingPanel.querySelector('input[name="payment"]:checked')?.value ?? tripData.payment;
           const passengers = Number.parseInt(seatBookingPanel.querySelector("#seat-passengers")?.textContent ?? "1", 10);
@@ -7574,11 +7682,11 @@
         dateError.hidden = true;
         departureDateInput.removeAttribute("aria-invalid");
         departureTimeInput.removeAttribute("aria-invalid");
-        tripData = {
         const assignedBus = liveBusDetails.find(({ id }) => id === tripData.busId);
         if (!assignedBus) {
           throw new Error("USAD booking could not be confirmed because a bus has not been assigned to the ride.");
         }
+        tripData = {
           ...tripData,
           departureDate: departureDateInput.value,
           departureTime: departureTimeInput.value,
@@ -7591,11 +7699,14 @@
           travelDate: tripData.departureDate,
           departureTime: tripData.departureTime,
           status: "upcoming",
-          origin: tripData.origin,
           busId: assignedBus.id,
-          originDetail: tripData.origin === activeRoute.origin ? activeRoute.originShort : "Trip origin",
+          origin: tripData.origin,
+          routeId: tripData.routeId,
+          originStopId: tripData.originStopId,
+          destinationStopId: tripData.destinationStopId,
+          originDetail: getStop(getRoute(tripData.routeId), tripData.originStopId).short,
           destination: tripData.destination,
-          destinationDetail: `Via ${activeRoute.via}`,
+          destinationDetail: `Drop-off · ${getStop(getRoute(tripData.routeId), tripData.destinationStopId).short}`,
           fare: 100 * tripData.passengers,
           seat: tripData.seat,
           passengers: tripData.passengers,
@@ -7646,6 +7757,17 @@
     }
   });
 
-  renderScreen(activeState);
-  resetCanvas();
+  const initialRoleParam = new URLSearchParams(window.location.search).get("role");
+  if (initialRoleParam === "admin") {
+    openWorkspace("admin");
+  } else if (initialRoleParam === "select") {
+    rolePage.hidden = false;
+    workspacePage.hidden = true;
+    renderScreen(activeState);
+  
+  } else {
+    openWorkspace("user");
+  }
+
+
 })();

@@ -8,6 +8,13 @@ window.USAD_ROUTES = Object.freeze([
     destination: "Trinoma Landmark Bus Bay",
     destinationShort: "Trinoma",
     via: "North Luzon Expressway (NLEX)",
+    stops: Object.freeze([
+      Object.freeze({ id: "malolos", label: "Robinsons Place Malolos", short: "Malolos", progress: 0 }),
+      Object.freeze({ id: "bocaue", label: "Bocaue stop", short: "Bocaue", progress: 0.24 }),
+      Object.freeze({ id: "marilao", label: "Marilao stop", short: "Marilao", progress: 0.5 }),
+      Object.freeze({ id: "balintawak", label: "Balintawak stop", short: "Balintawak", progress: 0.76 }),
+      Object.freeze({ id: "trinoma", label: "Trinoma Landmark Bus Bay", short: "Trinoma", progress: 1 }),
+    ]),
     demandFactors: [1, 0.98, 1.02, 1, 1.04, 1.08, 1.06, 1.1],
   }),
   Object.freeze({
@@ -19,6 +26,13 @@ window.USAD_ROUTES = Object.freeze([
     destination: "Robinsons Place Malolos",
     destinationShort: "Malolos",
     via: "North Luzon Expressway (NLEX)",
+    stops: Object.freeze([
+      Object.freeze({ id: "trinoma", label: "Trinoma Landmark Bus Bay", short: "Trinoma", progress: 1 }),
+      Object.freeze({ id: "balintawak", label: "Balintawak stop", short: "Balintawak", progress: 0.76 }),
+      Object.freeze({ id: "marilao", label: "Marilao stop", short: "Marilao", progress: 0.5 }),
+      Object.freeze({ id: "bocaue", label: "Bocaue stop", short: "Bocaue", progress: 0.24 }),
+      Object.freeze({ id: "malolos", label: "Robinsons Place Malolos", short: "Malolos", progress: 0 }),
+    ]),
     demandFactors: [0.96, 1, 1.04, 1.08, 1.12, 1.1, 1.06, 1.02],
   }),
 ]);
