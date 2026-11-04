@@ -43,17 +43,54 @@
     }
     return { route, origin: route.stops[originIndex], destination: route.stops[destinationIndex], originIndex, destinationIndex };
   };
-  const renderStopOptions = (route, stops, selectedStopId) => stops.map((stop) => `
+  const renderStopOptions = (stops, selectedStopId) => stops.map((stop) => `
     <option value="${escapeHtml(stop.id)}"${selectedStopId === stop.id ? " selected" : ""}>${escapeHtml(stop.label)}</option>
   `).join("");
+  const getAvailableOriginStops = () => {
+    const stopById = new Map();
+    routes.forEach((route) => route.stops.slice(0, -1).forEach((stop) => stopById.set(stop.id, stop)));
+    return [...stopById.values()];
+  };
+  const getRoutesFromStop = (originStopId) => routes.filter((route) => {
+    const originIndex = route.stops.findIndex(({ id }) => id === originStopId);
+    return originIndex >= 0 && originIndex < route.stops.length - 1;
+  });
+  const getAvailableDestinationStops = (originStopId) => {
+    const stopById = new Map();
+    getRoutesFromStop(originStopId).forEach((route) => {
+      const originIndex = route.stops.findIndex(({ id }) => id === originStopId);
+      route.stops.slice(originIndex + 1).forEach((stop) => stopById.set(stop.id, stop));
+    });
+    return [...stopById.values()];
+  };
+  const getRouteForStops = (originStopId, destinationStopId, preferredRouteId) => {
+    const matchingRoutes = getRoutesFromStop(originStopId).filter((route) => {
+      const originIndex = route.stops.findIndex(({ id }) => id === originStopId);
+      const destinationIndex = route.stops.findIndex(({ id }) => id === destinationStopId);
+      return destinationIndex > originIndex;
+    });
+    return matchingRoutes.find(({ id }) => id === preferredRouteId) || matchingRoutes[0];
+  };
   const renderTripStopFields = (compact = false) => {
-    const { route, originIndex, destination } = getTripStops(tripData);
+    const { destination } = getTripStops(tripData);
     const className = compact ? "trip-stop-fields" : "route-fields";
     return `
       <div class="${className}" data-trip-stop-fields>
-        <label><span>${compact ? "From" : '<span class="route-dot origin-dot" aria-hidden="true"></span>Starting point'}</span><select name="origin" data-trip-origin aria-label="Starting point">${renderStopOptions(route, route.stops.slice(0, -1), tripData.originStopId)}</select></label>
-        <label><span>${compact ? "Drop-off" : '<span class="route-dot destination-dot" aria-hidden="true"></span>Drop-off point'}</span><select name="destination" data-trip-destination aria-label="Drop-off point">${renderStopOptions(route, route.stops.slice(originIndex + 1), destination.id)}</select></label>
+        <label><span>${compact ? "From" : '<span class="route-dot origin-dot" aria-hidden="true"></span>Starting point'}</span><select name="origin" data-trip-origin aria-label="Starting point">${renderStopOptions(getAvailableOriginStops(), tripData.originStopId)}</select></label>
+        <label><span>${compact ? "Drop-off" : '<span class="route-dot destination-dot" aria-hidden="true"></span>Drop-off point'}</span><select name="destination" data-trip-destination aria-label="Drop-off point">${renderStopOptions(getAvailableDestinationStops(tripData.originStopId), destination.id)}</select></label>
       </div>`;
+  };
+  const syncTripStopControls = () => {
+    const destinations = getAvailableDestinationStops(tripData.originStopId);
+    if (!destinations.some(({ id }) => id === tripData.destinationStopId)) {
+      throw new Error(`Selected drop-off "${tripData.destinationStopId}" is not available from "${tripData.originStopId}".`);
+    }
+    screen.querySelectorAll("[data-trip-origin]").forEach((select) => {
+      select.value = tripData.originStopId;
+    });
+    screen.querySelectorAll("[data-trip-destination]").forEach((select) => {
+      select.innerHTML = renderStopOptions(destinations, tripData.destinationStopId);
+    });
   };
   const readTripStops = (routeId, originStopId, destinationStopId) => {
     const route = getRoute(routeId);
@@ -4177,7 +4214,7 @@
     const routePathD = live
       ? "M217 515 200 469 210 386 163 329 191 253 186 245"
       : "M48 119 110 104 160 70 220 77 296 35";
-    const selectedRoutePath = `<path class="selected-route-path" d="${routePathD}" pathLength="1" stroke-dasharray="${segmentLength} 1" stroke-dashoffset="${-segmentStart}"/>${route.stops.map((stop) => `<circle class="route-stop-marker${stop.id === origin.id ? " is-origin" : stop.id === destination.id ? " is-destination" : ""}" data-route-stop-progress="${stop.progress}" cx="0" cy="0" r="4"/>`).join("")}`;
+    const selectedRoutePath = `<path class="selected-route-path" d="${routePathD}" pathLength="1" stroke-dasharray="${segmentLength} 1" stroke-dashoffset="${-segmentStart}"/>${route.stops.map((stop) => `<circle class="route-stop-marker${stop.id === origin.id ? " is-origin" : stop.id === destination.id ? " is-destination" : ""}" data-route-stop-id="${stop.id}" data-route-stop-progress="${stop.progress}" cx="0" cy="0" r="4"/>`).join("")}`;
     const trackedBusIndex = trackedBus ? liveBusDetails.findIndex(({ id }) => id === trackedBus.id) : -1;
     if (trackedBus && trackedBusIndex < 0) throw new Error(`Unknown bus requested for passenger map: ${trackedBus.id}.`);
     const busMarker = live
@@ -4198,6 +4235,25 @@
           <svg class="route-stop-overlay" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${selectedRoutePath}</svg>
         </div>
       </div>`;
+  };
+  const updateTripStopMap = () => {
+    const { route, origin, destination } = getTripStops(tripData);
+    const segmentStart = Math.min(origin.progress, destination.progress);
+    const segmentLength = Math.abs(destination.progress - origin.progress);
+    screen.querySelectorAll(".map-art").forEach((mapArt) => {
+      const path = mapArt.querySelector(".selected-route-path");
+      const labels = mapArt.querySelectorAll(".map-label");
+      if (!path || labels.length !== 2) throw new Error("The route map is missing its selected path or stop labels.");
+      path.setAttribute("stroke-dasharray", `${segmentLength} 1`);
+      path.setAttribute("stroke-dashoffset", String(-segmentStart));
+      labels[0].textContent = origin.short;
+      labels[1].textContent = destination.short;
+      mapArt.setAttribute("aria-label", `Illustrative, not-to-scale route map from ${origin.label} to ${destination.label} via ${route.via}`);
+      mapArt.querySelectorAll(".route-stop-marker").forEach((marker) => {
+        marker.classList.toggle("is-origin", marker.dataset.routeStopId === origin.id);
+        marker.classList.toggle("is-destination", marker.dataset.routeStopId === destination.id);
+      });
+    });
   };
 
   const homeShortcutOverlayMarkup = (shortcut) => {
@@ -6242,27 +6298,33 @@
 
   screen.addEventListener("change", (event) => {
     if (event.target.matches("[data-trip-origin]")) {
-      const route = getRoute(tripData.routeId);
-      const originIndex = route.stops.findIndex(({ id }) => id === event.target.value);
-      if (originIndex < 0 || originIndex >= route.stops.length - 1) {
-        throw new Error(`Invalid starting stop selected on route "${route.id}".`);
-      }
+      const routesFromOrigin = getRoutesFromStop(event.target.value);
+      if (routesFromOrigin.length === 0) throw new Error(`No route continues from starting stop "${event.target.value}".`);
       const destinationSelect = event.target.closest("[data-trip-stop-fields]")?.querySelector("[data-trip-destination]");
       if (!destinationSelect) throw new Error("The drop-off selector is missing for the selected starting point.");
       const currentDestination = destinationSelect.value;
-      const downstreamStops = route.stops.slice(originIndex + 1);
+      const downstreamStops = getAvailableDestinationStops(event.target.value);
+      const preferredRoute = routesFromOrigin.find(({ id }) => id === tripData.routeId) || routesFromOrigin[0];
+      const defaultDestination = preferredRoute.stops[preferredRoute.stops.length - 1].id;
       const selectedDestination = downstreamStops.some(({ id }) => id === currentDestination)
         ? currentDestination
-        : downstreamStops[downstreamStops.length - 1].id;
-      destinationSelect.innerHTML = renderStopOptions(route, downstreamStops, selectedDestination);
+        : defaultDestination;
+      const route = getRouteForStops(event.target.value, selectedDestination, tripData.routeId);
+      if (!route) throw new Error(`No available route connects "${event.target.value}" to "${selectedDestination}".`);
       tripData = { ...tripData, ...readTripStops(route.id, event.target.value, selectedDestination) };
+      syncTripStopControls();
+      updateTripStopMap();
       const homeOrigin = screen.querySelector(".home-greeting-row h1");
       if (homeOrigin) homeOrigin.textContent = tripData.origin;
       return;
     }
 
     if (event.target.matches("[data-trip-destination]")) {
-      tripData = { ...tripData, ...readTripStops(tripData.routeId, tripData.originStopId, event.target.value) };
+      const route = getRouteForStops(tripData.originStopId, event.target.value, tripData.routeId);
+      if (!route) throw new Error(`No available route connects "${tripData.originStopId}" to "${event.target.value}".`);
+      tripData = { ...tripData, ...readTripStops(route.id, tripData.originStopId, event.target.value) };
+      syncTripStopControls();
+      updateTripStopMap();
       const homeOrigin = screen.querySelector(".home-greeting-row h1");
       if (homeOrigin) homeOrigin.textContent = tripData.origin;
       return;
