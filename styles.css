@@ -9602,3 +9602,99 @@ input:focus-visible,
     font-size: 10px;
   }
 }
+
+/* ==========================================================================
+   Passenger Light UI Design System
+   Overrides remaining dark surfaces on customer-facing screens and the
+   user-role workspace frame. Admin surfaces are intentionally untouched.
+   ========================================================================== */
+
+.workspace-page.is-passenger {
+  --passenger-surface: #ffffff;
+  --passenger-canvas: #eef2f0;
+  --passenger-border: #dde4e0;
+  --passenger-text: #2c2c2c;
+  --passenger-muted: #5d6a64;
+  background: var(--passenger-canvas);
+  color: var(--passenger-text);
+}
+
+.workspace-page.is-passenger .workspace-header,
+.workspace-page.is-passenger .canvas-hint {
+  border-color: var(--passenger-border);
+  background: var(--passenger-surface);
+  color: var(--passenger-muted);
+}
+
+.workspace-page.is-passenger .canvas-hint > span:first-child { color: var(--passenger-text); }
+.workspace-page.is-passenger .hint-divider { color: #9aa6a0; }
+.workspace-page.is-passenger .workspace-title { color: var(--passenger-muted); }
+.workspace-page.is-passenger .workspace-title strong { color: var(--passenger-text); }
+.workspace-page.is-passenger .workspace-divider,
+.workspace-page.is-passenger .zoom-separator { background: var(--passenger-border); }
+.workspace-page.is-passenger .zoom-controls { border-color: var(--passenger-border); background: #f6f8f7; }
+.workspace-page.is-passenger .zoom-button,
+.workspace-page.is-passenger .zoom-level { color: var(--passenger-text); }
+.workspace-page.is-passenger .zoom-button:hover,
+.workspace-page.is-passenger .back-button:hover,
+.workspace-page.is-passenger .fit-button:hover { background: #e7efeb; color: var(--passenger-text); }
+.workspace-page.is-passenger .back-button,
+.workspace-page.is-passenger .fit-button { color: var(--passenger-muted); }
+.workspace-page.is-passenger .phone-screen { box-shadow: 0 24px 60px rgba(28, 52, 42, .16), 0 0 0 1px rgba(28, 52, 42, .08); }
+
+/* Find Available Seats (previously dark teal panel) */
+.seat-capacity-page { background: #f3f7f4; }
+.panel-map {
+  border: 1px solid #dfe8e5;
+  background: #ffffff;
+}
+.seat-capacity-panel { box-shadow: 0 10px 24px rgba(24, 45, 36, .08); }
+.seat-capacity-sticky {
+  background: linear-gradient(145deg, #2fd9a8, #28b996);
+  border-radius: 0 0 18px 18px;
+}
+.seat-capacity-header { color: #fff; }
+.seat-capacity-back { border-color: rgba(255,255,255,.42); background: rgba(255,255,255,.18); }
+.seat-search { border-color: transparent; background: #fff; }
+.seat-search svg { stroke: #7c8883; }
+.seat-search input { color: #26352f; }
+.seat-search input::placeholder { color: #69756f; }
+.seat-category-tabs button {
+  border-color: rgba(255,255,255,.3);
+  background: rgba(255,255,255,.2);
+  color: #fff;
+}
+.seat-category-tabs button.is-active { background: #fff; color: #167b5e; }
+.seat-map-surface { margin-top: 16px; border-color: #dfe8e5; }
+.seat-bus-card {
+  border-color: #e0e7e3;
+  background: #fff;
+  color: #26352e;
+  box-shadow: 0 2px 7px rgba(37, 61, 49, .04);
+}
+.seat-bus-meta { border-bottom-color: #edf0ee; }
+.seat-bus-icon { background: #e4f7f0; color: #138263; }
+.seat-bus-meta span { color: #5d6a64; }
+.seat-bus-rows div { background: #f5f8f7; }
+.seat-bus-rows span { color: #5d6a64; }
+.seat-bus-rows strong { color: #26352e; }
+.seat-seat.empty { border: 1px solid #b8e5d2; background: #e5f7ee; color: #14785b; }
+.seat-seat.occupied { background: #e8ece9; color: #77837c; }
+.seat-seat.selected { background: #0f795b; color: #fff; }
+.seat-legend { color: #5d6a64; }
+.seat-dot.available { background: #8fd8b8; }
+.seat-dot.occupied { background: #c9d1cd; }
+
+/* Support banners (previously charcoal) */
+.faq-contact {
+  border: 1px solid #cfe9de;
+  background: #eefaf5;
+  color: #1f3a30;
+}
+.faq-contact small { color: #4f6a5f; }
+.profile-support-banner {
+  border: 1px solid #cfe9de;
+  background: #eefaf5;
+  color: #1f3a30;
+}
+.profile-support-banner small { color: #4f6a5f; }

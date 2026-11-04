@@ -5362,6 +5362,8 @@
     rolePage.hidden = true;
     workspacePage.hidden = false;
     roleNote.textContent = "";
+    workspacePage.classList.toggle("is-passenger", role !== "admin");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", role === "admin" ? "#1d1d1d" : "#ffffff");
     if (workspaceRoleLabel) {
       workspaceRoleLabel.textContent = role === "admin" ? "Admin" : "User";
     }
