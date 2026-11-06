@@ -601,6 +601,12 @@
       `).join("")}
     `;
   };
+  const renderBusNumberOptions = (busNo) => {
+    const selectedNumber = busNo.replace(/^Bus\s*/i, "").padStart(2, "0");
+    return Array.from({ length: 20 }, (_, index) => String(index + 1).padStart(2, "0"))
+      .map((number) => `<option value="${number}"${number === selectedNumber ? " selected" : ""}>Bus ${number}</option>`)
+      .join("");
+  };
 
   const BUS_TOTAL_SEAT_CAPACITY = 15;
   const EMPLOYEE_RESERVED_SEATS = [
@@ -1308,8 +1314,8 @@
     },
     {
       id: "bus-23",
-      unitCode: "UNIT #23",
-      busNo: "23",
+      unitCode: "UNIT #20",
+      busNo: "20",
       badge: "",
       category: "deployed",
       tripName: "Southbound Bus",
@@ -1410,6 +1416,7 @@
               ${bus.category === "terminal"
                 ? '<span class="dispatch-row-unavailable">Not in service</span>'
                 : `<button class="dispatch-row-manage" type="button" data-manage-trip="${bus.id}">${bus.tripFinished ? "View trip" : "Manage trip"}</button>`}
+              <button class="dispatch-row-manage" type="button" data-telemetry-edit="${bus.id}">Edit details</button>
               <button class="dispatch-row-delete" type="button" data-telemetry-delete="${bus.id}" aria-label="Delete telemetry for Bus ${escapeHtml(bus.busNo)}">Delete</button>
             </div>
           </td>
@@ -1974,6 +1981,20 @@
       <option value="${escapeHtml(driver.id)}"${driver.id === selectedDriverId ? " selected" : ""}>${escapeHtml(driver.name)} · ${escapeHtml(driver.status)}</option>
     `).join("")}
   `;
+  const getAssignableStaffDriverId = (driverName) => {
+    const drivers = getAssignableStaffDrivers();
+    const normalizedName = driverName.trim().toLocaleLowerCase();
+    const exactMatch = drivers.find((driver) => driver.name.toLocaleLowerCase() === normalizedName);
+    if (exactMatch) return exactMatch.id;
+    const abbreviatedName = /^(.+),\s*([a-z])\.?$/i.exec(driverName.trim());
+    if (!abbreviatedName) return "";
+    const surname = abbreviatedName[1].toLocaleLowerCase();
+    const firstInitial = abbreviatedName[2].toLocaleLowerCase();
+    return drivers.find((driver) => {
+      const [firstName, ...lastName] = driver.name.toLocaleLowerCase().split(/\s+/);
+      return firstName.startsWith(firstInitial) && lastName.join(" ") === surname;
+    })?.id ?? "";
+  };
 
   const generatedStaffFirstNames = [
     "Alex", "Bea", "Carlo", "Dana", "Emil", "Faith", "Gabriel", "Hazel", "Ian", "Jessa",
@@ -3441,6 +3462,9 @@
           <button type="button" data-fleet-action="telemetry" data-fleet-id="${bus.id}">
             <strong>View telemetry</strong><span>Review speed, fuel, GPS and onboard load.</span>
           </button>
+          <button type="button" data-fleet-action="edit-details" data-fleet-id="${bus.id}">
+            <strong>Edit bus details</strong><span>Update the bus number, route or dispatcher.</span>
+          </button>
           <button type="button" data-fleet-action="assign-driver" data-fleet-id="${bus.id}"${bus.filterCategory === "on-duty" ? " disabled" : ""}>
             <strong>${bus.filterCategory === "on-duty" ? "Driver assigned" : "Assign driver"}</strong>
             <span>${bus.filterCategory === "on-duty" ? "Driver changes are unavailable while this vehicle is on duty." : "Update the driver assigned to this vehicle."}</span>
@@ -3452,6 +3476,42 @@
           <p class="fleet-action-prototype-note">Actions update sample data in this prototype only.</p>
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Close</button>
         </div>
+      `;
+      isInfoOnly = true;
+    } else if (type.startsWith("fleet-edit-details-")) {
+      const busId = type.replace("fleet-edit-details-", "");
+      const bus = adminFleetData.find((item) => item.id === busId);
+      const telemetryUnit = fleetDispatchTelemetryUnits.find((item) => item.id === busId);
+      if (!bus && !telemetryUnit) throw new Error(`Bus details could not be opened: vehicle "${busId}" was not found.`);
+      const busNo = bus?.busNo ?? `Bus ${telemetryUnit.busNo}`;
+      const routeId = bus?.routeId ?? telemetryUnit.routeId ?? activeRoute.id;
+      const dispatcher = bus?.dispatcher ?? telemetryUnit.dispatcherName;
+      icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>`;
+      title = `Edit Bus Details — ${busNo}`;
+      desc = "Update this vehicle's number, route and assigned dispatcher.";
+      customHtml = `
+        <form class="admin-login-form" data-fleet-details-form="${busId}" style="margin-top: 14px; text-align: left;">
+          <div class="admin-form-field">
+            <label for="fleet-bus-number" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Bus Number</label>
+            <select class="admin-input" id="fleet-bus-number" name="busNo" required style="height: 40px;">
+              ${renderBusNumberOptions(busNo)}
+            </select>
+          </div>
+          <div class="admin-form-field">
+            <label for="fleet-bus-route" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Route</label>
+            <select class="admin-input" id="fleet-bus-route" name="routeId" required style="height: 40px;">
+              ${renderRouteOptions(routeId)}
+            </select>
+          </div>
+          <div class="admin-form-field">
+            <label for="fleet-bus-dispatcher" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Dispatcher</label>
+            <input class="admin-input" id="fleet-bus-dispatcher" name="dispatcher" value="${escapeHtml(dispatcher)}" required style="height: 40px;">
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
+            <button class="admin-modal-button-primary" type="submit">Save details</button>
+          </div>
+        </form>
       `;
       isInfoOnly = true;
     } else if (type.startsWith("fleet-assign-driver-")) {
@@ -3579,8 +3639,10 @@
       customHtml = `
         <form class="admin-login-form" data-admin-reassign-form style="margin-top: 14px; text-align: left;">
           <div class="admin-form-field">
-            <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Driver</label>
-            <input class="admin-input" id="reassign-driver-input" value="${escapeHtml(bus.driverName)}" style="height: 38px;">
+            <label for="reassign-driver-input" style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Driver</label>
+            <select class="admin-input" id="reassign-driver-input" name="driverId" required style="height: 38px;">
+              ${renderStaffDriverOptions(getAssignableStaffDriverId(bus.driverName))}
+            </select>
           </div>
           <div class="admin-form-field">
             <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Assigned Dispatcher</label>
@@ -5746,6 +5808,63 @@
       return;
     }
 
+    if (event.target.matches("[data-fleet-details-form]")) {
+      event.preventDefault();
+      const busId = event.target.dataset.fleetDetailsForm;
+      const bus = adminFleetData.find((item) => item.id === busId);
+      const telemetryUnit = fleetDispatchTelemetryUnits.find((unit) => unit.id === busId);
+      if (!bus && !telemetryUnit) throw new Error(`Bus details could not be saved: vehicle "${busId}" was not found.`);
+      const busName = bus?.busNo ?? `Bus ${telemetryUnit.busNo}`;
+      const busNoInput = event.target.querySelector('[name="busNo"]');
+      const routeInput = event.target.querySelector('[name="routeId"]');
+      const dispatcherInput = event.target.querySelector('[name="dispatcher"]');
+      if (!busNoInput || !routeInput || !dispatcherInput) {
+        throw new Error(`Bus details could not be saved for ${busName}: a required field is missing.`);
+      }
+      const busNumber = busNoInput.value;
+      const busNo = `Bus ${busNumber}`;
+      const dispatcher = dispatcherInput.value.trim();
+      const route = routes.find((item) => item.id === routeInput.value);
+      if (!busNumber || !dispatcher || !route) {
+        throw new Error(`Bus details could not be saved for ${busName}: enter a bus number and dispatcher and select a valid route.`);
+      }
+      const normalizedBusNo = busNo.replace(/^Bus\s*/i, "").toLocaleLowerCase();
+      const duplicateInFleet = adminFleetData.some((item) => item.id !== busId
+        && item.busNo.replace(/^Bus\s*/i, "").toLocaleLowerCase() === normalizedBusNo);
+      const duplicateInTelemetry = fleetDispatchTelemetryUnits.some((item) => item.id !== busId
+        && item.busNo.replace(/^Bus\s*/i, "").toLocaleLowerCase() === normalizedBusNo);
+      if (duplicateInFleet || duplicateInTelemetry) {
+        busNoInput.setCustomValidity("This bus number is already in use.");
+        busNoInput.reportValidity();
+        busNoInput.addEventListener("input", () => busNoInput.setCustomValidity(""), { once: true });
+        return;
+      }
+      busNoInput.setCustomValidity("");
+      if (bus) {
+        bus.busNo = busNo;
+        bus.routeId = route.id;
+        bus.route = route.label;
+        bus.dispatcher = dispatcher;
+      }
+      if (telemetryUnit) {
+        telemetryUnit.busNo = busNo.replace(/^Bus\s*/i, "");
+        telemetryUnit.unitCode = `UNIT #${telemetryUnit.busNo}`;
+        telemetryUnit.routeId = route.id;
+        telemetryUnit.routeCorridor = route.label;
+        telemetryUnit.dispatcherName = dispatcher;
+      }
+      screen.querySelector(".admin-modal-backdrop")?.remove();
+      const fleetTbody = screen.querySelector("#admin-fleet-tbody");
+      if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
+      const telemetryTbody = screen.querySelector("#fleet-telemetry-tbody");
+      if (telemetryTbody) telemetryTbody.innerHTML = renderFleetTelemetryRows();
+      const dispatchPanel = screen.querySelector("#dispatch-panel-container");
+      if (dispatchPanelOpen && dispatchPanel) dispatchPanel.innerHTML = renderDispatchControlPanel();
+      const mapContainer = screen.querySelector("#radar-viewport-container");
+      if (mapContainer) mapContainer.innerHTML = renderRadarMapSvg();
+      return;
+    }
+
     if (event.target.matches("[data-fleet-driver-form]")) {
       event.preventDefault();
       const busId = event.target.dataset.fleetDriverForm;
@@ -6612,6 +6731,8 @@
       screen.querySelector(".admin-modal-backdrop")?.remove();
       if (fleetAction === "telemetry") {
         openAdminModal(`telemetry-${fleetId}`);
+      } else if (fleetAction === "edit-details") {
+        openAdminModal(`fleet-edit-details-${fleetId}`);
       } else if (fleetAction === "assign-driver") {
         openAdminModal(`fleet-assign-driver-${fleetId}`);
       } else if (fleetAction === "dispatch") {
@@ -6657,6 +6778,12 @@
       });
       const tbody = screen.querySelector("#fleet-telemetry-tbody");
       if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      return;
+    }
+
+    const telemetryEditBtn = event.target.closest("[data-telemetry-edit]");
+    if (telemetryEditBtn) {
+      openAdminModal(`fleet-edit-details-${telemetryEditBtn.dataset.telemetryEdit}`);
       return;
     }
 
@@ -6995,11 +7122,15 @@
     if (confirmCrewBtn) {
       const busId = confirmCrewBtn.dataset.adminConfirmCrew;
       const unit = fleetDispatchTelemetryUnits.find((u) => u.id === busId);
-      const driverIn = screen.querySelector("#reassign-driver-input");
+      const driverSelect = screen.querySelector("#reassign-driver-input");
       const dispatcherIn = screen.querySelector("#reassign-dispatcher-input");
-      if (unit && driverIn && driverIn.value.trim()) {
-        unit.driverName = driverIn.value.trim();
-      }
+      const driver = adminStaffMembersData.find((member) => member.id === driverSelect?.value && member.roleKey === "driver" && !isStaffOffDuty(member));
+      if (!unit) throw new Error(`Crew assignment could not be saved: unit "${busId}" was not found.`);
+      if (!driverSelect || !driver) throw new Error("Crew assignment could not be saved: select an available driver.");
+      unit.driverName = driver.name;
+      unit.driverId = driver.staffId;
+      const fleetBus = adminFleetData.find((item) => item.id === busId);
+      if (fleetBus) fleetBus.driver = driver.name;
       if (unit && dispatcherIn && dispatcherIn.value.trim()) {
         unit.dispatcherName = dispatcherIn.value.trim();
       }
@@ -7008,6 +7139,8 @@
       if (panel) panel.innerHTML = renderDispatchControlPanel();
       const tbody = screen.querySelector("#fleet-telemetry-tbody");
       if (tbody) tbody.innerHTML = renderFleetTelemetryRows();
+      const fleetTbody = screen.querySelector("#admin-fleet-tbody");
+      if (fleetTbody) fleetTbody.innerHTML = renderAdminFleetRows();
       return;
     }
 

@@ -5797,8 +5797,9 @@ input:focus-visible,
 
 .dispatch-row-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(2, minmax(0, max-content));
   align-items: center;
+  justify-content: start;
   gap: 6px;
 }
 
@@ -5816,17 +5817,25 @@ input:focus-visible,
 
 .dispatch-row-delete {
   padding: 6px 9px;
-  justify-self: end;
+  grid-column: 1;
+  justify-self: stretch;
 }
 
 .dispatch-row-delete:hover,
 .staff-bulk-delete-btn:not(:disabled):hover {
   border-color: #b91c1c;
-  background: rgba(127, 29, 29, 0.32);
-  color: #fecaca;
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .dispatch-row-unavailable {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
   color: #64748b;
   font-size: 11px;
   white-space: nowrap;
