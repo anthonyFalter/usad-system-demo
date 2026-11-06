@@ -1276,7 +1276,8 @@ input:focus-visible,
   stroke-linejoin: round;
 }
 
-.destination-search input {
+.destination-search input,
+.destination-search select {
   width: 100%;
   min-width: 0;
   border: 0;
@@ -1288,6 +1289,11 @@ input:focus-visible,
 
 .destination-search input::placeholder {
   color: #69756f;
+}
+
+.destination-search select {
+  appearance: none;
+  cursor: pointer;
 }
 
 .destination-search button {
@@ -1828,7 +1834,13 @@ input:focus-visible,
 .route-fields { position: relative; display: grid; gap: var(--space-2); margin: var(--space-4) 0 18px; }
 .route-fields::before { position: absolute; top: 26px; bottom: 26px; left: 11px; width: 1px; background: #bdc8c3; content: ""; }
 .route-fields label { position: relative; display: flex; height: 39px; align-items: center; gap: 10px; padding: 0 10px; border: 1px solid #d9dfdc; border-radius: 8px; background: #fff; }
-.route-fields input { width: 100%; min-width: 0; border: 0; color: #29332f; background: transparent; font-size: 12px; outline: none; }
+.route-fields input,
+.route-fields select { width: 100%; min-width: 0; border: 0; color: #29332f; background: transparent; font-size: 12px; outline: none; }
+.route-fields select { appearance: none; cursor: pointer; }
+.route-fields .route-destination-display { min-height: 48px; height: auto; }
+.route-destination-display > span:last-child { display: grid; min-width: 0; gap: 2px; }
+.route-destination-display small { color: #7d8581; font-size: 9px; }
+.route-destination-display strong { overflow: hidden; color: #29332f; font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .route-dot { z-index: 1; width: 12px; height: 12px; flex: 0 0 12px; border: 3px solid #2b90d9; border-radius: 50%; background: #fff; }
 .destination-dot { border-color: #cb4d2f; }
 .sheet-label { display: block; margin: 14px 0 var(--space-2); color: #68766e; font-size: 11px; }
