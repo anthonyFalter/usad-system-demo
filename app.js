@@ -5224,18 +5224,66 @@
     const template = document.createElement("template");
     template.innerHTML = `
       <div class="modal-scrim top-up-modal-scrim" data-top-up-modal>
-        <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="top-up-dialog-title">
-          <button class="modal-close" type="button" aria-label="Close top-up message" data-top-up-close>×</button>
-          <div class="top-up-message">
-            <span class="top-up-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M14 4h6v6m-.5-5.5L11 13m-2-7H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            <h2 id="top-up-dialog-title">Redirecting you to merchant</h2>
+        <section class="top-up-dialog" role="dialog" aria-modal="true" aria-labelledby="top-up-dialog-title">
+          <header class="top-up-header">
+            <button type="button" class="top-up-back" aria-label="Close top-up" data-top-up-close>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <h2 id="top-up-dialog-title">Add funds to U-Pouch</h2>
+            <span aria-hidden="true"></span>
+          </header>
+          <div class="top-up-content">
+            <div class="top-up-balance-card">
+              <span class="top-up-brand">U-Pouch balance</span>
+              <strong>₱2.00</strong>
+            </div>
+            <section class="top-up-amount-section" aria-labelledby="top-up-amount-heading">
+              <h3 id="top-up-amount-heading">Choose your top-up amount (PHP)</h3>
+              <div class="top-up-amount-grid">
+                ${[300, 500, 700, 1000, 2000, 5000, 7500, 10000].map((amount) => `<button type="button" data-top-up-amount="${amount}" aria-pressed="false">${amount.toLocaleString("en-PH")}</button>`).join("")}
+              </div>
+              <label class="visually-hidden" for="top-up-custom-amount">Enter a custom top-up amount</label>
+              <input id="top-up-custom-amount" class="top-up-custom-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="Or enter amount" data-top-up-custom-amount>
+            </section>
+            <section class="top-up-payment-section" aria-labelledby="top-up-payment-heading">
+              <h3 id="top-up-payment-heading">Select payment option</h3>
+              <label class="top-up-payment-option">
+                <input type="radio" name="top-up-payment" value="card-ewallet" checked>
+                <span>Credit Card, Debit Card or E-Wallet</span>
+              </label>
+              <div class="top-up-payment-brands" aria-label="Accepted payment methods">
+                <span class="brand-mastercard">●</span><span class="brand-visa">VISA</span><span class="brand-jcb">JCB</span><span class="brand-maya">maya</span><span class="brand-gcash">G</span><span class="brand-shopee">S</span><span class="brand-wechat">WeChat Pay</span>
+              </div>
+            </section>
+            <button class="top-up-proceed" type="button" data-top-up-proceed disabled>Proceed to Payment</button>
+            <p class="top-up-terms">By continuing, you agree to USAD's <a href="#top-up-privacy">Privacy Policy</a> and <a href="#top-up-terms">Terms and Conditions</a>.</p>
           </div>
         </section>
       </div>`;
     const modal = template.content.firstElementChild;
     if (!modal) throw new Error("USAD could not open the top-up message.");
+    screen.append(modal);
+    modal.querySelector(".top-up-back")?.focus();
+  };
+
+  const openMerchantRedirectModal = () => {
+    const existing = screen.querySelector("[data-top-up-modal]");
+    if (existing) existing.remove();
+    const template = document.createElement("template");
+    template.innerHTML = `
+      <div class="modal-scrim top-up-modal-scrim" data-top-up-modal>
+        <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="top-up-redirect-title">
+          <button class="modal-close" type="button" aria-label="Close merchant message" data-top-up-close>×</button>
+          <div class="top-up-message">
+            <span class="top-up-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M14 4h6v6m-.5-5.5L11 13m-2-7H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h2 id="top-up-redirect-title">Redirecting you to merchant</h2>
+          </div>
+        </section>
+      </div>`;
+    const modal = template.content.firstElementChild;
+    if (!modal) throw new Error("USAD could not open the merchant redirect message.");
     screen.append(modal);
     modal.querySelector("[data-top-up-close]")?.focus();
   };
@@ -6033,6 +6081,18 @@
   });
 
   screen.addEventListener("input", (event) => {
+    if (event.target.matches("[data-top-up-custom-amount]")) {
+      const modal = event.target.closest("[data-top-up-modal]");
+      if (!modal) return;
+      modal.querySelectorAll("[data-top-up-amount]").forEach((button) => {
+        button.classList.remove("is-selected");
+        button.setAttribute("aria-pressed", "false");
+      });
+      const proceedButton = modal.querySelector("[data-top-up-proceed]");
+      if (proceedButton) proceedButton.disabled = !event.target.validity.valid || Number(event.target.value) <= 0;
+      return;
+    }
+
     if (event.target.matches("[data-trip-rating-comment]")) {
       selectedTripComment = event.target.value.slice(0, 50);
       const characterCount = screen.querySelector("[data-trip-rating-character-count]");
@@ -6299,6 +6359,31 @@
         ?? (passwordInput.id === "register-confirm-password" ? "confirm password" : "password");
       passwordToggle.setAttribute("aria-label", `${showPassword ? "Hide" : "Show"} ${passwordLabel}`);
       passwordToggle.setAttribute("aria-pressed", String(showPassword));
+      return;
+    }
+
+    const topUpAmountButton = event.target.closest("[data-top-up-amount]");
+    if (topUpAmountButton) {
+      const modal = topUpAmountButton.closest("[data-top-up-modal]");
+      if (!modal) return;
+      modal.querySelectorAll("[data-top-up-amount]").forEach((button) => {
+        const selected = button === topUpAmountButton;
+        button.classList.toggle("is-selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+      const customAmount = modal.querySelector("[data-top-up-custom-amount]");
+      if (customAmount) customAmount.value = "";
+      const proceedButton = modal.querySelector("[data-top-up-proceed]");
+      if (proceedButton) proceedButton.disabled = false;
+      return;
+    }
+
+    const topUpProceedButton = event.target.closest("[data-top-up-proceed]");
+    if (topUpProceedButton) {
+      const modal = topUpProceedButton.closest("[data-top-up-modal]");
+      if (!modal || topUpProceedButton.disabled) return;
+      modal.remove();
+      openMerchantRedirectModal();
       return;
     }
 
