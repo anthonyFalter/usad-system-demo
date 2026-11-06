@@ -476,6 +476,8 @@
     }
     const metricsContainer = screen.querySelector("#analytics-metrics-container");
     if (metricsContainer) metricsContainer.innerHTML = renderPredictiveStats();
+    const nowDecisionContainer = screen.querySelector("#analytics-now-decision");
+    if (nowDecisionContainer) nowDecisionContainer.innerHTML = renderNowDispatchRecommendation();
     const yAxis = screen.querySelector(".chart-y-axis");
     if (yAxis) yAxis.innerHTML = renderPredictiveYAxis();
     const forecastBadge = screen.querySelector(".analytics-range-badge");
@@ -1115,7 +1117,7 @@
           <option value="weekly"${activePredictivePeriod === "weekly" ? " selected" : ""}>Weekly</option>
           <option value="monthly"${activePredictivePeriod === "monthly" ? " selected" : ""}>Monthly</option>
         </select>
-        <span class="analytics-range-badge">${escapeHtml(activeRoute.label)} · ${escapeHtml(getPredictivePeriod().label)} passenger demand</span>
+        <span class="analytics-range-badge">${escapeHtml(routes.find((route) => route.id === activeAnalyticsRouteId)?.label ?? activeRoute.label)} · ${escapeHtml(getPredictivePeriod().label)} passenger demand</span>
         <button class="admin-btn-assign" type="button" data-admin-action="export-surge" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: 700;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1186,34 +1188,92 @@
 
     <!-- Dispatch recommendation -->
     <section class="analytics-bottom-grid">
-      <!-- AI Dispatch Recommendation -->
-      <article class="analytics-bottom-card">
+      <article class="analytics-bottom-card analytics-now-decision" id="analytics-now-decision">
+        ${renderNowDispatchRecommendation()}
+      </article>
+    </section>
+  `;
+
+  const renderNowDispatchRecommendation = () => {
+    const selectedForecastRoute = routes.find((route) => route.id === activeAnalyticsRouteId);
+    if (!selectedForecastRoute) throw new Error(`Dispatch recommendation could not find route "${activeAnalyticsRouteId}".`);
+    const selectedItem = predictiveDemandForecast.find((item) => item.id === predictiveSelectedBucket) ?? predictiveDemandForecast[7];
+    if (!selectedItem) throw new Error("Dispatch recommendation could not find the selected demand estimate.");
+    const predictivePeriod = getPredictivePeriod();
+    const projectedPassengers = Math.round(selectedItem.val * predictiveTransitLoadScale / 100);
+    const demandPressure = projectedPassengers / (predictiveDailyPassengerBaseline * predictivePeriod.days);
+    const availableBuses = adminFleetData.filter(isBusAvailableForAssignment);
+    const assignableDrivers = getAssignableStaffDrivers();
+    const demandSurge = selectedItem.state === "surge";
+    const routeUnits = fleetDispatchTelemetryUnits.filter((unit) => unit.routeId === selectedForecastRoute.id);
+    const delayedUnits = routeUnits.filter((unit) => unit.category === "delayed");
+    const estimatedDelayedCount = Math.min(routeUnits.length, Math.round(delayedUnits.length * demandPressure));
+    const estimatedNearFullCount = routeUnits.filter((unit) => unit.occupancyPct * demandPressure >= 90).length;
+    const recommendedAdditionalBuses = Math.min(20, Math.ceil(Math.max(0, demandPressure - 1) * 2));
+    const dispatchableBuses = Math.min(availableBuses.length, assignableDrivers.length);
+    const needsExtraCapacity = recommendedAdditionalBuses > 0 || (selectedItem.state === "normal" && estimatedNearFullCount > 0);
+    const simulatedDemandLabel = selectedItem.state === "surge" ? "Peak" : selectedItem.state === "normal" ? "Normal" : "Low";
+    const canDispatch = dispatchableBuses > 0;
+    const decisionTitle = needsExtraCapacity
+      ? canDispatch
+        ? recommendedAdditionalBuses > 1 ? `Dispatch ${recommendedAdditionalBuses} additional buses` : "Dispatch an available bus now"
+        : "No ready bus and driver available"
+      : selectedItem.state === "normal" ? "Keep current service and monitor load" : "Keep standby buses in reserve";
+    const decisionDescription = needsExtraCapacity
+      ? canDispatch
+        ? demandSurge
+          ? `The simulation projects peak demand (${projectedPassengers.toLocaleString()} passengers per ${predictivePeriod.unit}) and recommends ${recommendedAdditionalBuses} additional ${recommendedAdditionalBuses === 1 ? "bus" : "buses"} for ${selectedForecastRoute.name}. ${dispatchableBuses} can be assigned now.`
+          : `The simulation estimates ${estimatedNearFullCount} near-full ${estimatedNearFullCount === 1 ? "bus" : "buses"} on ${selectedForecastRoute.name}. Assign an available bus to relieve capacity; ${simulatedDemandLabel.toLowerCase()} demand is ${projectedPassengers.toLocaleString()} passengers per ${predictivePeriod.unit}.`
+        : `${demandSurge ? "Demand is in the peak range" : "A bus is near full"}, but no dispatch-ready bus and driver pair is currently available.`
+      : selectedItem.state === "normal"
+        ? `The simulation projects normal demand (${projectedPassengers.toLocaleString()} passengers per ${predictivePeriod.unit}) with ${predictiveOperatingProfile} at ${predictiveTransitLoadScale}% load. Monitor current trips and add a bus if boarding queues increase.`
+        : `The simulation projects low demand (${projectedPassengers.toLocaleString()} passengers per ${predictivePeriod.unit}) with ${predictiveOperatingProfile} at ${predictiveTransitLoadScale}% load. Keep available buses on standby, monitor any near-full trips, and reassess if demand rises.`;
+    const decisionClass = needsExtraCapacity ? "is-surge" : selectedItem.state === "normal" ? "is-normal" : "is-low";
+
+    return `
         <div class="admin-card-header">
           <div class="admin-card-header-left">
             <div class="card-icon-badge mint">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <div style="font-size: 13px; font-weight: 600; color: #1e293b;">Suggested Bus Changes</div>
+            <div>
+              <h2 class="analytics-now-title">Dispatcher decision — now</h2>
+              <p class="analytics-now-subtitle">Immediate response for ${escapeHtml(selectedForecastRoute.label)}</p>
+            </div>
+          </div>
+          <span class="analytics-now-badge">SIMULATION</span>
+        </div>
+
+        <div class="analytics-now-metrics" aria-label="Current dispatch context">
+          <div class="analytics-now-metric">
+            <span>Demand scenario</span>
+            <strong>${projectedPassengers.toLocaleString()} / ${getPredictivePeriod().unit}</strong>
+            <small>${escapeHtml(selectedItem.periodLabel)} · ${simulatedDemandLabel} · ${escapeHtml(predictiveOperatingProfile)} · ${predictiveTransitLoadScale}% load</small>
+          </div>
+          <div class="analytics-now-metric">
+            <span>Additional buses recommended</span>
+            <strong>${recommendedAdditionalBuses}</strong>
+            <small>${dispatchableBuses} ready to assign · ${availableBuses.map((bus) => escapeHtml(bus.busNo)).join(", ") || "No available buses"}</small>
+          </div>
+          <div class="analytics-now-metric">
+            <span>Estimated fleet needing attention</span>
+            <strong>${estimatedDelayedCount} delayed · ${estimatedNearFullCount} near full</strong>
+            <small>Sample fleet adjusted to simulated load</small>
           </div>
         </div>
 
-        <div class="bento-denested-content">
-          <ul class="recommendation-list">
-            <li>• Inject <strong>+3 standby buses</strong> on ${escapeHtml(activeRoute.label)}</li>
-            <li>• Reduce the time between evening buses from <strong>12m to 5m</strong></li>
-            <li>• Deploy <strong>2 available coaches</strong> from ${escapeHtml(activeRoute.origin)} depot</li>
-          </ul>
+        <div class="analytics-now-recommendation ${decisionClass}" aria-live="polite">
+          <span class="analytics-now-decision-label">Recommended action</span>
+          <strong>${decisionTitle}</strong>
+          <p>${decisionDescription}</p>
         </div>
 
-        <div class="bento-divider-line"></div>
-
-        <div class="analytics-action-row">
-          <button class="btn-approve-fleet" type="button" data-admin-action="preview-redistribution">Preview &amp; Apply Changes</button>
-          <button class="btn-simulate-surge" type="button" data-admin-action="simulate-surge">Preview Estimate</button>
+        <div class="analytics-action-row analytics-now-actions">
+          <button class="btn-approve-fleet" type="button" data-admin-action="open-assign"${needsExtraCapacity && !canDispatch ? " disabled" : ""}>${needsExtraCapacity ? canDispatch ? `Assign next bus${recommendedAdditionalBuses > dispatchableBuses ? ` (${dispatchableBuses} available of ${recommendedAdditionalBuses} needed)` : ""}` : "No bus ready to assign" : "Review dispatch options"}</button>
+          <span class="analytics-now-note">Bus demand and attention counts are simulation estimates; assignments update the prototype fleet only.</span>
         </div>
-      </article>
-    </section>
-  `;
+    `;
+  };
 
   fleetDispatchTelemetryUnits = [
     {
@@ -3440,7 +3500,7 @@
           <div class="admin-form-field">
             <label style="font-size: 11px; color: #72849a; margin-bottom: 4px;">Route</label>
             <select class="admin-input" id="assign-route" style="height: 40px;">
-              ${renderRouteOptions(activeRoute.id)}
+              ${renderRouteOptions(activeAnalyticsRouteId)}
             </select>
           </div>
           <div style="display: flex; gap: 10px; margin-top: 8px;">
@@ -3602,24 +3662,29 @@
     } else if (type === "preview-redistribution") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
       title = "Passenger Demand Preview";
-      desc = `Sample estimate based on 1,000 simulated trips on <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Estimated queue wait time: <strong>42% shorter</strong> at ${escapeHtml(activeRoute.destinationShort)}.<br><br>Proposed bus changes:<br>• Add <strong>3 standby buses</strong><br>• Reduce the time between evening buses from <strong>12 to 5 minutes</strong><br>• Deploy <strong>2 available buses</strong> from ${escapeHtml(activeRoute.origin)} depot<br><br>This prototype does not update real bus assignments.`;
+      const selectedDemand = predictiveDemandForecast.find((item) => item.id === predictiveSelectedBucket) ?? predictiveDemandForecast[7];
+      const selectedForecastRoute = routes.find((route) => route.id === activeAnalyticsRouteId) ?? activeRoute;
+      const readyBuses = adminFleetData.filter(isBusAvailableForAssignment);
+      desc = `Immediate dispatch review for <strong>${escapeHtml(selectedForecastRoute.label)}</strong>.<br><br>Selected demand scenario: <strong>${selectedDemand.periodLabel} · ${Math.round(selectedDemand.val * predictiveTransitLoadScale / 100).toLocaleString()} passengers per ${getPredictivePeriod().unit}</strong>.<br>Dispatch-ready buses: <strong>${readyBuses.map((bus) => escapeHtml(bus.busNo)).join(", ") || "None"}</strong>.<br><br>Choose a bus and driver to dispatch now. Demand and fleet details are illustrative prototype data.`;
       customHtml = `
         <div class="admin-modal-actions">
           <button class="admin-modal-button-secondary" type="button" data-admin-modal-close>Cancel</button>
-          <button class="admin-modal-button-primary" type="button" data-admin-action="apply-redistribution">Apply Changes</button>
+          <button class="admin-modal-button-primary" type="button" data-admin-action="open-assign">Dispatch Bus Now</button>
         </div>
       `;
       isInfoOnly = true;
     } else if (type === "approve-redistribution") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
-      title = "Bus Changes Applied";
-      desc = `Sample changes for ${escapeHtml(activeRoute.label)}:<br><br>• Add <strong>3 standby buses</strong><br>• Reduce the time between evening buses from <strong>12 to 5 minutes</strong><br>• Deploy <strong>2 available buses</strong> from ${escapeHtml(activeRoute.origin)} depot<br><br>This prototype does not update real bus assignments.`;
+      title = "Dispatch Decision Reviewed";
+      desc = `Review the immediate dispatch decision for <strong>${escapeHtml(routes.find((route) => route.id === activeAnalyticsRouteId)?.label ?? activeRoute.label)}</strong> in Fleet Management.`;
       hidePrimaryBtn = true;
       isInfoOnly = true;
     } else if (type === "simulate-surge") {
       icon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>`;
-      title = "Passenger Demand Estimate";
-      desc = `Sample estimate based on 1,000 simulated trips on <strong>${escapeHtml(activeRoute.label)}</strong>.<br><br>Estimated queue wait time: <strong>42% shorter</strong> at ${escapeHtml(activeRoute.destinationShort)}.`;
+      title = "Immediate Passenger Demand";
+      const selectedDemand = predictiveDemandForecast.find((item) => item.id === predictiveSelectedBucket) ?? predictiveDemandForecast[7];
+      const selectedForecastRoute = routes.find((route) => route.id === activeAnalyticsRouteId) ?? activeRoute;
+      desc = `Selected demand scenario for <strong>${escapeHtml(selectedForecastRoute.label)}</strong>: <strong>${selectedDemand.periodLabel}</strong>, with an estimated <strong>${Math.round(selectedDemand.val * predictiveTransitLoadScale / 100).toLocaleString()} passengers per ${getPredictivePeriod().unit}</strong>.<br><br>Use the current dispatch decision to review ready buses and assign one now. This is illustrative prototype data.`;
       hidePrimaryBtn = true;
       isInfoOnly = true;
     } else if (type.startsWith("dispatch-order-sent-")) {
