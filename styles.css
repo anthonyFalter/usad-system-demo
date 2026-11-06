@@ -8349,9 +8349,9 @@ input:focus-visible,
 
 .peak-readiness-card {
   padding: 20px;
-  border: 1px solid #254138;
+  border: 1px solid #cfe4dc;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.09), rgba(17, 24, 39, 0.98) 48%);
+  background: linear-gradient(135deg, #f0faf6, #ffffff 52%);
 }
 
 .peak-readiness-header,

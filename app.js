@@ -130,6 +130,7 @@
     { name: "Bus 02", fleetId: "MLS-018", route: activeRoute.label, eta: "Less than 1 min", seats: 1, fare: `₱${discountedUserFarePerPassenger.toFixed(2)}`, status: "On time" },
   ];
   let selectedLiveBus = 0;
+  let selectedRideBusName = "Bus 01";
   let selectedBusSeatId = "";
   let quickBookReturnFocus = null;
   let liveMapPan = { x: 0, y: 0 };
@@ -148,6 +149,10 @@
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
+  const busNumberBadge = (busName) => {
+    const busNumber = busName.replace(/^Bus\s+/i, "");
+    return `<span class="ride-logo" role="img" aria-label="${escapeHtml(busName)}">${escapeHtml(busNumber)}<small>BUS</small></span>`;
+  };
 
   const enforceMinimumFontSize = () => {
     [rolePage, workspacePage, screen].forEach((root) => {
@@ -4267,16 +4272,11 @@
         </div>
         <section class="vehicle-section">
           <div class="section-heading"><h2>Vehicles near you</h2><span><i></i> 2 en route</span></div>
-          <button class="vehicle-row" type="button" data-action="quick-book">
-            <span class="vehicle-logo">MLS<br><small>TRI</small></span>
-            <span class="vehicle-info"><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · 8 seats available</small></span>
-            <span class="vehicle-eta">3 min<small>On time</small></span>
-          </button>
-          <button class="vehicle-row" type="button" data-action="quick-book">
-            <span class="vehicle-logo ochre">MLS<br><small>TRI</small></span>
-            <span class="vehicle-info"><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · 1 seat available</small></span>
-            <span class="vehicle-eta soon">&lt;1 min<small>On time</small></span>
-          </button>
+          ${liveBusDetails.map((bus, index) => `<button class="vehicle-row" type="button" data-action="quick-book">
+            <span class="vehicle-logo${index === 1 ? " ochre" : ""}" role="img" aria-label="${escapeHtml(bus.name)}">${escapeHtml(bus.name.replace(/^Bus\s+/i, ""))}<small>BUS</small></span>
+            <span class="vehicle-info"><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · ${bus.seats} ${bus.seats === 1 ? "seat" : "seats"} available</small></span>
+            <span class="vehicle-eta${index === 1 ? " soon" : ""}">${bus.eta === "Less than 1 min" ? "&lt;1 min" : escapeHtml(bus.eta)}<small>${escapeHtml(bus.status)}</small></span>
+          </button>`).join("")}
         </section>
         <p class="home-demo-note">Illustrative vehicle ETAs · No live tracking</p>
       </div>
@@ -4372,7 +4372,12 @@
       </div>
     </div>`;
 
-  const rideResultsScreen = () => `
+  const rideResultsScreen = () => {
+    const rideOptions = [
+      ...liveBusDetails.map((bus) => ({ busName: bus.name, eta: bus.eta === "Less than 1 min" ? "<1 min" : bus.eta, seats: bus.seats })),
+      { busName: "Bus 03", eta: "9 min", seats: 0 },
+    ];
+    return `
     <div class="ride-results">
       <header class="results-header">
         <button type="button" class="round-back" data-screen="home" aria-label="Back to home">‹</button>
@@ -4381,21 +4386,23 @@
       <div class="results-map">${mapMarkup(true)}<span class="destination-label">${escapeHtml(tripData.destination)}</span></div>
       <div class="result-filter"><button class="filter-selected" type="button">Fastest</button><button type="button" data-info="Showing the fastest available seats.">More Seats</button></div>
       <section class="ride-list">
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">&lt;1 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>8 seats available · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">3 min<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation">Book</button></article>
-        <article class="ride-card is-sold-out"><span class="ride-logo">MLS<small>TRI</small></span><div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>0 seats · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">9 min<small>Arrival</small></div><button type="button" class="ride-book" disabled>Full</button></article>
+        ${rideOptions.map((bus) => `<article class="ride-card${bus.seats === 0 ? " is-sold-out" : ""}" data-ride-bus="${escapeHtml(bus.busName)}">${busNumberBadge(bus.busName)}<div class="ride-detail"><h2>${escapeHtml(activeRoute.name)}</h2><p>via ${escapeHtml(activeRoute.via)}</p><span>${bus.seats ? `${bus.seats} ${bus.seats === 1 ? "seat" : "seats"} available` : "0 seats"} · ₱${discountedUserFarePerPassenger.toFixed(2)}</span></div><div class="ride-arrival">${escapeHtml(bus.eta)}<small>Arrival</small></div><button type="button" class="ride-book" data-action="open-confirmation"${bus.seats === 0 ? " disabled" : ""}>${bus.seats === 0 ? "Full" : "Book"}</button></article>`).join("")}
       </section>
       <p class="prototype-stamp">Sample ride options · Not live availability</p>
     </div>`;
+  };
 
-  const bookingConfirmationScreen = () => `
+  const bookingConfirmationScreen = () => {
+    const selectedBus = liveBusDetails.find((bus) => bus.name === selectedRideBusName);
+    const availableSeats = selectedBus?.seats ?? 0;
+    return `
     <div class="ride-results with-confirmation">
       ${rideResultsScreen()}
       <div class="modal-scrim">
         <section class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title">
           <button class="modal-close" type="button" aria-label="Close confirmation" data-screen="find-rides">×</button>
           <h2 id="booking-dialog-title">Booking Confirmation</h2><p class="sheet-subtitle">Review your trip details</p>
-          <div class="confirm-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>8 seats available</span></div></div>
+          <div class="confirm-route">${busNumberBadge(selectedRideBusName)}<div><strong>${escapeHtml(activeRoute.name)}</strong><small>via ${escapeHtml(activeRoute.via)} · Drop-Off Near ${escapeHtml(tripData.destination)}</small><span>${availableSeats} ${availableSeats === 1 ? "seat" : "seats"} available</span></div></div>
           <div class="departure-fields">
             <label for="booking-departure-date">Travel date</label>
             <input id="booking-departure-date" type="date" min="${toDateInputValue(new Date())}" value="${escapeHtml(tripData.departureDate)}" required>
@@ -4409,6 +4416,7 @@
         </section>
       </div>
     </div>`;
+  };
 
   const bookingConfirmedScreen = () => {
     const trip = tripHistory.find(({ id }) => id === selectedHistoryTripId)
@@ -4434,7 +4442,7 @@
         <div class="demo-qr" role="img" aria-label="Non-scannable ticket code"><i></i><i></i><i></i><b></b></div>
         <p class="ticket-code-note">QR code cannot be scanned</p>
         <span class="ticket-caption">Ticket Reference</span><strong class="ticket-number">${escapeHtml(trip.receiptId || trip.id)}</strong>
-        <div class="ticket-route"><span class="ride-logo">MLS<small>TRI</small></span><div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)}</small></div></div>
+        <div class="ticket-route">${busNumberBadge(trip.busName || "Bus 01")}<div><strong>${escapeHtml(trip.destination)}</strong><small>${escapeHtml(trip.origin)} → ${escapeHtml(trip.destination)}</small></div></div>
         <div class="ticket-facts"><div><span>Trip status</span><strong>${trip.status === "cancelled" ? "Cancelled" : trip.status === "upcoming" ? "Booked" : "Completed"}</strong></div><div><span>Seat</span><strong>${escapeHtml(trip.seat || "—")}</strong></div><div><span>Travel date</span><strong>${trip.travelDate && trip.departureTime ? escapeHtml(formatDeparture(trip.travelDate, trip.departureTime)) : escapeHtml(trip.date || "—")}</strong></div><div><span>Passengers</span><strong>${trip.passengers || 1}</strong></div><div><span>Payment</span><strong>${escapeHtml(trip.payment)}</strong></div><div><span>${trip.status === "cancelled" ? "Original fare" : "Fare total"}</span><strong>₱${Number(trip.status === "cancelled" ? trip.originalFare : trip.fare).toFixed(2)}</strong></div></div>
         ${trip.status === "upcoming" ? '<button type="button" class="track-ride" data-screen="live-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>View map</button>' : '<button type="button" class="track-ride" data-screen="tickets">Back to My Tickets <span>→</span></button>'}
       </section>
@@ -4471,7 +4479,7 @@
           </div>
           <div class="seat-bus-card">
             <div class="seat-bus-meta">
-              <div class="seat-bus-icon" aria-hidden="true">MLS</div>
+              <div class="seat-bus-icon" role="img" aria-label="${escapeHtml(bus.name)}">${escapeHtml(bus.name.replace(/^Bus\s+/i, ""))}</div>
               <div>
                 <strong>Bus Information</strong>
                 <span>${bus.fleetId} · ${bus.route}</span>
@@ -7640,8 +7648,11 @@
         };
         openQuickBookOverlay();
       } else if (action === "open-confirmation") {
+        const rideCard = actionButton.closest("[data-ride-bus]");
+        if (rideCard) selectedRideBusName = rideCard.dataset.rideBus;
         const seatBookingPanel = screen.querySelector(".seat-book-card");
         if (seatBookingPanel) {
+          selectedRideBusName = liveBusDetails[selectedLiveBus].name;
           const payment = seatBookingPanel.querySelector('input[name="payment"]:checked')?.value ?? tripData.payment;
           const passengers = Number.parseInt(seatBookingPanel.querySelector("#seat-passengers")?.textContent ?? "1", 10);
           const paymentError = seatBookingPanel.querySelector("[data-payment-error]");
@@ -7692,6 +7703,7 @@
           destinationDetail: `Via ${activeRoute.via}`,
           fare: 100 * tripData.passengers,
           seat: tripData.seat,
+          busName: selectedRideBusName,
           passengers: tripData.passengers,
           payment: tripData.payment,
           co2Saved: 0,
