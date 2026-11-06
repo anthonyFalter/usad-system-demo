@@ -1182,7 +1182,7 @@
             <div class="card-icon-badge mint">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Suggested Bus Changes</div>
+            <div style="font-size: 13px; font-weight: 600; color: #1e293b;">Suggested Bus Changes</div>
           </div>
         </div>
 
@@ -3497,27 +3497,27 @@
       desc = `Sample vehicle information · Route: <strong>${bus.route}</strong><br>Driver: <strong>${bus.driver}</strong>`;
       customHtml = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; text-align: left; font-size: 11.5px;">
-          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
+          <div style="background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
             <span style="color: #64748b; display: block; font-size: 10px;">CURRENT SPEED</span>
             <strong style="color: #2FD9A8; font-size: 15px;">${bus.telemetry.speed}</strong>
           </div>
-          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
+          <div style="background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
             <span style="color: #64748b; display: block; font-size: 10px;">FUEL LEVEL</span>
             <strong style="color: #38bdf8; font-size: 15px;">${bus.telemetry.fuel}</strong>
           </div>
-          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
+          <div style="background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
             <span style="color: #64748b; display: block; font-size: 10px;">TIRE PRESSURE</span>
-            <strong style="color: #cbd5e1; font-size: 14px;">${bus.telemetry.tire}</strong>
+            <strong style="color: #334155; font-size: 14px;">${bus.telemetry.tire}</strong>
           </div>
-          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838;">
+          <div style="background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
             <span style="color: #64748b; display: block; font-size: 10px;">ENGINE TEMP</span>
-            <strong style="color: #cbd5e1; font-size: 14px;">${bus.telemetry.temp}</strong>
+            <strong style="color: #334155; font-size: 14px;">${bus.telemetry.temp}</strong>
           </div>
-          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838; grid-column: span 2;">
+          <div style="background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; grid-column: span 2;">
             <span style="color: #64748b; display: block; font-size: 10px;">CURRENT LOCATION</span>
-            <span style="color: #ffffff; font-size: 12px;">${bus.telemetry.gps}</span>
+            <span style="color: #334155; font-size: 12px;">${bus.telemetry.gps}</span>
           </div>
-          <div style="background: #0f1622; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2838; grid-column: span 2;">
+          <div style="background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; grid-column: span 2;">
             <span style="color: #64748b; display: block; font-size: 10px;">PASSENGER ONBOARD LOAD</span>
             <strong style="color: #2FD9A8; font-size: 13px;">${bus.telemetry.passengers} Seats Occupied</strong>
           </div>
@@ -3775,7 +3775,7 @@
       desc = `Adjust the sample view for <strong>${cam.title}</strong>.`;
       customHtml = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; text-align: left;">
-          <div style="background: #0f1622; padding: 12px; border-radius: 8px; border: 1px solid #1e2838; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
             <span style="font-size: 10px; color: #64748b; font-weight: 700;">PAN / TILT MOTOR</span>
             <div style="display: grid; grid-template-columns: repeat(3, 32px); gap: 4px; margin-top: 4px;">
               <div></div>
@@ -3790,11 +3790,11 @@
             </div>
           </div>
 
-          <div style="background: #0f1622; padding: 12px; border-radius: 8px; border: 1px solid #1e2838; font-size: 11px; display: flex; flex-direction: column; gap: 6px;">
-            <div><span style="color:#64748b;">Sensor Temp:</span> <strong style="color:#ffffff;">${cam.temp}</strong></div>
+          <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 11px; display: flex; flex-direction: column; gap: 6px;">
+            <div><span style="color:#64748b;">Sensor Temp:</span> <strong style="color:#334155;">${cam.temp}</strong></div>
             <div><span style="color:#64748b;">Bitrate:</span> <strong style="color:#2fd9a8;">${cam.bitrate}</strong></div>
             <div><span style="color:#64748b;">Latency:</span> <strong style="color:#38bdf8;">${cam.latency}</strong></div>
-            <div><span style="color:#64748b;">Firmware:</span> <strong style="color:#cbd5e1;">v4.18.2-rtsp</strong></div>
+            <div><span style="color:#64748b;">Firmware:</span> <strong style="color:#334155;">v4.18.2-rtsp</strong></div>
             <div><span style="color:#64748b;">IR Night Mode:</span> <strong style="color:#2fd9a8;">Auto-Sens</strong></div>
           </div>
         </div>
@@ -3909,24 +3909,24 @@
       title = `${report.id}: ${report.title}`;
       desc = `Official transit operational audit for <strong>${report.corridorLabel}</strong>.`;
       customHtml = `
-        <div style="background: #0b1017; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; margin: 16px 0; text-align: left; font-size: 12px; display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 16px 0; text-align: left; font-size: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <span style="color: #64748b;">Audit Period:</span>
-            <strong style="color: #ffffff;">${report.period}</strong>
+            <strong style="color: #334155;">${report.period}</strong>
           </div>
-          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <span style="color: #64748b;">Primary Metric:</span>
             <strong style="color: #2fd9a8;">${report.primaryMetric}</strong>
           </div>
-          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <span style="color: #64748b;">Secondary Metric:</span>
-            <span style="color: #cbd5e1;">${report.secondaryMetric}</span>
+            <span style="color: #334155;">${report.secondaryMetric}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <span style="color: #64748b;">Format &amp; File Size:</span>
             <strong style="color: #38bdf8;">${report.format} (${report.fileSize})</strong>
           </div>
-          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
             <span style="color: #64748b;">Verified By:</span>
             <span style="color: #e2e8f0;">${report.author}</span>
           </div>
