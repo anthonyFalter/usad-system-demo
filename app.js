@@ -286,7 +286,6 @@
   let activeTripLogDate = getDateInputValue(new Date());
   let showAllTripLogs = false;
   let activeReportsCorridor = activeRoute.id;
-  let activeRevenueChartPeriod = "monthly";
   let reportsSearchQuery = "";
   let selectedReportDetailId = "REP-2026-1048";
   function getDispatchSnapshot() {
@@ -3003,6 +3002,753 @@
     date: getTripLogDate(trip.daysAgo)
   }));
 
+  const reportStreams = [
+    { id: "cash", label: "Cash tickets" },
+    { id: "digital", label: "Digital tickets" },
+    { id: "charter", label: "Charter" },
+    { id: "advertising", label: "Advertising" },
+    { id: "parcel", label: "Parcel" },
+    { id: "other", label: "Other" }
+  ];
+  const reportTripStatuses = ["Completed", "In Progress", "Cancelled", "Delayed"];
+  const reportBusOptions = Array.from({ length: adminFleetSize }, (_, index) => `Bus ${String(index + 1).padStart(2, "0")}`);
+  const reportRouteOptions = routes.map((route) => ({ id: route.id, label: route.label }));
+  const reportDriverOptions = [...new Set(tripLogData.map((trip) => trip.driver))].sort((a, b) => a.localeCompare(b));
+  const defaultReportGlobalFilters = () => ({
+    preset: "last7",
+    from: getTripLogDate(6),
+    to: getTripLogDate(0),
+    buses: [],
+    routes: [],
+    drivers: [],
+    statuses: [],
+    streams: [],
+    search: ""
+  });
+  const reportFilterQueryKey = "fleetReportFilters";
+  let reportUrlState = {};
+  const parseReportFiltersFromUrl = () => {
+    const raw = new URLSearchParams(window.location.search).get(reportFilterQueryKey);
+    if (!raw) return defaultReportGlobalFilters();
+    try {
+      const parsed = JSON.parse(raw);
+      reportUrlState = parsed && typeof parsed === "object" ? parsed : {};
+      const source = reportUrlState.global ?? reportUrlState;
+      const defaults = defaultReportGlobalFilters();
+      const isValidDate = (value) => value === "" || /^\d{4}-\d{2}-\d{2}$/.test(value);
+      return {
+        preset: ["today", "last7", "thisMonth", "lastMonth", "custom"].includes(source.preset) ? source.preset : "custom",
+        from: isValidDate(source.from) ? source.from : defaults.from,
+        to: isValidDate(source.to) ? source.to : defaults.to,
+        buses: Array.isArray(source.buses) ? source.buses.filter((value) => reportBusOptions.includes(value)) : [],
+        routes: Array.isArray(source.routes) ? source.routes.filter((value) => routes.some((route) => route.id === value)) : [],
+        drivers: Array.isArray(source.drivers) ? source.drivers.filter((value) => reportDriverOptions.includes(value)) : [],
+        statuses: Array.isArray(source.statuses) ? source.statuses.filter((value) => reportTripStatuses.includes(value)) : [],
+        streams: Array.isArray(source.streams) ? source.streams.filter((value) => reportStreams.some((stream) => stream.id === value)) : [],
+        search: typeof source.search === "string" ? source.search.slice(0, 120) : ""
+      };
+    } catch (error) {
+      console.warn("Ignoring malformed fleet report filters in the URL.", error);
+      return defaultReportGlobalFilters();
+    }
+  };
+  let reportGlobalFilters = parseReportFiltersFromUrl();
+  const reportTableIds = ["trips", "financials", "efficiency", "assets", "staff", "passengers"];
+  const reportTableFilters = Object.fromEntries(reportTableIds.map((id) => [id, {
+    from: "",
+    to: "",
+    buses: [],
+    routes: [],
+    drivers: [],
+    statuses: [],
+    search: "",
+    extras: {}
+  }]));
+  const reportSortState = Object.fromEntries(reportTableIds.map((id) => [id, { column: 0, direction: "asc" }]));
+  reportTableIds.forEach((id) => {
+    const saved = reportUrlState.tables?.[id];
+    if (!saved || typeof saved !== "object") return;
+    for (const key of ["from", "to"]) {
+      if (typeof saved[key] === "string" && (saved[key] === "" || /^\d{4}-\d{2}-\d{2}$/.test(saved[key]))) reportTableFilters[id][key] = saved[key];
+    }
+    for (const key of ["buses", "routes", "drivers", "statuses"]) {
+      if (Array.isArray(saved[key])) reportTableFilters[id][key] = saved[key].filter((value) => typeof value === "string");
+    }
+    if (typeof saved.search === "string") reportTableFilters[id].search = saved.search.slice(0, 120);
+    if (saved.extras && typeof saved.extras === "object") reportTableFilters[id].extras = saved.extras;
+    const sort = reportUrlState.sort?.[id];
+    if (sort && Number.isInteger(sort.column) && sort.column >= 0 && ["asc", "desc"].includes(sort.direction)) {
+      reportSortState[id] = { column: sort.column, direction: sort.direction };
+    }
+  });
+  let reportSearchDebounceId = 0;
+  let reportSyncIntervalId = 0;
+  let reportLastRefresh = new Date();
+  const reportSavedPresetStorageKey = "usad-fleet-report-presets";
+  const reportSavedPresets = (() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(reportSavedPresetStorageKey) ?? "[]");
+      return Array.isArray(saved) ? saved.filter((preset) => typeof preset?.name === "string" && preset.filters?.global && preset.filters?.tables) : [];
+    } catch (error) {
+      console.warn("Saved fleet report presets could not be loaded.", error);
+      return [];
+    }
+  })();
+  const reportDatePresets = {
+    today: () => [getTripLogDate(0), getTripLogDate(0)],
+    last7: () => [getTripLogDate(6), getTripLogDate(0)],
+    thisMonth: () => {
+      const today = new Date();
+      return [getDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)), getDateInputValue(today)];
+    },
+    lastMonth: () => {
+      const today = new Date();
+      return [
+        getDateInputValue(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+        getDateInputValue(new Date(today.getFullYear(), today.getMonth(), 0))
+      ];
+    },
+    custom: () => [reportGlobalFilters.from, reportGlobalFilters.to]
+  };
+  const persistReportFiltersToUrl = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set(reportFilterQueryKey, JSON.stringify({ global: reportGlobalFilters, tables: reportTableFilters, sort: reportSortState }));
+    window.history.replaceState(null, "", url);
+  };
+  const setReportPreset = (preset) => {
+    const range = reportDatePresets[preset];
+    if (!range) throw new Error(`Unknown fleet report date preset: "${preset}".`);
+    reportGlobalFilters.preset = preset;
+    [reportGlobalFilters.from, reportGlobalFilters.to] = range();
+    persistReportFiltersToUrl();
+  };
+  const applyFleetReportPreset = (value) => {
+    if (!value) return;
+    if (value.startsWith("saved:")) {
+      const preset = reportSavedPresets[Number(value.slice(6))];
+      if (!preset) throw new Error(`Saved fleet report preset "${value}" was not found.`);
+      reportGlobalFilters = { ...preset.filters.global };
+      reportTableIds.forEach((id) => {
+        reportTableFilters[id] = JSON.parse(JSON.stringify(preset.filters.tables[id] ?? {
+          from: "", to: "", buses: [], routes: [], drivers: [], statuses: [], search: "", extras: {}
+        }));
+        const sort = preset.filters.sort?.[id];
+        if (sort && Number.isInteger(sort.column) && ["asc", "desc"].includes(sort.direction)) reportSortState[id] = { ...sort };
+        else reportSortState[id] = { column: 0, direction: "asc" };
+      });
+    } else {
+      reportGlobalFilters = { ...defaultReportGlobalFilters() };
+      reportTableIds.forEach((id) => {
+        Object.assign(reportTableFilters[id], { from: "", to: "", buses: [], routes: [], drivers: [], statuses: [], search: "", extras: {} });
+        reportSortState[id] = { column: 0, direction: "asc" };
+      });
+    }
+    if (value === "delayed-week") {
+      setReportPreset("last7");
+      reportGlobalFilters.statuses = ["Delayed"];
+    } else if (value === "service-due") {
+      setReportPreset("last7");
+      reportTableFilters.assets.extras.serviceDue = "30";
+    } else if (value === "driver-incidents") {
+      setReportPreset("last7");
+      reportTableFilters.staff.extras.incidents = true;
+    } else if (value) {
+      if (!value.startsWith("saved:")) throw new Error(`Unknown fleet report preset "${value}".`);
+    }
+    persistReportFiltersToUrl();
+  };
+  const renderReportMultiSelect = (scope, key, label, options, selectedValues = [], idPrefix = scope) => {
+    const selected = new Set(selectedValues);
+    const dropdownId = `${idPrefix}-${key}-options`;
+    return `
+      <details class="fleet-report-multiselect" data-report-multiselect="${scope}:${key}">
+        <summary aria-controls="${dropdownId}">${escapeHtml(label)}${selected.size ? ` (${selected.size})` : ""}</summary>
+        <div class="fleet-report-multiselect-menu" id="${dropdownId}">
+          <label class="fleet-report-select-all"><input type="checkbox" data-report-select-all="${scope}:${key}"${selected.size === options.length && options.length ? " checked" : ""}> Select all</label>
+          ${options.map((option) => {
+            const value = typeof option === "string" ? option : option.id;
+            const text = typeof option === "string" ? option : option.label;
+            return `<label><input type="checkbox" value="${escapeHtml(value)}" data-report-filter-check="${scope}:${key}"${selected.has(value) ? " checked" : ""}> ${escapeHtml(text)}</label>`;
+          }).join("")}
+        </div>
+      </details>
+    `;
+  };
+
+  const enrichedReportTrips = tripLogData.map((trip, index) => {
+    const route = routes.find((item) => item.id === trip.routeId);
+    if (!route) throw new Error(`Trip report ${trip.id} references an unknown route "${trip.routeId}".`);
+    const passengers = trip.regularPassengers + trip.studentPassengers;
+    const grossRevenue = trip.regularPassengers * 120 + trip.studentPassengers * 100;
+    const status = index === 2 ? "Delayed" : index === 9 ? "In Progress" : "Completed";
+    const scheduledDeparture = trip.departure;
+    const scheduledArrival = trip.arrival;
+    const actualDeparture = index === 2 ? "06:42 AM" : trip.departure;
+    const actualArrival = index === 2 ? "08:29 AM" : trip.arrival;
+    const distanceKm = 50 + (index % 4) * 2;
+    const streamValues = {
+      cash: Math.round(grossRevenue * 0.62),
+      digital: Math.round(grossRevenue * 0.38),
+      charter: 0,
+      advertising: 0,
+      parcel: index % 3 === 0 ? 120 : 0,
+      other: 0
+    };
+    streamValues.cash += grossRevenue - Object.values(streamValues).reduce((sum, value) => sum + value, 0);
+    return {
+      ...trip,
+      routeLabel: route.label,
+      origin: route.origin,
+      destination: route.destination,
+      passengers,
+      grossRevenue,
+      status,
+      scheduledDeparture,
+      actualDeparture,
+      scheduledArrival,
+      actualArrival,
+      distanceKm,
+      stopsMade: 8 + (index % 4),
+      stopsSkipped: index === 2 ? 1 : 0,
+      fuelLiters: Number((distanceKm / (3.2 + (index % 5) * 0.1)).toFixed(1)),
+      delayMinutes: index === 2 ? 12 : 0,
+      delayReason: index === 2 ? "Traffic near Balintawak" : "—",
+      conductor: ["Mark Santos", "Liza Reyes", "Paolo Cruz"][index % 3],
+      streams: streamValues,
+      paymentMethod: index % 3 === 0 ? "Cash" : index % 3 === 1 ? "Digital" : "Card",
+      revenueStreams: Object.keys(streamValues).filter((stream) => streamValues[stream] > 0),
+      cashRevenue: streamValues.cash,
+      digitalRevenue: streamValues.digital,
+      operatingCost: Math.round(2150 + distanceKm * 31 + passengers * 18),
+      operatingMinutes: 95 + (index % 5) * 4,
+      notes: index === 2 ? "Sample delay; dispatch monitoring required." : "No incidents recorded in sample."
+    };
+  });
+
+  const reportTripLogRows = () => enrichedReportTrips.map((trip) => ({
+    id: trip.id,
+    date: trip.date,
+    bus: trip.busNo,
+    plate: `USAD-${trip.busNo.replace(/\D/g, "").padStart(3, "0")}`,
+    route: trip.routeId,
+    routeLabel: trip.routeLabel,
+    driver: trip.driver,
+    status: trip.status,
+    streams: trip.revenueStreams,
+    searchText: `${trip.id} ${trip.busNo} USAD-${trip.busNo.replace(/\D/g, "").padStart(3, "0")} ${trip.driver} ${trip.conductor} ${trip.routeLabel}`,
+    values: [
+      trip.id, trip.busNo, trip.routeLabel, trip.driver, trip.conductor, trip.passengers,
+      `${trip.scheduledDeparture} / ${trip.actualDeparture}`,
+      `${trip.scheduledArrival} / ${trip.actualArrival}`,
+      `${trip.operatingMinutes} / 98 min`, `${trip.origin} → ${trip.destination}`,
+      `${trip.distanceKm} km`, `${trip.stopsMade} / ${trip.stopsSkipped}`,
+      `${trip.fuelLiters} L`, trip.status, trip.delayReason, trip.notes
+    ],
+    sortValues: [trip.id, trip.busNo, trip.routeLabel, trip.driver, trip.conductor, trip.passengers, trip.actualDeparture, trip.actualArrival, trip.operatingMinutes, trip.origin, trip.distanceKm, trip.stopsMade, trip.fuelLiters, trip.status, trip.delayMinutes, trip.notes],
+    searchExtras: { from: trip.actualDeparture, incident: trip.status === "Delayed" || trip.status === "Cancelled" }
+  }));
+
+  const reportFinancialRows = () => {
+    const rows = enrichedReportTrips.map((trip, index) => {
+      const netRevenue = trip.grossRevenue - trip.operatingCost;
+      const receivables = index % 4 === 0 ? 180 : 0;
+      const variance = index % 3 === 0 ? 2.1 : -1.4;
+      return {
+        id: trip.id, date: trip.date, bus: trip.busNo, route: trip.routeId, routeLabel: trip.routeLabel,
+        driver: trip.driver, status: trip.status, streams: trip.revenueStreams, revenue: trip.grossRevenue,
+        searchText: `${trip.id} ${trip.busNo} ${trip.driver} ${trip.routeLabel} ${trip.paymentMethod}`,
+        financialData: {
+          cash: trip.streams.cash, digital: trip.streams.digital, charter: trip.streams.charter,
+          advertising: trip.streams.advertising, parcel: trip.streams.parcel, other: trip.streams.other,
+          gross: trip.grossRevenue, cost: trip.operatingCost, distance: trip.distanceKm, passengers: trip.passengers,
+          receivables, payment: trip.paymentMethod, variance, count: 1
+        },
+        values: [],
+        sortValues: [],
+        searchExtras: { payment: trip.paymentMethod, profitable: netRevenue >= 0, variance }
+      };
+    });
+    const granularity = reportTableFilters.financials.extras.granularity || "daily";
+    if (granularity === "daily") {
+      return rows.map((row) => {
+        const data = row.financialData;
+        const net = data.gross - data.cost;
+        const costPerKm = data.cost / data.distance;
+        const revenuePerKm = data.gross / data.distance;
+        const revenuePerPassenger = data.gross / data.passengers;
+        row.values = [
+          row.date, row.bus, row.routeLabel, formatPhp(data.cash), formatPhp(data.digital), formatPhp(data.charter), formatPhp(data.advertising), formatPhp(data.parcel), formatPhp(data.other),
+          formatPhp(data.gross), formatPhp(data.cost), formatPhp(net), `${formatPhp(costPerKm)}/km`,
+          `${formatPhp(revenuePerKm)}/km`, formatPhp(revenuePerPassenger), formatPhp(data.receivables), data.payment, `${data.variance > 0 ? "+" : ""}${data.variance}%`
+        ];
+        row.sortValues = [row.date, row.bus, row.routeLabel, data.cash, data.digital, data.charter, data.advertising, data.parcel, data.other, data.gross, data.cost, net, costPerKm, revenuePerKm, revenuePerPassenger, data.receivables, data.payment, data.variance];
+        return row;
+      });
+    }
+
+    const periodStart = (date) => {
+      const value = new Date(`${date}T00:00:00`);
+      if (granularity === "weekly") {
+        value.setDate(value.getDate() - (value.getDay() + 6) % 7);
+      } else {
+        value.setDate(1);
+      }
+      return getDateInputValue(value);
+    };
+    const grouped = new Map();
+    rows.forEach((row) => {
+      const start = periodStart(row.date);
+      const key = [start, row.bus, row.route, row.driver, row.searchExtras.payment].join("|");
+      const current = grouped.get(key);
+      if (!current) {
+        grouped.set(key, {
+          ...row,
+          id: `${granularity}-${key}`,
+          date: start,
+          periodLabel: granularity === "weekly" ? `Week of ${start}` : new Date(`${start}T00:00:00`).toLocaleDateString(undefined, { month: "short", year: "numeric" }),
+          financialData: { ...row.financialData },
+          streams: [...row.streams],
+          searchText: row.searchText
+        });
+        return;
+      }
+      for (const field of ["cash", "digital", "charter", "advertising", "parcel", "other", "gross", "cost", "distance", "passengers", "receivables"]) {
+        current.financialData[field] += row.financialData[field];
+      }
+      const currentCount = current.financialData.count;
+      current.financialData.variance = (current.financialData.variance * currentCount + row.financialData.variance) / (currentCount + 1);
+      current.financialData.count += 1;
+      current.streams = [...new Set([...current.streams, ...row.streams])];
+      current.searchText += ` ${row.searchText}`;
+      if (row.status === "Delayed") current.status = "Delayed";
+    });
+    return [...grouped.values()].map((row) => {
+      const data = row.financialData;
+      const net = data.gross - data.cost;
+      const costPerKm = data.cost / data.distance;
+      const revenuePerKm = data.gross / data.distance;
+      const revenuePerPassenger = data.gross / data.passengers;
+      row.revenue = data.gross;
+      row.values = [
+        row.periodLabel, row.bus, row.routeLabel, formatPhp(data.cash), formatPhp(data.digital), formatPhp(data.charter), formatPhp(data.advertising), formatPhp(data.parcel), formatPhp(data.other),
+        formatPhp(data.gross), formatPhp(data.cost), formatPhp(net), `${formatPhp(costPerKm)}/km`,
+        `${formatPhp(revenuePerKm)}/km`, formatPhp(revenuePerPassenger), formatPhp(data.receivables), data.payment, `${data.variance > 0 ? "+" : ""}${data.variance.toFixed(1)}%`
+      ];
+      row.sortValues = [row.date, row.bus, row.routeLabel, data.cash, data.digital, data.charter, data.advertising, data.parcel, data.other, data.gross, data.cost, net, costPerKm, revenuePerKm, revenuePerPassenger, data.receivables, data.payment, data.variance];
+      row.searchExtras = { ...row.searchExtras, profitable: net >= 0, variance: data.variance };
+      return row;
+    });
+  };
+
+  const reportEfficiencyRows = () => reportBusOptions.map((bus, index) => {
+    const trips = enrichedReportTrips.filter((trip) => trip.busNo === bus);
+    const sampleTrip = trips[0] ?? enrichedReportTrips[index % enrichedReportTrips.length];
+    const passengers = trips.reduce((sum, trip) => sum + trip.passengers, 0);
+    const utilisation = trips.length ? Math.min(98, 36 + trips.length * 11 + index % 5 * 4) : 24 + index % 4 * 5;
+    const onTime = Math.max(72, 98 - index % 7 * 4);
+    return {
+      id: bus, date: sampleTrip.date, bus, route: sampleTrip.route, routeLabel: sampleTrip.routeLabel,
+      driver: sampleTrip.driver, status: sampleTrip.status, streams: sampleTrip.revenueStreams,
+      utilization: utilisation, onTime, downtime: index % 4 * 1.5, searchText: `${bus} ${sampleTrip.driver} ${sampleTrip.routeLabel}`,
+      values: [bus, `${utilisation}%`, `${onTime}%`, `${index % 6 + 1} min`, `${(3.1 + (index % 9) * 0.08).toFixed(2)} km/L`, `${Math.min(100, 54 + index % 6 * 7)}%`, `${trips.length} / ${trips.length + index % 3}`, `${(index % 4 * 1.5).toFixed(1)} hr`, formatPhp(2400 + index * 185), `${(74 + index % 25)}/100`, formatPhp((2600 + index * 185) / Math.max(1, trips.length)), `${(index % 5 * 0.7).toFixed(1)} hr`],
+      sortValues: [bus, utilisation, onTime, index % 6 + 1, 3.1 + (index % 9) * 0.08, Math.min(100, 54 + index % 6 * 7), trips.length, index % 4 * 1.5, 2400 + index * 185, 74 + index % 25, (2600 + index * 185) / Math.max(1, trips.length), index % 5 * 0.7]
+    };
+  });
+
+  const reportAssetRows = () => reportBusOptions.map((bus, index) => {
+    const trip = enrichedReportTrips.find((entry) => entry.busNo === bus) ?? enrichedReportTrips[index % enrichedReportTrips.length];
+    const status = index === 3 ? "Maintenance" : index === 7 ? "Out of Service" : index === 1 ? "Idle" : "Active";
+    const dueInDays = (index * 7) % 100;
+    const modelYear = 2018 + index % 7;
+    return {
+      id: bus, date: trip.date, bus, route: trip.route, routeLabel: trip.routeLabel, driver: trip.driver, status,
+      streams: trip.revenueStreams, searchText: `${bus} USAD-${bus.replace(/\D/g, "").padStart(3, "0")} Saraza City Bus ${modelYear} ${trip.driver}`,
+      values: [`USAD-${bus.replace(/\D/g, "").padStart(3, "0")}`, `Saraza City Bus · ${modelYear}`, status, trip.driver, `${42100 + index * 18475} km`, `${getTripLogDate(Math.max(0, dueInDays - 30))} / ${getTripLogDate(-dueInDays)}`, getTripLogDate(-((index * 11) % 90)), getTripLogDate(-((index * 13) % 100)), `${45 + index % 55}%`, `${index % 4}`, formatPhp(145000 + index * 11250)],
+      sortValues: [`USAD-${bus.replace(/\D/g, "").padStart(3, "0")}`, `Saraza City Bus · ${2018 + index % 7}`, status, trip.driver, 42100 + index * 18475, getTripLogDate(-dueInDays), getTripLogDate(-((index * 11) % 90)), getTripLogDate(-((index * 13) % 100)), 45 + index % 55, index % 4, 145000 + index * 11250],
+      searchExtras: { dueInDays, openTickets: index % 4, model: "Saraza City Bus", year: modelYear, documentDays: Math.min((index * 11) % 90, (index * 13) % 100) }
+    };
+  });
+
+  const reportStaffRows = () => reportDriverOptions.map((driver, index) => {
+    const trips = enrichedReportTrips.filter((trip) => trip.driver === driver);
+    const trip = trips[0] ?? enrichedReportTrips[index % enrichedReportTrips.length];
+    const passengers = trips.reduce((sum, entry) => sum + entry.passengers, 0);
+    return {
+      id: driver, date: trip.date, bus: trip.busNo, route: trip.route, routeLabel: trip.routeLabel, driver,
+      status: trip.status, streams: trip.revenueStreams, searchText: `${driver} DR-${String(1001 + index)} ${trip.busNo}`,
+      values: [`${driver} / DR-${String(1001 + index)}`, "05:30 / 14:30", `${trips.length} / ${Math.max(trips.length, 2)}`, `${8 + index % 4} / ${index % 3} hr`, `${index % 5}`, `${index % 4}`, index % 7 === 0 ? "Late" : "Present", getTripLogDate(-(index * 12 % 180)), `${78 + index % 20}/100`],
+      sortValues: [driver, "05:30", trips.length, 8 + index % 4, index % 5, index % 4, index % 7 === 0 ? 1 : 0, getTripLogDate(-(index * 12 % 180)), 78 + index % 20],
+      searchExtras: { shift: index % 3 === 0 ? "Morning" : index % 3 === 1 ? "Afternoon" : "Night", incident: index % 5 === 0, complaint: index % 4 === 0, licenseDays: index * 13 % 100, rating: 78 + index % 20 }
+    };
+  });
+
+  const reportPassengerRows = () => enrichedReportTrips.map((trip, index) => {
+    const ticketsCash = Math.round(trip.passengers * 0.62);
+    const ticketsApp = Math.round(trip.passengers * 0.28);
+    const ticketsCard = trip.passengers - ticketsCash - ticketsApp;
+    const repeatPassengers = index % 3 === 0 ? 31 : 18;
+    return {
+      id: trip.id, date: trip.date, bus: trip.busNo, route: trip.route, routeLabel: trip.routeLabel,
+      driver: trip.driver, status: trip.status, streams: trip.revenueStreams, passengers: trip.passengers,
+      searchText: `${trip.id} ${trip.busNo} ${trip.driver} ${trip.routeLabel}`,
+      values: [trip.date, trip.routeLabel, trip.busNo, trip.passengers, `${ticketsCash} / ${ticketsApp} / ${ticketsCard}`, index % 5, formatPhp(trip.grossRevenue / trip.passengers), index % 2 ? "Peak" : "Off-peak", `${repeatPassengers} / ${trip.passengers - repeatPassengers}`],
+      sortValues: [trip.date, trip.routeLabel, trip.busNo, trip.passengers, ticketsCash + ticketsApp + ticketsCard, index % 5, trip.grossRevenue / trip.passengers, index % 2 ? "Peak" : "Off-peak", index % 3 === 0 ? 31 : 18]
+    };
+  });
+
+  const fleetReportDefinitions = [
+    { id: "trips", title: "Trip Logs — Full Detail", description: "Scheduled and actual service, passenger, fuel and stop performance.", columns: ["Trip ID", "Bus / Plate", "Route", "Driver", "Conductor", "Passengers", "Scheduled / Actual Departure", "Scheduled / Actual Arrival", "Duration Actual / Scheduled", "Origin → Destination", "Distance", "Stops Made / Skipped", "Fuel Used", "Status", "Delay Reason", "Notes"], getRows: reportTripLogRows, filters: ["buses", "routes", "drivers", "statuses"], extras: ["onTime", "timeOfDay", "incidents"] },
+    { id: "financials", title: "Financials & Revenue Streams", description: "Estimated revenue, operating costs and contribution by trip.", columns: ["Period", "Bus", "Route", "Cash Tickets", "Digital Tickets", "Charter", "Advertising", "Parcel", "Other", "Gross Revenue", "Operating Costs", "Net Revenue", "Cost / km", "Revenue / km", "Revenue / Passenger", "Receivables", "Payment Method", "Variance"], getRows: reportFinancialRows, filters: ["buses", "routes", "drivers", "streams"], extras: ["granularity", "payment", "profitability", "minimumRevenue", "maximumRevenue", "minimumVariance"] },
+    { id: "efficiency", title: "Operational Efficiency", description: "Fleet utilization, service reliability, fuel and maintenance indicators.", columns: ["Bus", "Utilization", "On-Time", "Avg Delay", "Fuel Efficiency", "Load Factor", "Trips Done / Scheduled", "Downtime", "Maintenance Cost", "Driver Score", "Cost / Trip", "Idle Time"], getRows: reportEfficiencyRows, filters: ["buses", "routes", "drivers"], extras: ["maxUtilization", "maxOnTime", "minDowntime"] },
+    { id: "assets", title: "Fleet & Asset Status", description: "Vehicle condition, service schedules and compliance documents.", columns: ["Vehicle ID / Plate", "Make / Model / Year", "Status", "Current Driver", "Odometer", "Last / Next Service", "Insurance Expiry", "Permit Expiry", "Fuel", "Open Tickets", "Lifetime Maintenance Cost"], getRows: reportAssetRows, filters: ["buses", "routes", "drivers"], extras: ["assetStatus", "makeModel", "minimumYear", "maximumYear", "serviceDue", "documentExpiry", "openTickets"] },
+    { id: "staff", title: "Driver & Staff Activity", description: "Shift coverage, trip completion, attendance and driver risk indicators.", columns: ["Name / ID", "Shift Start / End", "Trips Assigned / Completed", "Hours / Overtime", "Incidents", "Complaints", "Attendance", "License Validity", "Performance Rating"], getRows: reportStaffRows, filters: ["drivers", "routes", "statuses"], extras: ["shift", "incidents", "complaints", "licenseExpiry", "minimumRating"] },
+    { id: "passengers", title: "Passenger & Ticketing Summary", description: "Passenger counts and channel mix across trips.", columns: ["Date / Period", "Route", "Bus", "Passengers Carried", "Cash / App / Card Tickets", "Refunds / Cancellations", "Average Fare", "Peak / Off-Peak", "Repeat / New Passengers"], getRows: reportPassengerRows, filters: ["routes", "buses", "drivers"], extras: ["ticketChannel", "peak", "minimumPassengers", "maximumPassengers"] }
+  ];
+
+  const getFleetReportRows = (definition, applyLocalFilters = true) => {
+    let rows = definition.getRows();
+    const matchesDimensions = (row, filters, includeSearch) => {
+      if (filters.from && row.date && row.date < filters.from) return false;
+      if (filters.to && row.date && row.date > filters.to) return false;
+      if (filters.buses?.length && row.bus && !filters.buses.includes(row.bus)) return false;
+      if (filters.routes?.length && row.route && !filters.routes.includes(row.route)) return false;
+      if (filters.drivers?.length && row.driver && !filters.drivers.includes(row.driver)) return false;
+      const selectedStatuses = filters.statuses ?? [];
+      if (selectedStatuses.length && reportTripStatuses.includes(row.status) && !selectedStatuses.includes(row.status)) return false;
+      if (filters.streams?.length && row.streams?.length && !filters.streams.some((stream) => row.streams.includes(stream))) return false;
+      if (includeSearch && filters.search?.trim()) {
+        const query = filters.search.trim().toLowerCase();
+        if (!row.searchText.toLowerCase().includes(query)) return false;
+      }
+      return true;
+    };
+    rows = rows.filter((row) => matchesDimensions(row, reportGlobalFilters, true));
+    if (!applyLocalFilters) return rows;
+    const filters = reportTableFilters[definition.id];
+    rows = rows.filter((row) => {
+      if (!matchesDimensions(row, filters, true)) return false;
+      const extras = filters.extras;
+      if (definition.id === "trips") {
+        if (extras.onTime && row.status !== "Completed") return false;
+        if (extras.incidents && !row.searchExtras?.incident) return false;
+        if (extras.timeOfDay && row.searchExtras) {
+          const minutes = (() => {
+            const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(row.searchExtras.from ?? "");
+            if (!match) return 0;
+            return (Number(match[1]) % 12 + (match[3].toUpperCase() === "PM" ? 12 : 0)) * 60 + Number(match[2]);
+          })();
+          if (extras.timeOfDay === "morning" && (minutes < 360 || minutes > 600)) return false;
+          if (extras.timeOfDay === "afternoon" && (minutes < 601 || minutes > 1020)) return false;
+          if (extras.timeOfDay === "night" && minutes < 1021 && minutes > 359) return false;
+        }
+      } else if (definition.id === "financials") {
+        if (extras.payment && row.searchExtras?.payment !== extras.payment) return false;
+        if (extras.profitability === "profitable" && !row.searchExtras?.profitable) return false;
+        if (extras.profitability === "loss" && row.searchExtras?.profitable) return false;
+        if (extras.minimumRevenue && row.revenue < Number(extras.minimumRevenue)) return false;
+        if (extras.maximumRevenue && row.revenue > Number(extras.maximumRevenue)) return false;
+        if (extras.minimumVariance && Math.abs(row.searchExtras?.variance ?? 0) < Number(extras.minimumVariance)) return false;
+      } else if (definition.id === "efficiency") {
+        if (extras.maxUtilization && row.utilization >= Number(extras.maxUtilization)) return false;
+        if (extras.maxOnTime && row.onTime >= Number(extras.maxOnTime)) return false;
+        if (extras.minDowntime && row.downtime < Number(extras.minDowntime)) return false;
+      } else if (definition.id === "assets") {
+        if (extras.assetStatus && row.status !== extras.assetStatus) return false;
+        if (extras.serviceDue && row.searchExtras?.dueInDays > Number(extras.serviceDue)) return false;
+        if (extras.makeModel && !row.searchExtras?.model.toLowerCase().includes(extras.makeModel.toLowerCase())) return false;
+        if (extras.minimumYear && row.searchExtras?.year < Number(extras.minimumYear)) return false;
+        if (extras.maximumYear && row.searchExtras?.year > Number(extras.maximumYear)) return false;
+        if (extras.documentExpiry && row.searchExtras?.documentDays > Number(extras.documentExpiry)) return false;
+        if (extras.openTickets && Number(row.searchExtras?.openTickets) === 0) return false;
+      } else if (definition.id === "staff") {
+        const sample = row.searchExtras ?? {};
+        if (extras.shift && sample.shift !== extras.shift) return false;
+        if (extras.incidents && !sample.incident) return false;
+        if (extras.complaints && !sample.complaint) return false;
+        if (extras.licenseExpiry && sample.licenseDays > Number(extras.licenseExpiry)) return false;
+        if (extras.minimumRating && sample.rating < Number(extras.minimumRating)) return false;
+      } else if (definition.id === "passengers") {
+        if (extras.ticketChannel && extras.ticketChannel !== "all" && !tripPaymentMatches(row, extras.ticketChannel)) return false;
+        if (extras.peak && row.values[7].toLowerCase() !== extras.peak.toLowerCase()) return false;
+        if (extras.minimumPassengers && row.passengers < Number(extras.minimumPassengers)) return false;
+        if (extras.maximumPassengers && row.passengers > Number(extras.maximumPassengers)) return false;
+      }
+      return true;
+    });
+    const sortState = reportSortState[definition.id];
+    rows.sort((a, b) => {
+      const left = a.sortValues[sortState.column];
+      const right = b.sortValues[sortState.column];
+      const compared = typeof left === "number" && typeof right === "number"
+        ? left - right
+        : String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" });
+      return compared * (sortState.direction === "asc" ? 1 : -1);
+    });
+    return rows;
+  };
+
+  const tripPaymentMatches = (row, channel) => {
+    const trip = enrichedReportTrips.find((entry) => entry.id === row.id);
+    if (!trip) return false;
+    if (channel === "cash") return trip.paymentMethod === "Cash";
+    if (channel === "app") return trip.paymentMethod === "Digital";
+    if (channel === "card") return trip.paymentMethod === "Card";
+    return false;
+  };
+
+  const reportFilterOptionSets = {
+    buses: reportBusOptions,
+    routes: reportRouteOptions,
+    drivers: reportDriverOptions,
+    statuses: reportTripStatuses,
+    streams: reportStreams
+  };
+  const reportFilterLabels = { buses: "Bus / Vehicle", routes: "Route", drivers: "Driver", statuses: "Trip status", streams: "Revenue stream" };
+  const renderFleetReportFilterBar = (definition) => {
+    const local = reportTableFilters[definition.id];
+    const extras = {
+      onTime: `<label class="fleet-report-toggle"><input type="checkbox" data-report-extra="${definition.id}:onTime"${local.extras.onTime ? " checked" : ""}> On-time only</label>`,
+      incidents: `<label class="fleet-report-toggle"><input type="checkbox" data-report-extra="${definition.id}:incidents"${local.extras.incidents ? " checked" : ""}> Has incidents</label>`,
+      timeOfDay: `<label class="fleet-report-field">Departure time<select data-report-extra="${definition.id}:timeOfDay"><option value="">Any time</option><option value="morning"${local.extras.timeOfDay === "morning" ? " selected" : ""}>06:00–10:00</option><option value="afternoon"${local.extras.timeOfDay === "afternoon" ? " selected" : ""}>10:01–17:00</option><option value="night"${local.extras.timeOfDay === "night" ? " selected" : ""}>17:01–05:59</option></select></label>`,
+      granularity: `<label class="fleet-report-field">Period<select data-report-extra="${definition.id}:granularity"><option value="daily"${!local.extras.granularity || local.extras.granularity === "daily" ? " selected" : ""}>Daily</option><option value="weekly"${local.extras.granularity === "weekly" ? " selected" : ""}>Weekly</option><option value="monthly"${local.extras.granularity === "monthly" ? " selected" : ""}>Monthly</option></select></label>`,
+      payment: `<label class="fleet-report-field">Payment<select data-report-extra="${definition.id}:payment"><option value="">All methods</option>${["Cash", "Digital", "Card", "Other"].map((item) => `<option${local.extras.payment === item ? " selected" : ""}>${item}</option>`).join("")}</select></label>`,
+      profitability: `<label class="fleet-report-field">Profitability<select data-report-extra="${definition.id}:profitability"><option value="">All</option><option value="profitable"${local.extras.profitability === "profitable" ? " selected" : ""}>Profitable</option><option value="loss"${local.extras.profitability === "loss" ? " selected" : ""}>Loss-making</option></select></label>`,
+      minimumRevenue: `<label class="fleet-report-field">Min revenue<input type="number" min="0" step="100" placeholder="Any" value="${escapeHtml(local.extras.minimumRevenue ?? "")}" data-report-extra="${definition.id}:minimumRevenue"></label>`,
+      maximumRevenue: `<label class="fleet-report-field">Max revenue<input type="number" min="0" step="100" placeholder="Any" value="${escapeHtml(local.extras.maximumRevenue ?? "")}" data-report-extra="${definition.id}:maximumRevenue"></label>`,
+      minimumVariance: `<label class="fleet-report-field">Variance magnitude<select data-report-extra="${definition.id}:minimumVariance"><option value="">Any variance</option>${[1, 2, 5, 10].map((item) => `<option value="${item}"${Number(local.extras.minimumVariance) === item ? " selected" : ""}>At least ${item}%</option>`).join("")}</select></label>`,
+      maxUtilization: `<label class="fleet-report-field">Utilization below ${local.extras.maxUtilization ?? 100}%<input type="range" min="0" max="100" step="5" value="${local.extras.maxUtilization ?? 100}" data-report-extra="${definition.id}:maxUtilization"></label>`,
+      maxOnTime: `<label class="fleet-report-field">On-time below ${local.extras.maxOnTime ?? 100}%<input type="range" min="0" max="100" step="5" value="${local.extras.maxOnTime ?? 100}" data-report-extra="${definition.id}:maxOnTime"></label>`,
+      minDowntime: `<label class="fleet-report-field">Downtime at least<select data-report-extra="${definition.id}:minDowntime"><option value="0">Any</option>${[1.5, 3, 4.5].map((item) => `<option value="${item}"${Number(local.extras.minDowntime) === item ? " selected" : ""}>${item}+ hours</option>`).join("")}</select></label>`,
+      assetStatus: `<label class="fleet-report-field">Status<select data-report-extra="${definition.id}:assetStatus"><option value="">All statuses</option>${["Active", "Maintenance", "Out of Service", "Idle"].map((item) => `<option${local.extras.assetStatus === item ? " selected" : ""}>${item}</option>`).join("")}</select></label>`,
+      serviceDue: `<label class="fleet-report-field">Service due within<select data-report-extra="${definition.id}:serviceDue"><option value="">Any date</option>${[7, 30, 90].map((item) => `<option value="${item}"${Number(local.extras.serviceDue) === item ? " selected" : ""}>${item} days</option>`).join("")}</select></label>`,
+      makeModel: `<label class="fleet-report-field">Make / model<select data-report-extra="${definition.id}:makeModel"><option value="">All models</option><option value="Saraza City Bus"${local.extras.makeModel === "Saraza City Bus" ? " selected" : ""}>Saraza City Bus</option></select></label>`,
+      minimumYear: `<label class="fleet-report-field">Year from<select data-report-extra="${definition.id}:minimumYear"><option value="">Any year</option>${[2018, 2019, 2020, 2021, 2022, 2023, 2024].map((item) => `<option value="${item}"${Number(local.extras.minimumYear) === item ? " selected" : ""}>${item}</option>`).join("")}</select></label>`,
+      maximumYear: `<label class="fleet-report-field">Year to<select data-report-extra="${definition.id}:maximumYear"><option value="">Any year</option>${[2018, 2019, 2020, 2021, 2022, 2023, 2024].map((item) => `<option value="${item}"${Number(local.extras.maximumYear) === item ? " selected" : ""}>${item}</option>`).join("")}</select></label>`,
+      documentExpiry: `<label class="fleet-report-field">Document expiry<select data-report-extra="${definition.id}:documentExpiry"><option value="">Any date</option>${[7, 30, 90].map((item) => `<option value="${item}"${Number(local.extras.documentExpiry) === item ? " selected" : ""}>Within ${item} days</option>`).join("")}</select></label>`,
+      openTickets: `<label class="fleet-report-toggle"><input type="checkbox" data-report-extra="${definition.id}:openTickets"${local.extras.openTickets ? " checked" : ""}> Open tickets only</label>`,
+      shift: `<label class="fleet-report-field">Shift<select data-report-extra="${definition.id}:shift"><option value="">All shifts</option>${["Morning", "Afternoon", "Night"].map((item) => `<option${local.extras.shift === item ? " selected" : ""}>${item}</option>`).join("")}</select></label>`,
+      complaints: `<label class="fleet-report-toggle"><input type="checkbox" data-report-extra="${definition.id}:complaints"${local.extras.complaints ? " checked" : ""}> Has complaints</label>`,
+      licenseExpiry: `<label class="fleet-report-field">License expiry<select data-report-extra="${definition.id}:licenseExpiry"><option value="">Any date</option>${[30, 60, 90].map((item) => `<option value="${item}"${Number(local.extras.licenseExpiry) === item ? " selected" : ""}>Within ${item} days</option>`).join("")}</select></label>`,
+      minimumRating: `<label class="fleet-report-field">Rating at least<select data-report-extra="${definition.id}:minimumRating"><option value="">Any rating</option>${[80, 85, 90, 95].map((item) => `<option value="${item}"${Number(local.extras.minimumRating) === item ? " selected" : ""}>${item}/100</option>`).join("")}</select></label>`,
+      ticketChannel: `<label class="fleet-report-field">Ticket channel<select data-report-extra="${definition.id}:ticketChannel"><option value="all">All channels</option>${["cash", "app", "card"].map((item) => `<option value="${item}"${local.extras.ticketChannel === item ? " selected" : ""}>${item[0].toUpperCase()}${item.slice(1)}</option>`).join("")}</select></label>`,
+      peak: `<label class="fleet-report-field">Peak / off-peak<select data-report-extra="${definition.id}:peak"><option value="">All periods</option><option value="Peak"${local.extras.peak === "Peak" ? " selected" : ""}>Peak</option><option value="Off-peak"${local.extras.peak === "Off-peak" ? " selected" : ""}>Off-peak</option></select></label>`,
+      minimumPassengers: `<label class="fleet-report-field">Min passengers<input type="number" min="0" step="5" placeholder="Any" value="${escapeHtml(local.extras.minimumPassengers ?? "")}" data-report-extra="${definition.id}:minimumPassengers"></label>`,
+      maximumPassengers: `<label class="fleet-report-field">Max passengers<input type="number" min="0" step="5" placeholder="Any" value="${escapeHtml(local.extras.maximumPassengers ?? "")}" data-report-extra="${definition.id}:maximumPassengers"></label>`
+    };
+    const dimensions = definition.filters.map((key) => renderReportMultiSelect(definition.id, key, reportFilterLabels[key], reportFilterOptionSets[key], local[key], `table-${definition.id}`)).join("");
+    const options = definition.extras.map((key) => extras[key]).join("");
+    return `
+      <div class="fleet-report-filterbar" aria-label="${escapeHtml(definition.title)} filters">
+        <label class="fleet-report-field">From<input type="date" value="${escapeHtml(local.from)}" data-report-local-date="${definition.id}:from"></label>
+        <label class="fleet-report-field">To<input type="date" value="${escapeHtml(local.to)}" data-report-local-date="${definition.id}:to"></label>
+        ${dimensions}
+        ${options}
+        <label class="fleet-report-field fleet-report-search">Search<input type="search" value="${escapeHtml(local.search)}" placeholder="Search this table..." data-report-local-search="${definition.id}"></label>
+        <button type="button" class="reports-show-all-btn" data-report-clear-table="${definition.id}">Reset table</button>
+      </div>
+    `;
+  };
+
+  const renderFleetReportTable = (definition) => {
+    const globalRows = getFleetReportRows(definition, false);
+    const rows = getFleetReportRows(definition);
+    const sortState = reportSortState[definition.id];
+    const headers = definition.columns.map((column, index) => `
+      <th aria-sort="${sortState.column === index ? sortState.direction === "asc" ? "ascending" : "descending" : "none"}">
+        <button type="button" class="fleet-report-sort" data-report-sort="${definition.id}:${index}">${escapeHtml(column)}${sortState.column === index ? sortState.direction === "asc" ? " ↑" : " ↓" : ""}</button>
+      </th>`).join("");
+    const body = rows.length
+      ? rows.map((row) => `<tr>${row.values.map((value) => `<td>${escapeHtml(String(value))}</td>`).join("")}</tr>`).join("")
+      : `<tr><td class="fleet-report-empty" colspan="${definition.columns.length}">No ${escapeHtml(definition.title.toLowerCase())} match these filters. <button type="button" data-report-clear-table="${definition.id}">Reset this table’s filters</button></td></tr>`;
+    return `
+      <section class="fleet-report-table-card" id="fleet-report-${definition.id}" aria-labelledby="fleet-report-${definition.id}-title">
+        <header class="fleet-report-heading">
+          <div><h2 id="fleet-report-${definition.id}-title">${escapeHtml(definition.title)}</h2><p>${escapeHtml(definition.description)}</p></div>
+          <div class="fleet-report-actions">
+            <span class="fleet-report-row-count">Showing ${rows.length} of ${globalRows.length} records</span>
+            ${currentRole === "admin" ? `<button type="button" data-report-export="${definition.id}:csv">CSV</button><button type="button" data-report-export="${definition.id}:pdf">PDF</button>` : ""}
+          </div>
+        </header>
+        ${renderFleetReportFilterBar(definition)}
+        <div class="fleet-report-table-scroll"><table class="fleet-report-table"><thead><tr>${headers}</tr></thead><tbody>${body}</tbody></table></div>
+      </section>
+    `;
+  };
+
+  const renderFleetGlobalReportFilters = () => `
+    <section class="fleet-report-global" id="fleet-report-global" aria-labelledby="fleet-report-global-title">
+      <div class="fleet-report-global-heading">
+        <div><h2 id="fleet-report-global-title">Fleet reports</h2><p>Illustrative sample data · ${currentRole === "dispatcher" ? "Read-only access" : "Administrator export access"} · No live data source is connected.</p></div>
+        <span class="fleet-report-sync" id="fleet-report-sync">Sample refreshed ${reportLastRefresh.toLocaleTimeString()}</span>
+      </div>
+      <div class="fleet-report-global-filters" aria-label="Global report filters">
+        <label class="fleet-report-field">Date preset<select data-report-preset>
+          <option value="today"${reportGlobalFilters.preset === "today" ? " selected" : ""}>Today</option>
+          <option value="last7"${reportGlobalFilters.preset === "last7" ? " selected" : ""}>Last 7 days</option>
+          <option value="thisMonth"${reportGlobalFilters.preset === "thisMonth" ? " selected" : ""}>This Month</option>
+          <option value="lastMonth"${reportGlobalFilters.preset === "lastMonth" ? " selected" : ""}>Last Month</option>
+          <option value="custom"${reportGlobalFilters.preset === "custom" ? " selected" : ""}>Custom</option>
+        </select></label>
+        <label class="fleet-report-field">From<input type="date" value="${escapeHtml(reportGlobalFilters.from)}" data-report-global-date="from"></label>
+        <label class="fleet-report-field">To<input type="date" value="${escapeHtml(reportGlobalFilters.to)}" data-report-global-date="to"></label>
+        ${renderReportMultiSelect("global", "buses", "Bus / Vehicle", reportBusOptions, reportGlobalFilters.buses)}
+        ${renderReportMultiSelect("global", "routes", "Route", reportRouteOptions, reportGlobalFilters.routes)}
+        ${renderReportMultiSelect("global", "drivers", "Driver", reportDriverOptions, reportGlobalFilters.drivers)}
+        ${renderReportMultiSelect("global", "statuses", "Trip status", reportTripStatuses, reportGlobalFilters.statuses)}
+        ${renderReportMultiSelect("global", "streams", "Revenue stream", reportStreams, reportGlobalFilters.streams)}
+        <label class="fleet-report-field fleet-report-search">Search all reports<input type="search" value="${escapeHtml(reportGlobalFilters.search)}" placeholder="Trip ID, bus plate, driver..." data-report-global-search></label>
+        <button type="button" class="reports-show-all-btn" data-report-clear-global>Clear all filters</button>
+      </div>
+      <div class="fleet-report-presets">
+        <label>Saved views<select data-report-saved-preset><option value="">Choose a saved view</option><option value="delayed-week">This week’s delayed trips</option><option value="service-due">Vehicles due for service</option><option value="driver-incidents">Driver incidents</option>${reportSavedPresets.map((preset, index) => `<option value="saved:${index}">${escapeHtml(preset.name)}</option>`).join("")}</select></label>
+        <input type="text" maxlength="40" placeholder="Name this view" data-report-save-name aria-label="Saved view name">
+        <button type="button" data-report-save-preset>Save current filters</button>
+        <span data-report-save-status role="status"></span>
+      </div>
+      <div class="fleet-report-chips" id="fleet-report-filter-chips" aria-live="polite"></div>
+      <div class="fleet-report-sync-note">The prototype refreshes the current report view every 30 seconds; its underlying values are static sample data.</div>
+    </section>
+  `;
+
+  const renderFleetReportDashboard = () => `
+    ${renderFleetGlobalReportFilters()}
+    <div id="fleet-report-tables">${fleetReportDefinitions.map(renderFleetReportTable).join("")}</div>
+  `;
+
+  const updateFleetReportFilterChips = () => {
+    const chips = screen.querySelector("#fleet-report-filter-chips");
+    if (!chips) return;
+    const active = [];
+    if (reportGlobalFilters.from || reportGlobalFilters.to) active.push(`Date: ${reportGlobalFilters.from || "any"} – ${reportGlobalFilters.to || "any"}`);
+    for (const [key, values] of Object.entries({ buses: reportGlobalFilters.buses, routes: reportGlobalFilters.routes, drivers: reportGlobalFilters.drivers, statuses: reportGlobalFilters.statuses, streams: reportGlobalFilters.streams })) {
+      values.forEach((value) => active.push(`${reportFilterLabels[key]}: ${typeof reportFilterOptionSets[key][0] === "object" ? reportFilterOptionSets[key].find((option) => option.id === value)?.label : value}`));
+    }
+    if (reportGlobalFilters.search) active.push(`Search: ${reportGlobalFilters.search}`);
+    chips.innerHTML = active.length ? active.map((chip) => `<span class="fleet-report-chip">${escapeHtml(chip)}</span>`).join("") : `<span class="fleet-report-chip-empty">No global filters applied</span>`;
+  };
+
+  const syncFleetGlobalReportControls = () => {
+    for (const key of ["buses", "routes", "drivers", "statuses", "streams"]) {
+      const wrapper = screen.querySelector(`[data-report-multiselect="global:${key}"]`);
+      if (!wrapper) continue;
+      const selectedValues = reportGlobalFilters[key];
+      wrapper.querySelector("summary").textContent = `${reportFilterLabels[key]}${selectedValues.length ? ` (${selectedValues.length})` : ""}`;
+      wrapper.querySelectorAll(`[data-report-filter-check="global:${key}"]`).forEach((checkbox) => {
+        checkbox.checked = selectedValues.includes(checkbox.value);
+      });
+      const selectAll = wrapper.querySelector(`[data-report-select-all="global:${key}"]`);
+      if (selectAll) selectAll.checked = selectedValues.length === reportFilterOptionSets[key].length && selectedValues.length > 0;
+    }
+    const from = screen.querySelector("[data-report-global-date='from']");
+    const to = screen.querySelector("[data-report-global-date='to']");
+    const search = screen.querySelector("[data-report-global-search]");
+    const preset = screen.querySelector("[data-report-preset]");
+    if (from) from.value = reportGlobalFilters.from;
+    if (to) to.value = reportGlobalFilters.to;
+    if (search) search.value = reportGlobalFilters.search;
+    if (preset) preset.value = reportGlobalFilters.preset;
+  };
+
+  const refreshFleetReportGlobalSection = () => {
+    const section = screen.querySelector("#fleet-report-global");
+    if (section) section.outerHTML = renderFleetGlobalReportFilters();
+  };
+
+  const updateFleetReportTables = () => {
+    const container = screen.querySelector("#fleet-report-tables");
+    if (!container) return;
+    const openMultiSelects = [...container.querySelectorAll("details[open]")].map((element) => element.dataset.reportMultiselect);
+    container.innerHTML = fleetReportDefinitions.map(renderFleetReportTable).join("");
+    container.querySelectorAll("details[data-report-multiselect]").forEach((element) => {
+      if (openMultiSelects.includes(element.dataset.reportMultiselect)) element.open = true;
+    });
+    syncFleetGlobalReportControls();
+    updateFleetReportFilterChips();
+  };
+
+  const clearReportTableFilters = (id) => {
+    const filters = reportTableFilters[id];
+    if (!filters) throw new Error(`Unknown fleet report table: "${id}".`);
+    Object.assign(filters, { from: "", to: "", buses: [], routes: [], drivers: [], statuses: [], search: "", extras: {} });
+    reportSortState[id] = { column: 0, direction: "asc" };
+    persistReportFiltersToUrl();
+    updateFleetReportTables();
+  };
+
+  const clearAllFleetReportFilters = () => {
+    reportGlobalFilters = { ...defaultReportGlobalFilters(), from: "", to: "", preset: "custom" };
+    reportTableIds.forEach((id) => {
+      Object.assign(reportTableFilters[id], { from: "", to: "", buses: [], routes: [], drivers: [], statuses: [], search: "", extras: {} });
+      reportSortState[id] = { column: 0, direction: "asc" };
+    });
+    persistReportFiltersToUrl();
+    refreshFleetReportGlobalSection();
+    updateFleetReportTables();
+  };
+
+  const saveFleetReportPreset = () => {
+    const nameInput = screen.querySelector("[data-report-save-name]");
+    const status = screen.querySelector("[data-report-save-status]");
+    const name = nameInput?.value.trim();
+    if (!name) {
+      if (status) status.textContent = "Enter a name for this view.";
+      nameInput?.focus();
+      return;
+    }
+    const preset = {
+      name,
+      filters: JSON.parse(JSON.stringify({ global: reportGlobalFilters, tables: reportTableFilters, sort: reportSortState }))
+    };
+    const existingIndex = reportSavedPresets.findIndex((saved) => saved.name.toLowerCase() === name.toLowerCase());
+    if (existingIndex >= 0) reportSavedPresets[existingIndex] = preset;
+    else reportSavedPresets.push(preset);
+    try {
+      window.localStorage.setItem(reportSavedPresetStorageKey, JSON.stringify(reportSavedPresets));
+    } catch (error) {
+      if (status) status.textContent = "This browser could not save the view.";
+      console.error("Fleet report preset could not be saved.", error);
+      return;
+    }
+    refreshFleetReportGlobalSection();
+    const presetSelect = screen.querySelector("[data-report-saved-preset]");
+    if (presetSelect) presetSelect.value = `saved:${reportSavedPresets.indexOf(preset)}`;
+    const saveStatus = screen.querySelector("[data-report-save-status]");
+    if (saveStatus) saveStatus.textContent = "View saved.";
+  };
+
+  const escapeReportCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const exportFleetReport = (id, format) => {
+    const definition = fleetReportDefinitions.find((item) => item.id === id);
+    if (!definition) throw new Error(`Cannot export unknown fleet report "${id}".`);
+    if (currentRole !== "admin") throw new Error("Only administrators can export fleet reports.");
+    const rows = getFleetReportRows(definition);
+    const csv = [definition.columns, ...rows.map((row) => row.values)].map((row) => row.map(escapeReportCsv).join(",")).join("\r\n");
+    if (format === "csv") {
+      const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${id}-report-${getDateInputValue(new Date())}.csv`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
+    }
+    if (format !== "pdf") throw new Error(`Unknown fleet report export format "${format}".`);
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) throw new Error("The browser blocked the print window. Allow pop-ups to export this report as PDF.");
+    const heading = `<h1>${escapeHtml(definition.title)}</h1><p>Illustrative sample report · ${new Date().toLocaleString()}</p>`;
+    const table = `<table><thead><tr>${definition.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.values.map((value) => `<td>${escapeHtml(String(value))}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(definition.title)}</title><style>body{font:11px Arial,sans-serif;padding:20px;color:#172033}h1{font-size:18px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #cbd5e1;padding:5px;text-align:left}th{background:#f1f5f9}tr{break-inside:avoid}@media print{body{padding:0}}</style></head><body>${heading}${table}<script>window.onload=()=>window.print();</script></body></html>`);
+    printWindow.document.close();
+  };
+
+  const updateFleetReportSync = () => {
+    reportLastRefresh = new Date();
+    const label = screen.querySelector("#fleet-report-sync");
+    if (label) label.textContent = `Sample refreshed ${reportLastRefresh.toLocaleTimeString()}`;
+    updateFleetReportTables();
+  };
+
   const renderReportsTableRows = () => {
     let list = tripLogData;
     if (!showAllTripLogs) {
@@ -3064,182 +3810,10 @@
     }).join("");
   };
 
-  const reportsTrendData = {
-    weekly: {
-      periodLabel: "Last 7 days",
-      revenueLabel: "Daily revenue",
-      labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-      revenue: [138000, 154500, 149800, 171200, 168900, 190400, 176350],
-      passengers: [4210, 4480, 4390, 4760, 4680, 5180, 4920]
-    },
-    monthly: {
-      periodLabel: "October 2026 · month to date",
-      revenueLabel: "Weekly revenue",
-      labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
-      revenue: [291000, 304500, 317800, 335350],
-      passengers: [33100, 34750, 36600, 38430]
-    },
-    annual: {
-      periodLabel: "January–October 2026 · year to date",
-      revenueLabel: "Monthly revenue",
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"],
-      revenue: [1080000, 1125000, 1050000, 1180000, 1195000, 1160000, 1220000, 1240000, 1175000, 1248650],
-      passengers: [126400, 130200, 124800, 135100, 137500, 132600, 140300, 143200, 136900, 142880]
-    }
-  };
-
-  const formatChartValue = (value, type) => {
-    if (type === "revenue") return value >= 1000000 ? `₱${(value / 1000000).toFixed(1)}m` : `₱${Math.round(value / 1000)}k`;
-    return value >= 1000 ? `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k` : String(value);
-  };
-
-  const renderReportsTrendBars = (values, labels, type) => {
-    const maxValue = Math.max(...values);
-    return values.map((value, index) => `
-      <div class="reports-trend-column" tabindex="0" aria-label="${labels[index]}: ${type === "revenue" ? formatPhp(value) : `${value.toLocaleString()} passengers`}" aria-describedby="reports-${type}-${index}-tooltip">
-        <span class="reports-trend-value">${formatChartValue(value, type)}</span>
-        <div class="reports-trend-track" style="--bar-height: ${Math.max(8, value / maxValue * 100)}%">
-          <span class="reports-trend-bar${type === "passengers" ? " passengers" : ""}"></span>
-          <span class="reports-chart-tooltip" id="reports-${type}-${index}-tooltip" role="tooltip">${labels[index]} · ${type === "revenue" ? formatPhp(value) : `${value.toLocaleString()} passengers`}</span>
-        </div>
-        <span class="reports-trend-label">${labels[index]}</span>
-      </div>
-    `).join("");
-  };
-
-  const renderReportsRevenueLine = (values, labels) => {
-    const maxValue = Math.max(...values) * 1.12;
-    const points = values.map((value, index) => ({
-      x: values.length === 1 ? 500 : 36 + index * 928 / (values.length - 1),
-      y: 178 - value / maxValue * 140,
-      value,
-      label: labels[index]
-    }));
-    const pointList = points.map(({ x, y }) => `${x},${y}`).join(" ");
-    const areaPath = `M ${points[0].x},178 L ${points.map(({ x, y }) => `${x},${y}`).join(" L ")} L ${points[points.length - 1].x},178 Z`;
-    const gridLines = [38, 83, 128, 173].map((y) => `<line x1="36" y1="${y}" x2="964" y2="${y}" class="reports-line-gridline"/>`).join("");
-    const markers = points.map((point, index) => {
-      const hitStart = index === 0 ? 20 : (points[index - 1].x + point.x) / 2;
-      const hitEnd = index === points.length - 1 ? 980 : (point.x + points[index + 1].x) / 2;
-      return `
-        <g class="reports-line-point" tabindex="0" role="img" aria-label="${point.label}: ${formatPhp(point.value)}" aria-describedby="reports-revenue-tooltip" data-tooltip="${point.label} · ${formatPhp(point.value)}">
-          <rect x="${hitStart}" y="22" width="${hitEnd - hitStart}" height="158" class="reports-line-hit-area"/>
-          <line x1="${point.x}" y1="${point.y + 8}" x2="${point.x}" y2="178" class="reports-line-guide"/>
-          <circle cx="${point.x}" cy="${point.y}" r="5" class="reports-line-marker"/>
-          <title>${point.label}: ${formatPhp(point.value)}</title>
-        </g>
-      `;
-    }).join("");
-
-    return `
-      <svg class="reports-line-chart-svg" viewBox="0 0 1000 205" preserveAspectRatio="none" role="group" aria-label="Fare revenue line chart">
-        ${gridLines}
-        <path d="${areaPath}" class="reports-line-area"/>
-        <polyline points="${pointList}" class="reports-line-path"/>
-        ${markers}
-      </svg>
-      <div class="reports-line-tooltip" id="reports-revenue-tooltip" role="tooltip" aria-hidden="true"></div>
-      <div class="reports-line-xlabels" style="--reports-point-count: ${labels.length}">
-        ${labels.map((label) => `<span>${label}</span>`).join("")}
-      </div>
-    `;
-  };
-
-  const renderReportsDecisionCharts = () => {
-    const trend = reportsTrendData[activeRevenueChartPeriod];
-    const revenueTotal = trend.revenue.reduce((total, value) => total + value, 0);
-    const passengerTotal = trend.passengers.reduce((total, value) => total + value, 0);
-    const snapshot = getDispatchSnapshot();
-    const cashShare = reportingSummary.cashRevenueMonthToDate / reportingSummary.revenueMonthToDate * 100;
-    const pouchShare = 100 - cashShare;
-    const activeShare = snapshot.movingUnits.length / adminFleetSize * 100;
-    const efficiencyShare = Math.min(100, reportingSummary.fleetEfficiency / 4.5 * 100);
-
-    return `
-      <div class="reports-trend-grid">
-        <section class="reports-visual-card reports-primary-chart" aria-label="Revenue trend">
-          <div class="reports-visual-header">
-            <div>
-              <h2 class="reports-visual-title">Fare revenue</h2>
-              <p class="reports-visual-caption">${trend.revenueLabel} · ${trend.periodLabel}</p>
-            </div>
-            <div class="reports-chart-total">${formatPhp(revenueTotal)}<span>selected period</span></div>
-          </div>
-          <div class="reports-line-chart revenue-chart" aria-label="${trend.revenueLabel} from ${trend.periodLabel}">
-            ${renderReportsRevenueLine(trend.revenue, trend.labels)}
-          </div>
-        </section>
-
-        <section class="reports-visual-card reports-ridership-chart" aria-label="Passenger trend">
-          <div class="reports-visual-header">
-            <div>
-              <h2 class="reports-visual-title">Passenger volume</h2>
-              <p class="reports-visual-caption">${trend.periodLabel}</p>
-            </div>
-            <div class="reports-chart-total">${passengerTotal.toLocaleString()}<span>passengers</span></div>
-          </div>
-          <div class="reports-trend-chart passenger-chart" role="group" aria-label="Passenger volume from ${trend.periodLabel}">
-            ${renderReportsTrendBars(trend.passengers, trend.labels, "passengers")}
-          </div>
-        </section>
-      </div>
-
-      <div class="reports-insight-grid">
-        <section class="reports-visual-card reports-insight-card">
-          <div class="reports-insight-heading">
-            <h2 class="reports-visual-title">Revenue collection mix</h2>
-            <span class="reports-visual-caption">Month to date</span>
-          </div>
-          <div class="reports-mix-track" tabindex="0" role="img" aria-label="Cash ${cashShare.toFixed(0)} percent, U-Pouch ${pouchShare.toFixed(0)} percent" data-tooltip="Cash ${cashShare.toFixed(0)}% · ${formatPhp(reportingSummary.cashRevenueMonthToDate)} | U-Pouch ${pouchShare.toFixed(0)}% · ${formatPhp(reportingSummary.pouchRevenueMonthToDate)}">
-            <span class="reports-mix-cash" style="width: ${cashShare}%"></span>
-            <span class="reports-mix-pouch" style="width: ${pouchShare}%"></span>
-          </div>
-          <div class="reports-mix-legend">
-            <span><i class="reports-legend-dot cash"></i>Cash <strong>${cashShare.toFixed(0)}%</strong><small>${formatPhp(reportingSummary.cashRevenueMonthToDate)}</small></span>
-            <span><i class="reports-legend-dot pouch"></i>U-Pouch <strong>${pouchShare.toFixed(0)}%</strong><small>${formatPhp(reportingSummary.pouchRevenueMonthToDate)}</small></span>
-          </div>
-        </section>
-
-        <section class="reports-visual-card reports-insight-card">
-          <div class="reports-insight-heading">
-            <h2 class="reports-visual-title">Fleet deployment</h2>
-            <span class="reports-visual-caption">Dispatch snapshot</span>
-          </div>
-          <div class="reports-deployment-value">${snapshot.movingUnits.length}<span> / ${adminFleetSize} buses active</span></div>
-          <div class="reports-deployment-track" tabindex="0" role="img" aria-label="${snapshot.movingUnits.length} of ${adminFleetSize} fleet buses active" data-tooltip="${snapshot.movingUnits.length} of ${adminFleetSize} buses active · ${snapshot.movingUnits.filter((unit) => unit.statusType === "on-time").length} on time · ${snapshot.delayedUnits.length} delayed · ${snapshot.terminalUnits.length} at terminal">
-            <span style="width: ${activeShare}%"></span>
-          </div>
-          <div class="reports-deployment-legend"><span>${snapshot.movingUnits.filter((unit) => unit.statusType === "on-time").length} on time</span><span>${snapshot.delayedUnits.length} delayed</span><span>${snapshot.terminalUnits.length} at terminal</span></div>
-        </section>
-
-        <section class="reports-visual-card reports-insight-card">
-          <div class="reports-insight-heading">
-            <h2 class="reports-visual-title">Fuel efficiency</h2>
-            <span class="reports-visual-caption">Month to date</span>
-          </div>
-          <div class="reports-efficiency-value">${reportingSummary.fleetEfficiency}<span> km/L</span></div>
-          <div class="reports-efficiency-track" tabindex="0" role="img" aria-label="${reportingSummary.fleetEfficiency} kilometers per liter, planning benchmark 3.5 kilometers per liter" data-tooltip="Fleet average: ${reportingSummary.fleetEfficiency} km/L · Benchmark: 3.5 km/L">
-            <span style="width: ${efficiencyShare}%"></span>
-            <i style="left: 77.78%"></i>
-          </div>
-          <div class="reports-efficiency-legend"><span>Current fleet average</span><span>Benchmark: 3.5 km/L</span></div>
-        </section>
-      </div>
-    `;
-  };
-
-  const adminReportsView = () => {
+  const renderReportsOverview = () => {
     const dispatchSnapshot = getDispatchSnapshot();
     return `
-    <!-- Top Title & Action Header -->
-    <header class="admin-header-row reports-header-row">
-      <div class="admin-header-title-box">
-  <h1 class="admin-header-title">Reports &amp; Decision Support</h1>
-      </div>
-
-    </header>
-
-    <p class="admin-kpi-context">Illustrative trip logs · Times, passenger counts and revenue are sample data. Fare totals use ₱120 per regular passenger and ₱100 per student passenger.</p>
+    <p class="admin-kpi-context">Management overview · KPI values are illustrative sample data.</p>
     <section class="reports-kpi-grid" aria-label="Executive Operational Totals">
       <article class="reports-kpi-card">
         <div class="reports-kpi-header">
@@ -3278,60 +3852,18 @@
       </article>
     </section>
 
-    <section class="reports-visualizations" aria-label="Operational decision visualizations">
-      <div class="reports-visual-toolbar">
-        <div>
-          <h2 class="reports-visual-title">Performance trends</h2>
-          <p class="reports-visual-caption">Compare revenue and passenger demand over time</p>
-        </div>
-        <label class="reports-period-control">View
-          <select class="admin-select-corridor" data-revenue-period aria-label="Revenue chart period">
-            <option value="weekly"${activeRevenueChartPeriod === "weekly" ? " selected" : ""}>Weekly</option>
-            <option value="monthly"${activeRevenueChartPeriod === "monthly" ? " selected" : ""}>Monthly</option>
-            <option value="annual"${activeRevenueChartPeriod === "annual" ? " selected" : ""}>Annual</option>
-          </select>
-        </label>
-      </div>
-      <div id="reports-decision-charts">${renderReportsDecisionCharts()}</div>
-    </section>
-
-    <!-- Main Reports Hub & Table Card -->
-    <section class="reports-table-card" aria-labelledby="reports-library-title">
-      <div class="reports-library-heading">
-        <h2 class="reports-library-title" id="reports-library-title">Report library</h2>
-        <div class="reports-log-controls">
-          <label class="reports-log-date-label" for="reports-trip-date">Trip date
-            <input class="admin-select-corridor reports-log-date" id="reports-trip-date" type="date" value="${activeTripLogDate}" data-trip-log-date aria-label="Filter trips by date">
-          </label>
-          <button class="reports-show-all-btn${showAllTripLogs ? " is-active" : ""}" type="button" data-trip-log-show-all aria-pressed="${showAllTripLogs}">${showAllTripLogs ? "Show selected date" : "Show all"}</button>
-          <div class="staff-header-search-wrap reports-search-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input type="text" class="staff-header-search-input" placeholder="Search bus, driver, dispatcher..." value="${escapeHtml(reportsSearchQuery)}" data-report-search aria-label="Search trip logs">
-          </div>
-        </div>
-      </div>
-
-      <div class="reports-table-wrap">
-        <table class="reports-table">
-          <thead>
-            <tr>
-              <th>TRIP DATE</th>
-              <th>BUS &amp; ROUTE</th>
-              <th>DEPARTED / ARRIVED</th>
-              <th>DRIVER</th>
-              <th>PASSENGERS</th>
-              <th>DISPATCHER</th>
-              <th>TRIP REVENUE</th>
-            </tr>
-          </thead>
-          <tbody id="reports-table-tbody">
-            ${renderReportsTableRows()}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  `;
+    `;
   };
+
+  const adminReportsView = () => `
+    <header class="admin-header-row reports-header-row">
+      <div class="admin-header-title-box">
+        <h1 class="admin-header-title">Reports &amp; Decision Support</h1>
+      </div>
+    </header>
+    ${renderReportsOverview()}
+    ${renderFleetReportDashboard()}
+  `;
 
   const adminDashboardScreen = () => `
     <div class="admin-dashboard-layout" data-admin-screen="dashboard">
@@ -3361,6 +3893,11 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               <span>Fleet</span>
             </button>
+            ${currentRole === "dispatcher" ? `
+            <button class="admin-nav-item${activeAdminSidebarTab === "reports" ? " is-active" : ""}" type="button" data-admin-nav="reports" aria-current="${activeAdminSidebarTab === "reports" ? "page" : "false"}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Reports</span>
+            </button>` : ""}
             ${currentRole === "dispatcher" ? "" : `
             <button class="admin-nav-item${activeAdminSidebarTab === "staff-resources" ? " is-active" : ""}" type="button" data-admin-nav="staff-resources" aria-current="${activeAdminSidebarTab === "staff-resources" ? "page" : "false"}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -5256,6 +5793,8 @@
   const renderScreen = (state, options = {}) => {
     if (welcomeTimeout) window.clearTimeout(welcomeTimeout);
     welcomeTimeout = 0;
+    if (reportSyncIntervalId) window.clearInterval(reportSyncIntervalId);
+    reportSyncIntervalId = 0;
     stopLiveMapSimulation();
     activeState = state;
     liveMapDrag = null;
@@ -5319,6 +5858,9 @@
       screen.firstElementChild?.classList.add("screen-enter");
     }
     enforceMinimumFontSize();
+    if (state === "admin-dashboard" && activeAdminSidebarTab === "reports") {
+      reportSyncIntervalId = window.setInterval(updateFleetReportSync, 30000);
+    }
     if (state === "register-success") {
       welcomeTimeout = window.setTimeout(() => {
         if (activeState !== "register-success") return;
@@ -6291,10 +6833,27 @@
       if (characterCount) characterCount.textContent = `${selectedTripComment.length}/50`;
       return;
     }
-    if (event.target.matches("[data-report-search]")) {
-      reportsSearchQuery = event.target.value;
-      const tbody = screen.querySelector("#reports-table-tbody");
-      if (tbody) tbody.innerHTML = renderReportsTableRows();
+    if (event.target.matches("[data-report-global-search]")) {
+      reportGlobalFilters.search = event.target.value;
+      window.clearTimeout(reportSearchDebounceId);
+      reportSearchDebounceId = window.setTimeout(() => {
+        persistReportFiltersToUrl();
+        updateFleetReportTables();
+      }, 300);
+      return;
+    }
+
+    const localReportSearch = event.target.closest("[data-report-local-search]");
+    if (localReportSearch) {
+      const reportId = localReportSearch.dataset.reportLocalSearch;
+      if (!reportTableFilters[reportId]) throw new Error(`Unknown fleet report search field: "${reportId}".`);
+      reportTableFilters[reportId].search = localReportSearch.value;
+      window.clearTimeout(reportSearchDebounceId);
+      reportSearchDebounceId = window.setTimeout(() => {
+        persistReportFiltersToUrl();
+        updateFleetReportTables();
+      }, 300);
+      return;
     }
 
     if (event.target.matches("[data-cctv-search]")) {
@@ -6376,63 +6935,71 @@
     }
   });
 
-  const showReportsRevenueTooltip = (point) => {
-    const chart = point.closest(".reports-line-chart");
-    const marker = point.querySelector(".reports-line-marker");
-    const tooltip = chart?.querySelector("#reports-revenue-tooltip");
-    const tooltipText = point.dataset.tooltip;
-    if (!chart || !marker || !tooltip || !tooltipText) return;
-
-    tooltip.textContent = tooltipText;
-    tooltip.setAttribute("aria-hidden", "false");
-    tooltip.classList.add("is-visible");
-
-    const chartRect = chart.getBoundingClientRect();
-    const markerRect = marker.getBoundingClientRect();
-    const scaleX = chartRect.width / chart.offsetWidth;
-    const scaleY = chartRect.height / chart.offsetHeight;
-    const tooltipHalfWidth = tooltip.offsetWidth / 2;
-    const centerX = (markerRect.left + markerRect.width / 2 - chartRect.left) / scaleX;
-    const left = Math.max(tooltipHalfWidth + 8, Math.min(chart.offsetWidth - tooltipHalfWidth - 8, centerX));
-    let top = (markerRect.top - chartRect.top) / scaleY - tooltip.offsetHeight - 8;
-    if (top < 0) top = (markerRect.bottom - chartRect.top) / scaleY + 8;
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${top}px`;
-  };
-
-  const hideReportsRevenueTooltip = () => {
-    const tooltip = screen.querySelector("#reports-revenue-tooltip");
-    if (!tooltip) return;
-    tooltip.classList.remove("is-visible");
-    tooltip.setAttribute("aria-hidden", "true");
-  };
-
-  screen.addEventListener("pointerover", (event) => {
-    const point = event.target.closest(".reports-line-point");
-    if (point) showReportsRevenueTooltip(point);
-  });
-
-  screen.addEventListener("pointerout", (event) => {
-    const point = event.target.closest(".reports-line-point");
-    if (!point || (event.relatedTarget instanceof Node && point.contains(event.relatedTarget))) return;
-    if (point !== screen.activeElement) hideReportsRevenueTooltip();
-  });
-
-  screen.addEventListener("focusin", (event) => {
-    const point = event.target.closest(".reports-line-point");
-    if (point) showReportsRevenueTooltip(point);
-  });
-
-  screen.addEventListener("focusout", (event) => {
-    const point = event.target.closest(".reports-line-point");
-    if (point && !point.matches(":hover")) hideReportsRevenueTooltip();
-  });
-
   screen.addEventListener("change", (event) => {
-    if (event.target.matches("[data-revenue-period]")) {
-      activeRevenueChartPeriod = event.target.value;
-      const charts = screen.querySelector("#reports-decision-charts");
-      if (charts) charts.innerHTML = renderReportsDecisionCharts();
+    if (event.target.matches("[data-report-preset]")) {
+      setReportPreset(event.target.value);
+      syncFleetGlobalReportControls();
+      updateFleetReportTables();
+      return;
+    }
+
+    if (event.target.matches("[data-report-saved-preset]")) {
+      applyFleetReportPreset(event.target.value);
+      refreshFleetReportGlobalSection();
+      updateFleetReportTables();
+      return;
+    }
+
+    if (event.target.matches("[data-report-global-date]")) {
+      const field = event.target.dataset.reportGlobalDate;
+      reportGlobalFilters[field] = event.target.value;
+      reportGlobalFilters.preset = "custom";
+      const preset = screen.querySelector("[data-report-preset]");
+      if (preset) preset.value = "custom";
+      persistReportFiltersToUrl();
+      updateFleetReportTables();
+      return;
+    }
+
+    if (event.target.matches("[data-report-filter-check]")) {
+      const [scope, key] = event.target.dataset.reportFilterCheck.split(":");
+      const target = scope === "global" ? reportGlobalFilters : reportTableFilters[scope];
+      if (!target || !Array.isArray(target[key])) throw new Error(`Unknown fleet report filter: "${scope}:${key}".`);
+      target[key] = event.target.checked
+        ? [...new Set([...target[key], event.target.value])]
+        : target[key].filter((value) => value !== event.target.value);
+      persistReportFiltersToUrl();
+      updateFleetReportTables();
+      return;
+    }
+
+    if (event.target.matches("[data-report-select-all]")) {
+      const [scope, key] = event.target.dataset.reportSelectAll.split(":");
+      const target = scope === "global" ? reportGlobalFilters : reportTableFilters[scope];
+      const optionSet = reportFilterOptionSets[key];
+      if (!target || !Array.isArray(target[key]) || !optionSet) throw new Error(`Unknown fleet report filter: "${scope}:${key}".`);
+      target[key] = event.target.checked ? optionSet.map((option) => typeof option === "string" ? option : option.id) : [];
+      persistReportFiltersToUrl();
+      updateFleetReportTables();
+      return;
+    }
+
+    if (event.target.matches("[data-report-local-date]")) {
+      const [tableId, field] = event.target.dataset.reportLocalDate.split(":");
+      if (!reportTableFilters[tableId] || !["from", "to"].includes(field)) throw new Error(`Unknown fleet report date filter: "${tableId}:${field}".`);
+      reportTableFilters[tableId][field] = event.target.value;
+      persistReportFiltersToUrl();
+      updateFleetReportTables();
+      return;
+    }
+
+    if (event.target.matches("[data-report-extra]")) {
+      const [tableId, key] = event.target.dataset.reportExtra.split(":");
+      const filters = reportTableFilters[tableId];
+      if (!filters) throw new Error(`Unknown fleet report-specific filter: "${tableId}:${key}".`);
+      filters.extras[key] = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+      persistReportFiltersToUrl();
+      updateFleetReportTables();
       return;
     }
 
@@ -6511,19 +7078,6 @@
       dispatchNoteInput = event.target.value;
     }
 
-    if (event.target.matches("[data-trip-log-date]")) {
-      activeTripLogDate = event.target.value;
-      showAllTripLogs = false;
-      const showAllButton = screen.querySelector("[data-trip-log-show-all]");
-      if (showAllButton) {
-        showAllButton.textContent = "Show all";
-        showAllButton.classList.remove("is-active");
-        showAllButton.setAttribute("aria-pressed", "false");
-      }
-      const tbody = screen.querySelector("#reports-table-tbody");
-      if (tbody) tbody.innerHTML = renderReportsTableRows();
-    }
-
     if (event.target.matches("#terms-accepted") && event.target.checked) {
       event.target.removeAttribute("aria-invalid");
       const termsError = screen.querySelector("#terms-error");
@@ -6532,6 +7086,47 @@
   });
 
   screen.addEventListener("click", (event) => {
+    const reportSortButton = event.target.closest("[data-report-sort]");
+    if (reportSortButton) {
+      const [tableId, columnValue] = reportSortButton.dataset.reportSort.split(":");
+      const column = Number(columnValue);
+      const definition = fleetReportDefinitions.find((item) => item.id === tableId);
+      if (!definition || !Number.isInteger(column) || column < 0 || column >= definition.columns.length) {
+        throw new Error(`Unknown fleet report sort target: "${reportSortButton.dataset.reportSort}".`);
+      }
+      const current = reportSortState[tableId];
+      reportSortState[tableId] = {
+        column,
+        direction: current.column === column && current.direction === "asc" ? "desc" : "asc"
+      };
+      persistReportFiltersToUrl();
+      updateFleetReportTables();
+      return;
+    }
+
+    const reportExportButton = event.target.closest("[data-report-export]");
+    if (reportExportButton) {
+      const [tableId, format] = reportExportButton.dataset.reportExport.split(":");
+      exportFleetReport(tableId, format);
+      return;
+    }
+
+    const resetReportTableButton = event.target.closest("[data-report-clear-table]");
+    if (resetReportTableButton) {
+      clearReportTableFilters(resetReportTableButton.dataset.reportClearTable);
+      return;
+    }
+
+    if (event.target.closest("[data-report-clear-global]")) {
+      clearAllFleetReportFilters();
+      return;
+    }
+
+    if (event.target.closest("[data-report-save-preset]")) {
+      saveFleetReportPreset();
+      return;
+    }
+
     const homeShortcutButton = event.target.closest("[data-home-shortcut]");
     if (homeShortcutButton) {
       openHomeShortcut(homeShortcutButton.dataset.homeShortcut);
@@ -7483,7 +8078,7 @@
 
     const navItem = event.target.closest("[data-admin-nav]");
     if (navItem) {
-      const allowedDispatcherTabs = ["live-operations", "predictive-analytics", "fleet-dispatch"];
+      const allowedDispatcherTabs = ["live-operations", "predictive-analytics", "fleet-dispatch", "reports"];
       if (currentRole === "dispatcher" && !allowedDispatcherTabs.includes(navItem.dataset.adminNav)) return;
       activeAdminSidebarTab = navItem.dataset.adminNav;
       renderScreen("admin-dashboard");

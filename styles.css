@@ -9810,3 +9810,375 @@ input:focus-visible,
     font-size: 10px;
   }
 }
+
+.fleet-report-global,
+.fleet-report-table-card {
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #1e293b;
+}
+
+.fleet-report-global {
+  padding: 20px;
+}
+
+.fleet-report-global-heading,
+.fleet-report-heading,
+.fleet-report-actions,
+.fleet-report-presets {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fleet-report-global-heading h2,
+.fleet-report-heading h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.fleet-report-global-heading p,
+.fleet-report-heading p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.fleet-report-sync,
+.fleet-report-row-count,
+.fleet-report-sync-note {
+  color: #64748b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.fleet-report-global-filters,
+.fleet-report-filterbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fleet-report-global-filters {
+  margin-top: 18px;
+}
+
+.fleet-report-field,
+.fleet-report-presets label {
+  display: flex;
+  min-width: 120px;
+  flex-direction: column;
+  gap: 5px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fleet-report-field input,
+.fleet-report-field select,
+.fleet-report-presets input,
+.fleet-report-presets select {
+  min-width: 0;
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #1e293b;
+  font: inherit;
+}
+
+.fleet-report-field input:focus,
+.fleet-report-field select:focus,
+.fleet-report-presets input:focus,
+.fleet-report-presets select:focus {
+  border-color: #087f5b;
+  outline: 2px solid rgba(8, 127, 91, .14);
+}
+
+.fleet-report-search {
+  flex: 1 1 190px;
+}
+
+.fleet-report-search input {
+  width: 100%;
+}
+
+.fleet-report-multiselect {
+  position: relative;
+  min-width: 130px;
+  color: #334155;
+  font-size: 11px;
+}
+
+.fleet-report-multiselect summary {
+  display: flex;
+  height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.fleet-report-multiselect summary::-webkit-details-marker {
+  display: none;
+}
+
+.fleet-report-multiselect summary::after {
+  margin-left: 12px;
+  color: #64748b;
+  content: "▾";
+}
+
+.fleet-report-multiselect[open] summary {
+  border-color: #087f5b;
+}
+
+.fleet-report-multiselect-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  min-width: 190px;
+  max-height: 240px;
+  gap: 2px;
+  overflow: auto;
+  padding: 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .12);
+}
+
+.fleet-report-multiselect-menu label,
+.fleet-report-toggle {
+  display: flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.fleet-report-multiselect-menu label:hover {
+  border-radius: 4px;
+  background: #f1f5f9;
+}
+
+.fleet-report-multiselect-menu input,
+.fleet-report-toggle input {
+  accent-color: #087f5b;
+}
+
+.fleet-report-global-filters > button,
+.fleet-report-presets > button,
+.fleet-report-actions > button,
+.fleet-report-filterbar > button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fleet-report-global-filters > button:hover,
+.fleet-report-presets > button:hover,
+.fleet-report-actions > button:hover,
+.fleet-report-filterbar > button:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.fleet-report-presets {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.fleet-report-presets input {
+  align-self: end;
+}
+
+.fleet-report-presets [role="status"] {
+  color: #087f5b;
+  font-size: 11px;
+}
+
+.fleet-report-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.fleet-report-chip,
+.fleet-report-chip-empty {
+  padding: 5px 8px;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 10px;
+}
+
+.fleet-report-chip-empty {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.fleet-report-sync-note {
+  margin-top: 10px;
+  white-space: normal;
+}
+
+.fleet-report-table-card {
+  overflow: visible;
+}
+
+.fleet-report-heading {
+  padding: 18px 20px 14px;
+}
+
+.fleet-report-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.fleet-report-filterbar {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  background: rgba(248, 250, 252, .97);
+}
+
+.fleet-report-filterbar .fleet-report-field {
+  min-width: 112px;
+}
+
+.fleet-report-filterbar input[type="range"] {
+  width: 120px;
+  padding: 0;
+  accent-color: #087f5b;
+}
+
+.fleet-report-table-scroll {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.fleet-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #334155;
+  font-size: 11px;
+  text-align: left;
+}
+
+.fleet-report-table th,
+.fleet-report-table td {
+  min-width: 110px;
+  padding: 11px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.fleet-report-table th {
+  position: sticky;
+  z-index: 2;
+  top: 60px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.fleet-report-sort {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fleet-report-sort:hover,
+.fleet-report-sort:focus-visible {
+  color: #087f5b;
+}
+
+.fleet-report-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.fleet-report-empty {
+  padding: 28px !important;
+  color: #64748b;
+  text-align: center;
+}
+
+.fleet-report-empty button {
+  margin-left: 6px;
+  border: 0;
+  background: transparent;
+  color: #087f5b;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .fleet-report-global {
+    padding: 15px;
+  }
+
+  .fleet-report-global-heading,
+  .fleet-report-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .fleet-report-sync,
+  .fleet-report-row-count {
+    white-space: normal;
+  }
+
+  .fleet-report-filterbar {
+    top: 0;
+    padding: 10px;
+  }
+
+  .fleet-report-filterbar .fleet-report-field,
+  .fleet-report-global-filters .fleet-report-field {
+    flex: 1 1 135px;
+  }
+
+  .fleet-report-multiselect {
+    flex: 1 1 135px;
+  }
+}
